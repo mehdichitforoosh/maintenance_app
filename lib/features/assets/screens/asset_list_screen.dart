@@ -2,17 +2,59 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../facilities/providers/facility_providers.dart';
+import '../models/asset.dart';
 import '../providers/asset_providers.dart';
 
-class AssetListScreen extends ConsumerWidget {
+class AssetListScreen extends ConsumerStatefulWidget {
   const AssetListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AssetListScreen> createState() => _AssetListScreenState();
+}
+
+class _AssetListScreenState extends ConsumerState<AssetListScreen> {
+  final _searchController = TextEditingController();
+  AssetStatus? _selectedStatus;
+  AssetType? _selectedType;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Color _getStatusColor(AssetStatus status) {
+    switch (status) {
+      case AssetStatus.active:
+        return Colors.green;
+      case AssetStatus.underMaintenance:
+        return Colors.orange;
+      case AssetStatus.inactive:
+        return Colors.grey;
+      case AssetStatus.retired:
+        return Colors.red;
+    }
+  }
+
+  List<Asset> _filterAssets(List<Asset> assets) {
+    final query = _searchController.text.trim().toLowerCase();
+    return assets.where((a) {
+      final matchesQuery = query.isEmpty ||
+          a.name.toLowerCase().contains(query) ||
+          a.code.toLowerCase().contains(query);
+      final matchesStatus = _selectedStatus == null || a.status == _selectedStatus;
+      final matchesType = _selectedType == null || a.assetType == _selectedType;
+      return matchesQuery && matchesStatus && matchesType;
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final facilityAsync = ref.watch(primaryFacilityProvider);
 
     return facilityAsync.when(
@@ -31,48 +73,150 @@ class AssetListScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: assetsAsync.when(
-            data: (assets) {
-              if (assets.isEmpty) {
-                return AppEmptyState(
-                  title: 'هیچ تجهیزی ثبت نشده است',
-                  message: 'اولین تجهیز کارگاه را اضافه کنید.',
-                  actionLabel: 'افزودن تجهیز',
-                  onActionPressed: () => context.push('/assets/new'),
-                );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: assets.length,
-                itemBuilder: (context, index) {
-                  final asset = assets[index];
-                  return Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFDBEAFE),
-                        child: Icon(EneftyIcons.cpu_bold, color: Color(0xFF2563EB)),
+          body: Column(
+            children: [
+              // Search & Filter Header
+              Container(
+                color: Theme.of(context).cardColor,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'جستجوی تجهیز با نام یا کد...',
+                        prefixIcon: const Icon(EneftyIcons.search_normal_outline),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      title: Text(asset.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('کد: ${asset.code} | نوع: ${asset.assetType.displayName} | وضعیت: ${asset.status.displayName}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
                         children: [
-                          IconButton(
-                            icon: const Icon(EneftyIcons.edit_2_outline, color: Color(0xFF2563EB)),
-                            tooltip: 'ویرایش تجهیز',
-                            onPressed: () => context.push('/assets/${asset.id}/edit'),
+                          FilterChip(
+                            label: const Text('همه وضعیت‌ها'),
+                            selected: _selectedStatus == null,
+                            onSelected: (_) => setState(() => _selectedStatus = null),
                           ),
-                          const Icon(EneftyIcons.arrow_left_3_outline, size: 18),
+                          const SizedBox(width: 8),
+                          ...AssetStatus.values.map((s) => Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: FilterChip(
+                                  label: Text(s.displayName),
+                                  selected: _selectedStatus == s,
+                                  onSelected: (selected) => setState(() => _selectedStatus = selected ? s : null),
+                                ),
+                              )),
                         ],
                       ),
-                      onTap: () => context.push('/assets/${asset.id}'),
                     ),
-                  );
-                },
-              );
-            },
-            loading: () => const AppLoading(),
-            error: (e, _) => AppErrorState(message: e.toString()),
+                  ],
+                ),
+              ),
+
+              // Asset List
+              Expanded(
+                child: assetsAsync.when(
+                  data: (allAssets) {
+                    final filtered = _filterAssets(allAssets);
+
+                    if (filtered.isEmpty) {
+                      return AppEmptyState(
+                        title: allAssets.isEmpty ? 'هیچ تجهیزی ثبت نشده است' : 'نتیجه‌ای یافت نشد',
+                        message: allAssets.isEmpty ? 'اولین تجهیز کارگاه را اضافه کنید.' : 'فیلترها را تغییر دهید.',
+                        actionLabel: allAssets.isEmpty ? 'افزودن تجهیز' : null,
+                        onActionPressed: allAssets.isEmpty ? () => context.push('/assets/new') : null,
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final asset = filtered[index];
+                        final statusColor = _getStatusColor(asset.status);
+
+                        return Card(
+                          child: InkWell(
+                            onTap: () => context.push('/assets/${asset.id}'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 24,
+                                    backgroundColor: const Color(0xFFDBEAFE),
+                                    child: const Icon(EneftyIcons.cpu_bold, color: Color(0xFF2563EB)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(asset.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                        const SizedBox(height: 4),
+                                        Text('کد: ${asset.code}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 4,
+                                          children: [
+                                            Chip(
+                                              label: Text(asset.status.displayName, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11)),
+                                              backgroundColor: statusColor.withValues(alpha: 0.1),
+                                              side: BorderSide.none,
+                                              padding: EdgeInsets.zero,
+                                              visualDensity: VisualDensity.compact,
+                                            ),
+                                            Chip(
+                                              label: Text(asset.assetType.displayName, style: const TextStyle(fontSize: 11)),
+                                              backgroundColor: Colors.grey.shade100,
+                                              side: BorderSide.none,
+                                              padding: EdgeInsets.zero,
+                                              visualDensity: VisualDensity.compact,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(EneftyIcons.edit_2_outline, color: Color(0xFF2563EB)),
+                                        tooltip: 'ویرایش تجهیز',
+                                        onPressed: () => context.push('/assets/${asset.id}/edit'),
+                                      ),
+                                      const Icon(EneftyIcons.arrow_left_3_outline, size: 18, color: Colors.grey),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const AppLoading(),
+                  error: (e, _) => AppErrorState(message: e.toString()),
+                ),
+              ),
+            ],
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/assets/new'),
