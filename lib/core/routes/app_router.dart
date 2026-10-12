@@ -1,165 +1,183 @@
 import 'package:go_router/go_router.dart';
-
-import '../storage/key_value_storage.dart';
+import '../../features/alerts/screens/alerts_screen.dart';
+import '../../features/assets/screens/asset_detail_screen.dart';
+import '../../features/assets/screens/asset_form_screen.dart';
+import '../../features/assets/screens/asset_list_screen.dart';
+import '../../features/assets/screens/asset_readings_screen.dart';
+import '../../features/assets/screens/asset_tree_screen.dart';
+import '../../features/dashboard/screens/dashboard_screen.dart';
+import '../../features/facilities/screens/facility_setup_screen.dart';
+import '../../features/facilities/screens/location_form_screen.dart';
+import '../../features/facilities/screens/location_list_screen.dart';
+import '../../features/inventory/screens/inventory_item_detail_screen.dart';
+import '../../features/inventory/screens/inventory_item_form_screen.dart';
+import '../../features/inventory/screens/inventory_list_screen.dart';
+import '../../features/inventory/screens/stock_adjustment_screen.dart';
+import '../../features/maintenance/screens/maintenance_plan_form_screen.dart';
+import '../../features/maintenance/screens/maintenance_plan_list_screen.dart';
+import '../../features/purchases/screens/purchase_order_detail_screen.dart';
+import '../../features/purchases/screens/purchase_order_form_screen.dart';
+import '../../features/purchases/screens/purchase_order_list_screen.dart';
+import '../../features/purchases/screens/receive_purchase_screen.dart';
+import '../../features/settings/screens/settings_screen.dart';
+import '../../features/work_orders/screens/complete_task_screen.dart';
+import '../../features/work_orders/screens/work_order_detail_screen.dart';
+import '../../features/work_orders/screens/work_order_form_screen.dart';
+import '../../features/work_orders/screens/work_order_list_screen.dart';
+import '../widgets/app_scaffold_shell.dart';
 
 final router = GoRouter(
-  initialLocation: KeyValueStorage.instance.isFirstRun ? '/onboarding' : '/',
+  initialLocation: '/',
   routes: [
-    // GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
-    // GoRoute(
-    //     path: '/initial-setup', builder: (_, _) => const InitialSetupScreen()),
-    // GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
-    // GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
-    // GoRoute(path: '/backup', builder: (_, _) => const BackupScreen()),
-    // // Business
-    // GoRoute(
-    //   path: '/business/edit',
-    //   builder: (context, state) => const EditBusinessScreen(),
-    // ),
-    // // Materials & Inventory
-    // GoRoute(
-    //   path: '/materials',
-    //   builder: (context, state) => MaterialListScreen(
-    //     onAddMaterialPressed: () => context.push('/materials/add'),
-    //     onEditMaterialPressed: (material) =>
-    //         context.push('/materials/edit', extra: material),
-    //   ),
-    //   routes: [
-    //     GoRoute(
-    //       path: 'add',
-    //       builder: (context, state) => const AddMaterialScreen(),
-    //     ),
-    //     GoRoute(
-    //       path: 'edit',
-    //       builder: (context, state) {
-    //         final material = state.extra as RawMaterial?;
-    //         return AddMaterialScreen(materialToEdit: material);
-    //       },
-    //     ),
-    //   ],
-    // ),
-    // // Products
-    // GoRoute(
-    //   path: '/products',
-    //   builder: (context, state) => ProductListScreen(
-    //     onAddProductPressed: () => context.push('/products/add'),
-    //     onEditProductPressed: (product) =>
-    //         context.push('/products/edit', extra: product),
-    //   ),
-    //   routes: [
-    //     GoRoute(
-    //       path: 'add',
-    //       builder: (context, state) => const AddProductScreen(),
-    //     ),
-    //     GoRoute(
-    //       path: 'edit',
-    //       builder: (context, state) {
-    //         final product = state.extra as Product?;
-    //         return AddProductScreen(productToEdit: product);
-    //       },
-    //     ),
-    //   ],
-    // ),
-    // // Categories
-    // GoRoute(
-    //   path: '/categories',
-    //   builder: (context, state) => CategoryListScreen(
-    //     onAddCategoryPressed: () => context.push('/categories/add'),
-    //     onEditCategoryPressed: (category) =>
-    //         context.push('/categories/edit', extra: category),
-    //   ),
-    //   routes: [
-    //     GoRoute(
-    //       path: 'add',
-    //       builder: (context, state) => const AddCategoryScreen(),
-    //     ),
-    //     GoRoute(
-    //       path: 'edit',
-    //       builder: (context, state) {
-    //         final category = state.extra as Category?;
-    //         return AddCategoryScreen(categoryToEdit: category);
-    //       },
-    //     ),
-    //   ],
-    // ),
-    // // Expenses
-    // GoRoute(
-    //   path: '/expenses',
-    //   builder: (context, state) => ExpenseListScreen(
-    //     onAddExpensePressed: () => context.push('/expenses/add'),
-    //     onEditExpensePressed: (expense) =>
-    //         context.push('/expenses/edit', extra: expense),
-    //   ),
-    //   routes: [
-    //     GoRoute(
-    //       path: 'add',
-    //       builder: (context, state) {
-    //         final initialDate = state.extra as DateTime?;
-    //         return AddExpenseScreen(initialDate: initialDate);
-    //       },
-    //     ),
-    //     GoRoute(
-    //       path: 'edit',
-    //       builder: (context, state) {
-    //         final expense = state.extra as Expense?;
-    //         return AddExpenseScreen(expenseToEdit: expense);
-    //       },
-    //     ),
-    //   ],
-    // ),
-    // // Sales
-    // GoRoute(
-    //   path: '/sales',
-    //   builder: (context, state) => SaleListScreen(
-    //     onAddSalePressed: () => context.push('/sales/add'),
-    //     onEditSalePressed: (sale) => context.push('/sales/edit', extra: sale),
-    //   ),
-    //   routes: [
-    //     GoRoute(
-    //       path: 'add',
-    //       builder: (context, state) {
-    //         final initialDate = state.extra as DateTime?;
-    //         return AddSaleScreen(initialDate: initialDate);
-    //       },
-    //     ),
-    //     GoRoute(
-    //       path: 'edit',
-    //       builder: (context, state) {
-    //         final sale = state.extra as Sale?;
-    //         return AddSaleScreen(saleToEdit: sale);
-    //       },
-    //     ),
-    //   ],
-    // ),
-    // // Purchases
-    // GoRoute(
-    //   path: '/purchases',
-    //   builder: (context, state) => PurchaseListScreen(
-    //     onAddPurchasePressed: () => context.push('/purchases/add'),
-    //     onEditPurchasePressed: (purchase) =>
-    //         context.push('/purchases/edit', extra: purchase),
-    //   ),
-    //   routes: [
-    //     GoRoute(
-    //       path: 'add',
-    //       builder: (context, state) {
-    //         final initialDate = state.extra as DateTime?;
-    //         return AddPurchaseScreen(initialDate: initialDate);
-    //       },
-    //     ),
-    //     GoRoute(
-    //       path: 'edit',
-    //       builder: (context, state) {
-    //         final purchase = state.extra as Purchase?;
-    //         return AddPurchaseScreen(purchaseToEdit: purchase);
-    //       },
-    //     ),
-    //   ],
-    // ),
-    // // Settings
-    // GoRoute(
-    //   path: '/settings',
-    //   builder: (context, state) => const SettingsScreen(),
-    // ),
+    GoRoute(
+      path: '/setup/facility',
+      builder: (_, __) => const FacilitySetupScreen(),
+    ),
+    ShellRoute(
+      builder: (context, state, child) {
+        return AppScaffoldShell(
+          location: state.uri.path,
+          child: child,
+        );
+      },
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => const DashboardScreen(),
+        ),
+        // Assets
+        GoRoute(
+          path: '/assets',
+          builder: (_, __) => const AssetListScreen(),
+        ),
+        GoRoute(
+          path: '/assets/new',
+          builder: (_, __) => const AssetFormScreen(),
+        ),
+        GoRoute(
+          path: '/assets/tree',
+          builder: (_, __) => const AssetTreeScreen(),
+        ),
+        GoRoute(
+          path: '/assets/:id',
+          builder: (_, state) => AssetDetailScreen(assetId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/assets/:id/edit',
+          builder: (_, state) => AssetFormScreen(assetId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/assets/:id/readings',
+          builder: (_, state) => AssetReadingsScreen(assetId: state.pathParameters['id']!),
+        ),
+        // Locations
+        GoRoute(
+          path: '/locations',
+          builder: (_, __) => const LocationListScreen(),
+        ),
+        GoRoute(
+          path: '/locations/new',
+          builder: (_, __) => const LocationFormScreen(),
+        ),
+        GoRoute(
+          path: '/locations/:id/edit',
+          builder: (_, state) => LocationFormScreen(locationId: state.pathParameters['id']!),
+        ),
+        // Maintenance Plans
+        GoRoute(
+          path: '/maintenance-plans',
+          builder: (_, __) => const MaintenancePlanListScreen(),
+        ),
+        GoRoute(
+          path: '/maintenance-plans/new',
+          builder: (_, state) {
+            final assetId = state.uri.queryParameters['assetId'] ?? '';
+            return MaintenancePlanFormScreen(assetId: assetId);
+          },
+        ),
+        GoRoute(
+          path: '/maintenance-plans/:id/edit',
+          builder: (_, state) {
+            final assetId = state.uri.queryParameters['assetId'] ?? '';
+            return MaintenancePlanFormScreen(assetId: assetId, planId: state.pathParameters['id']!);
+          },
+        ),
+        // Work Orders
+        GoRoute(
+          path: '/work-orders',
+          builder: (_, __) => const WorkOrderListScreen(),
+        ),
+        GoRoute(
+          path: '/work-orders/new',
+          builder: (_, __) => const WorkOrderFormScreen(),
+        ),
+        GoRoute(
+          path: '/work-orders/:id',
+          builder: (_, state) => WorkOrderDetailScreen(workOrderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/work-orders/:id/edit',
+          builder: (_, state) => WorkOrderFormScreen(workOrderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/work-orders/:id/tasks/:taskId/complete',
+          builder: (_, state) => CompleteTaskScreen(
+            workOrderId: state.pathParameters['id']!,
+            taskId: state.pathParameters['taskId']!,
+          ),
+        ),
+        // Inventory
+        GoRoute(
+          path: '/inventory',
+          builder: (_, __) => const InventoryListScreen(),
+        ),
+        GoRoute(
+          path: '/inventory/new',
+          builder: (_, __) => const InventoryItemFormScreen(),
+        ),
+        GoRoute(
+          path: '/inventory/adjustment',
+          builder: (_, __) => const StockAdjustmentScreen(),
+        ),
+        GoRoute(
+          path: '/inventory/:id',
+          builder: (_, state) => InventoryItemDetailScreen(itemId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/inventory/:id/edit',
+          builder: (_, state) => InventoryItemFormScreen(itemId: state.pathParameters['id']!),
+        ),
+        // Purchases
+        GoRoute(
+          path: '/purchases',
+          builder: (_, __) => const PurchaseOrderListScreen(),
+        ),
+        GoRoute(
+          path: '/purchases/new',
+          builder: (_, __) => const PurchaseOrderFormScreen(),
+        ),
+        GoRoute(
+          path: '/purchases/:id',
+          builder: (_, state) => PurchaseOrderDetailScreen(purchaseOrderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/purchases/:id/edit',
+          builder: (_, state) => PurchaseOrderFormScreen(purchaseOrderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/purchases/:id/receive',
+          builder: (_, state) => ReceivePurchaseScreen(purchaseOrderId: state.pathParameters['id']!),
+        ),
+        // Alerts & Settings
+        GoRoute(
+          path: '/alerts',
+          builder: (_, __) => const AlertsScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (_, __) => const SettingsScreen(),
+        ),
+      ],
+    ),
   ],
 );

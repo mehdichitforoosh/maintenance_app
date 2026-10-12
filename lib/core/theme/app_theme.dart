@@ -12,18 +12,34 @@ class AppTheme {
       seedColor: AppColors.primary,
       brightness: Brightness.light,
       surface: Colors.white,
-      onSurface: const Color(0xFF1A1A1A),
+      onSurface: const Color(0xFF0F172A),
     );
 
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       fontFamily: GoogleFonts.vazirmatn().fontFamily,
-      scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+      scaffoldBackgroundColor: AppColors.backgroundLight,
       cardColor: Colors.white,
       colorScheme: colorScheme,
       textTheme: AppTextTheme.lightTextTheme,
       inputDecorationTheme: AppTextTheme.lightInputDecorationTheme,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Color(0xFF0F172A),
+        elevation: 0,
+        centerTitle: true,
+        scrolledUnderElevation: 1,
+      ),
+      cardTheme: const CardThemeData(
+        color: Colors.white,
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12.0)),
+          side: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+        ),
+        margin: EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+      ),
       bottomAppBarTheme: const BottomAppBarThemeData(
         color: Colors.white,
         elevation: 8,
@@ -84,6 +100,22 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: AppTextTheme.darkTextTheme,
       inputDecorationTheme: AppTextTheme.darkInputDecorationTheme,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E1E1E),
+        foregroundColor: Color(0xFFE0E0E0),
+        elevation: 0,
+        centerTitle: true,
+        scrolledUnderElevation: 1,
+      ),
+      cardTheme: const CardThemeData(
+        color: Color(0xFF1E1E1E),
+        elevation: 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12.0)),
+          side: BorderSide(color: Color(0xFF334155), width: 1),
+        ),
+        margin: EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+      ),
       bottomAppBarTheme: const BottomAppBarThemeData(
         color: Color(0xFF1E1E1E),
         elevation: 8,
