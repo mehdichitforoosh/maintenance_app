@@ -39,6 +39,7 @@ class LocationRepository {
     required String name,
     String? code,
     String? description,
+    bool isActive = true,
   }) async {
     final db = await _dbHelper.db;
 
@@ -58,6 +59,7 @@ class LocationRepository {
       name: name,
       code: code,
       description: description,
+      isActive: isActive,
       createdAt: now,
       updatedAt: now,
     );
@@ -68,18 +70,20 @@ class LocationRepository {
 
   Future<Location> updateLocation(Location location, {String? parentLocationId}) async {
     final db = await _dbHelper.db;
-    if (parentLocationId != null) {
-      if (parentLocationId == location.id) {
+    final targetParentId = parentLocationId ?? location.parentLocationId;
+
+    if (targetParentId != null) {
+      if (targetParentId == location.id) {
         throw ArgumentError('مکان نمی‌تواند والد خودش باشد.');
       }
-      final parent = await getLocationById(parentLocationId);
+      final parent = await getLocationById(targetParentId);
       if (parent == null || parent.facilityId != location.facilityId) {
         throw ArgumentError('مکان والد نامعتبر است.');
       }
     }
 
     final updated = location.copyWith(
-      parentLocationId: parentLocationId ?? location.parentLocationId,
+      parentLocationId: targetParentId,
       updatedAt: AppDateUtils.nowUtcIso(),
     );
 

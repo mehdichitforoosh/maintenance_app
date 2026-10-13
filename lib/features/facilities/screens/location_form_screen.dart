@@ -20,6 +20,9 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
   final _descController = TextEditingController();
+
+  String? _selectedParentLocationId;
+  bool _isActive = true;
   bool _isLoading = false;
   Location? _existingLocation;
 
@@ -41,6 +44,8 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
         _nameController.text = loc.name;
         _codeController.text = loc.code ?? '';
         _descController.text = loc.description ?? '';
+        _selectedParentLocationId = loc.parentLocationId;
+        _isActive = loc.isActive;
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -66,17 +71,21 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
 
       if (_existingLocation != null) {
         final updated = _existingLocation!.copyWith(
+          parentLocationId: _selectedParentLocationId,
           name: _nameController.text.trim(),
           code: _codeController.text.trim().isEmpty ? null : _codeController.text.trim(),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          isActive: _isActive,
         );
-        await repo.updateLocation(updated);
+        await repo.updateLocation(updated, parentLocationId: _selectedParentLocationId);
       } else {
         await repo.createLocation(
           facilityId: facility.id,
+          parentLocationId: _selectedParentLocationId,
           name: _nameController.text.trim(),
           code: _codeController.text.trim().isEmpty ? null : _codeController.text.trim(),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          isActive: _isActive,
         );
       }
 
@@ -94,6 +103,7 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.locationId != null;
+    final facilityAsync = ref.watch(primaryFacilityProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -124,6 +134,54 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Parent Location Selector
+              facilityAsync.when(
+                data: (facility) {
+                  if (facility == null) return const SizedBox.shrink();
+                  final locationsAsync = ref.watch(locationsProvider(facility.id));
+                  return locationsAsync.when(
+                    data: (locations) {
+                      final candidates = locations.where((loc) => loc.id != widget.locationId).toList();
+                      return DropdownButtonFormField<String?>(
+                        initialValue: _selectedParentLocationId,
+                        decoration: const InputDecoration(
+                          labelText: 'موقعیت والد (در صورت وجود)',
+                          prefixIcon: Icon(EneftyIcons.hierarchy_bold),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(value: null, child: Text('اصلی (بدون والد)')),
+                          ...candidates.map((loc) => DropdownMenuItem<String?>(value: loc.id, child: Text(loc.name))),
+                        ],
+                        onChanged: (v) => setState(() => _selectedParentLocationId = v),
+                      );
+                    },
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+
+              // Active Switch
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  value: _isActive,
+                  onChanged: (v) => setState(() => _isActive = v),
+                  title: const Text('وضعیت فعال بودن موقعیت', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: Text(_isActive ? 'موقعیت فعال و قابل انتخاب است' : 'موقعیت غیرفعال شده است'),
+                  secondary: Icon(
+                    _isActive ? EneftyIcons.tick_circle_bold : EneftyIcons.close_circle_bold,
+                    color: _isActive ? Colors.green : Colors.grey,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               TextFormField(
                 controller: _descController,
                 decoration: const InputDecoration(

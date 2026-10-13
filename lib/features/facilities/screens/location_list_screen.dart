@@ -5,13 +5,54 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_search_filter_bar.dart';
+import '../models/location.dart';
 import '../providers/facility_providers.dart';
 
-class LocationListScreen extends ConsumerWidget {
+class LocationListScreen extends ConsumerStatefulWidget {
   const LocationListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LocationListScreen> createState() => _LocationListScreenState();
+}
+
+class _LocationListScreenState extends ConsumerState<LocationListScreen> {
+  final _searchController = TextEditingController();
+  SortOrder _sortOrder = SortOrder.nameAsc;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Location> _filterAndSortLocations(List<Location> locations) {
+    final query = _searchController.text.trim().toLowerCase();
+    var filtered = locations.where((loc) {
+      return query.isEmpty ||
+          loc.name.toLowerCase().contains(query) ||
+          (loc.code != null && loc.code!.toLowerCase().contains(query));
+    }).toList();
+
+    switch (_sortOrder) {
+      case SortOrder.nameAsc:
+        filtered.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case SortOrder.nameDesc:
+        filtered.sort((a, b) => b.name.compareTo(a.name));
+        break;
+      case SortOrder.dateNewest:
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case SortOrder.dateOldest:
+        filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+    }
+    return filtered;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final facilityAsync = ref.watch(primaryFacilityProvider);
 
     return facilityAsync.when(
@@ -22,56 +63,91 @@ class LocationListScreen extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text('موقعیت‌ها و سالن‌ها', style: TextStyle(fontWeight: FontWeight.bold)),
+            actions: [
+              IconButton(
+                icon: const Icon(EneftyIcons.chart_2_outline),
+                tooltip: 'نمایش درختی موقعیت‌ها',
+                onPressed: () => context.push('/locations/tree'),
+              ),
+            ],
           ),
-          body: locationsAsync.when(
-            data: (locations) {
-              if (locations.isEmpty) {
-                return AppEmptyState(
-                  title: 'موقعیتی ثبت نشده است',
-                  message: 'برای دسته‌بندی تجهیزات، موقعیت جدید اضافه کنید.',
-                  actionLabel: 'افزودن موقعیت',
-                  onActionPressed: () => context.push('/locations/new'),
-                );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: locations.length,
-                itemBuilder: (context, index) {
-                  final loc = locations[index];
-                  return Card(
-                    child: InkWell(
-                      onTap: () => context.push('/locations/${loc.id}/edit'),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 22,
-                              backgroundColor: Color(0xFFE0F2FE),
-                              child: Icon(EneftyIcons.location_bold, color: Color(0xFF0284C7), size: 22),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+          body: Column(
+            children: [
+              AppSearchFilterBar(
+                searchController: _searchController,
+                hintText: 'جستجوی موقعیت با نام یا کد...',
+                onChanged: () => setState(() {}),
+                currentSortOrder: _sortOrder,
+                onSortOrderChanged: (newSort) => setState(() => _sortOrder = newSort),
+              ),
+
+              // Location List
+              Expanded(
+                child: locationsAsync.when(
+                  data: (allLocations) {
+                    final filtered = _filterAndSortLocations(allLocations);
+
+                    if (filtered.isEmpty) {
+                      return AppEmptyState(
+                        title: allLocations.isEmpty ? 'موقعیتی ثبت نشده است' : 'نتیجه‌ای یافت نشد',
+                        message: allLocations.isEmpty ? 'برای دسته‌بندی تجهیزات، موقعیت جدید اضافه کنید.' : 'عبارت دیگری را جستجو کنید.',
+                        actionLabel: allLocations.isEmpty ? 'افزودن موقعیت' : null,
+                        onActionPressed: allLocations.isEmpty ? () => context.push('/locations/new') : null,
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final loc = filtered[index];
+                        final isActive = loc.isActive;
+
+                        return Card(
+                          child: InkWell(
+                            onTap: () => context.push('/locations/${loc.id}/edit'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
                                 children: [
-                                  Text(loc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                  const SizedBox(height: 4),
-                                  Text(loc.code != null ? 'کد موقعیت: ${loc.code}' : 'بدون کد', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                  CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: const Color(0xFFE0F2FE),
+                                    child: const Icon(EneftyIcons.location_bold, color: Color(0xFF0284C7), size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(loc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                        const SizedBox(height: 4),
+                                        Text(loc.code != null ? 'کد موقعیت: ${loc.code}' : 'بدون کد', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                        const SizedBox(height: 8),
+                                        Chip(
+                                          label: Text(isActive ? 'فعال' : 'غیرفعال', style: TextStyle(color: isActive ? Colors.green : Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
+                                          backgroundColor: (isActive ? Colors.green : Colors.grey).withValues(alpha: 0.1),
+                                          side: BorderSide.none,
+                                          padding: EdgeInsets.zero,
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-            loading: () => const AppLoading(),
-            error: (e, _) => AppErrorState(message: e.toString()),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const AppLoading(),
+                  error: (e, _) => AppErrorState(message: e.toString()),
+                ),
+              ),
+            ],
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/locations/new'),

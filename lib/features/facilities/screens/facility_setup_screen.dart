@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/storage/key_value_storage.dart';
 import '../../../core/utils/validators.dart';
+import '../models/facility.dart';
 import '../providers/facility_providers.dart';
 
 class FacilitySetupScreen extends ConsumerStatefulWidget {
@@ -19,6 +20,23 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
   final _descController = TextEditingController();
   final _addressController = TextEditingController();
   bool _isLoading = false;
+  Facility? _existingFacility;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingFacility();
+  }
+
+  Future<void> _loadExistingFacility() async {
+    final facility = await ref.read(primaryFacilityProvider.future);
+    if (facility != null && mounted) {
+      _existingFacility = facility;
+      _nameController.text = facility.name;
+      _descController.text = facility.description ?? '';
+      _addressController.text = facility.address ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -34,23 +52,37 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
 
     try {
       final repo = ref.read(facilityRepositoryProvider);
-      await repo.createFacility(
-        name: _nameController.text.trim(),
-        description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-      );
+
+      if (_existingFacility != null) {
+        final updated = _existingFacility!.copyWith(
+          name: _nameController.text.trim(),
+          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+        );
+        await repo.updateFacility(updated);
+      } else {
+        await repo.createFacility(
+          name: _nameController.text.trim(),
+          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+        );
+      }
 
       await KeyValueStorage.instance.setOnboardingCompleted();
       ref.invalidate(primaryFacilityProvider);
       await ref.read(primaryFacilityProvider.future);
 
       if (mounted) {
-        context.go('/');
+        if (_existingFacility != null) {
+          context.pop();
+        } else {
+          context.go('/');
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطا در ایجاد کارگاه: $e')),
+          SnackBar(content: Text('خطا در ذخیره مشخصات کارگاه: $e')),
         );
       }
     } finally {
@@ -60,9 +92,11 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = _existingFacility != null;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('راه‌اندازی کارگاه / کارخانه', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(isEditing ? 'ویرایش مشخصات کارگاه' : 'راه‌اندازی کارگاه / کارخانه', style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -79,13 +113,13 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'خوش آمدید به سیستم نگهداری و تعمیرات (CMMS)',
+                  isEditing ? 'ویرایش اطلاعات عمومی کارگاه' : 'خوش آمدید به سیستم نگهداری و تعمیرات (CMMS)',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'لطفاً مشخصات کارگاه یا کارخانه خود را جهت شروع کار ثبت کنید.',
+                  isEditing ? 'می‌توانید نام، آدرس و توضیحات کارگاه خود را تغییر دهید.' : 'لطفاً مشخصات کارگاه یا کارخانه خود را جهت شروع کار ثبت کنید.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
                   textAlign: TextAlign.center,
                 ),
@@ -121,11 +155,11 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                 ),
                 const SizedBox(height: 32),
                 FilledButton.icon(
-                  icon: _isLoading ? const SizedBox.shrink() : const Icon(EneftyIcons.tick_circle_bold),
+                  icon: _isLoading ? const SizedBox.shrink() : Icon(isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.tick_circle_bold),
                   onPressed: _isLoading ? null : _submit,
                   label: _isLoading
                       ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('ذخیره و ورود به سیستم', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      : Text(isEditing ? 'بروزرسانی کارگاه' : 'ذخیره و ورود به سیستم', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

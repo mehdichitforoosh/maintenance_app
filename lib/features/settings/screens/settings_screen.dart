@@ -46,6 +46,11 @@ class SettingsScreen extends ConsumerWidget {
                               ],
                             ),
                           ),
+                          IconButton(
+                            icon: const Icon(EneftyIcons.edit_2_outline, color: Color(0xFF2563EB)),
+                            tooltip: 'ویرایش مشخصات کارگاه',
+                            onPressed: () => context.push('/setup/facility'),
+                          ),
                         ],
                       ),
                       if (facility?.description != null && facility!.description!.isNotEmpty) ...[

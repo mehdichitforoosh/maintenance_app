@@ -9,6 +9,7 @@ import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/facilities/screens/facility_setup_screen.dart';
 import '../../features/facilities/screens/location_form_screen.dart';
 import '../../features/facilities/screens/location_list_screen.dart';
+import '../../features/facilities/screens/location_tree_screen.dart';
 import '../../features/inventory/screens/inventory_item_detail_screen.dart';
 import '../../features/inventory/screens/inventory_item_form_screen.dart';
 import '../../features/inventory/screens/inventory_list_screen.dart';
@@ -84,6 +85,10 @@ final router = GoRouter(
         GoRoute(
           path: '/locations/new',
           builder: (_, __) => const LocationFormScreen(),
+        ),
+        GoRoute(
+          path: '/locations/tree',
+          builder: (_, __) => const LocationTreeScreen(),
         ),
         GoRoute(
           path: '/locations/:id/edit',
