@@ -40,6 +40,76 @@ class AppTheme {
         ),
         margin: EdgeInsets.symmetric(vertical: 6, horizontal: 0),
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'VazirmatnFD',
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'VazirmatnFD',
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: const Color(0xFFDBEAFE),
+        elevation: 8,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1D4ED8),
+              fontFamily: 'VazirmatnFD',
+            );
+          }
+          return TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontFamily: 'VazirmatnFD',
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(
+              size: 24,
+              color: Color(0xFF1D4ED8),
+            );
+          }
+          return IconThemeData(
+            size: 22,
+            color: Colors.grey.shade600,
+          );
+        }),
+      ),
       bottomAppBarTheme: const BottomAppBarThemeData(
         color: Colors.white,
         elevation: 8,
@@ -115,6 +185,64 @@ class AppTheme {
           side: BorderSide(color: Color(0xFF334155), width: 1),
         ),
         margin: EdgeInsets.symmetric(vertical: 6, horizontal: 0),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'VazirmatnFD',
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: 'VazirmatnFD',
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: const Color(0xFF1E1E1E),
+        indicatorColor: const Color(0xFF1E3A8A),
+        elevation: 8,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'VazirmatnFD',
+            );
+          }
+          return TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade400,
+            fontFamily: 'VazirmatnFD',
+          );
+        }),
       ),
       bottomAppBarTheme: const BottomAppBarThemeData(
         color: Color(0xFF1E1E1E),

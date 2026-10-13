@@ -1,4 +1,5 @@
 import 'package:enefty_icons/enefty_icons.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -66,6 +67,7 @@ class _DashboardContent extends ConsumerWidget {
           ref.invalidate(dashboardSummaryProvider(facilityId));
           ref.invalidate(dashboardTodayTasksProvider(facilityId));
           ref.invalidate(lowStockItemsProvider);
+          ref.invalidate(dashboardWorkOrderStatusProvider(facilityId));
         },
         child: ListView(
           padding: const EdgeInsets.all(16.0),
@@ -112,6 +114,85 @@ class _DashboardContent extends ConsumerWidget {
               ),
               loading: () => const SizedBox(height: 150, child: AppLoading()),
               error: (e, _) => Text('خطا در بارگذاری خلاصه: $e'),
+            ),
+            const SizedBox(height: 24),
+
+            // Analytics Chart Report (fl_chart)
+            const SectionHeader(title: 'گزارش تحلیلی وضعیت دستورکارها'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('توزيع وضعیت دستورکارها در کارگاه', style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 200,
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final statusAsync = ref.watch(dashboardWorkOrderStatusProvider(facilityId));
+                          return statusAsync.when(
+                            data: (statusCounts) {
+                              if (statusCounts.isEmpty) {
+                                return const Center(child: Text('داده‌ای برای نمایش نمودار وجود ندارد.'));
+                              }
+                              final openCount = statusCounts['OPEN'] ?? 0;
+                              final inProgCount = statusCounts['IN_PROGRESS'] ?? 0;
+                              final completedCount = statusCounts['COMPLETED'] ?? 0;
+                              final cancelledCount = statusCounts['CANCELLED'] ?? 0;
+                              final maxY = [openCount, inProgCount, completedCount, cancelledCount].reduce((a, b) => a > b ? a : b).toDouble();
+
+                              return BarChart(
+                                BarChartData(
+                                  alignment: BarChartAlignment.spaceAround,
+                                  maxY: maxY == 0 ? 5 : maxY + 2,
+                                  barTouchData: BarTouchData(enabled: true),
+                                  titlesData: FlTitlesData(
+                                    show: true,
+                                    bottomTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        getTitlesWidget: (value, meta) {
+                                          switch (value.toInt()) {
+                                            case 0:
+                                              return const Text('باز', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold));
+                                            case 1:
+                                              return const Text('جریان', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold));
+                                            case 2:
+                                              return const Text('تکمیل', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold));
+                                            case 3:
+                                              return const Text('لغو', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold));
+                                            default:
+                                              return const Text('');
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  ),
+                                  gridData: const FlGridData(show: false),
+                                  borderData: FlBorderData(show: false),
+                                  barGroups: [
+                                    BarChartGroupData(x: 0, barRods: [BarChartRodData(toY: openCount.toDouble(), color: const Color(0xFF2563EB), width: 24, borderRadius: BorderRadius.circular(6))]),
+                                    BarChartGroupData(x: 1, barRods: [BarChartRodData(toY: inProgCount.toDouble(), color: const Color(0xFFD97706), width: 24, borderRadius: BorderRadius.circular(6))]),
+                                    BarChartGroupData(x: 2, barRods: [BarChartRodData(toY: completedCount.toDouble(), color: Colors.green, width: 24, borderRadius: BorderRadius.circular(6))]),
+                                    BarChartGroupData(x: 3, barRods: [BarChartRodData(toY: cancelledCount.toDouble(), color: Colors.red, width: 24, borderRadius: BorderRadius.circular(6))]),
+                                  ],
+                                ),
+                              );
+                            },
+                            loading: () => const AppLoading(),
+                            error: (e, _) => Text('خطا در بارگذاری نمودار: $e'),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 24),
 

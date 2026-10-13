@@ -15,3 +15,8 @@ final dashboardTodayTasksProvider = FutureProvider.family<List<Map<String, dynam
   final repo = ref.watch(dashboardRepositoryProvider);
   return repo.getTodayTasks(facilityId);
 });
+
+final dashboardWorkOrderStatusProvider = FutureProvider.family<Map<String, int>, String>((ref, facilityId) async {
+  final repo = ref.watch(dashboardRepositoryProvider);
+  return repo.getWorkOrderStatusDistribution(facilityId);
+});

@@ -1,6 +1,6 @@
+import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:enefty_icons/enefty_icons.dart';
 
 class AppScaffoldShell extends StatelessWidget {
   final Widget child;
@@ -48,36 +48,53 @@ class AppScaffoldShell extends StatelessWidget {
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (index) => _onItemTapped(context, index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(EneftyIcons.home_2_outline),
-            selectedIcon: Icon(EneftyIcons.home_2_bold),
-            label: 'داشبورد',
-          ),
-          NavigationDestination(
-            icon: Icon(EneftyIcons.cpu_outline),
-            selectedIcon: Icon(EneftyIcons.cpu_bold),
-            label: 'تجهیزات',
-          ),
-          NavigationDestination(
-            icon: Icon(EneftyIcons.document_text_outline),
-            selectedIcon: Icon(EneftyIcons.document_text_bold),
-            label: 'دستورات کار',
-          ),
-          NavigationDestination(
-            icon: Icon(EneftyIcons.box_outline),
-            selectedIcon: Icon(EneftyIcons.box_bold),
-            label: 'انبار',
-          ),
-          NavigationDestination(
-            icon: Icon(EneftyIcons.setting_2_outline),
-            selectedIcon: Icon(EneftyIcons.setting_2_bold),
-            label: 'تنظیمات',
-          ),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: currentIndex,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: const Color(0xFFDBEAFE),
+          elevation: 0,
+          height: 65,
+          onDestinationSelected: (index) => _onItemTapped(context, index),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(EneftyIcons.home_2_outline),
+              selectedIcon: Icon(EneftyIcons.home_2_bold, color: Color(0xFF1D4ED8)),
+              label: 'داشبورد',
+            ),
+            NavigationDestination(
+              icon: Icon(EneftyIcons.cpu_outline),
+              selectedIcon: Icon(EneftyIcons.cpu_bold, color: Color(0xFF1D4ED8)),
+              label: 'تجهیزات',
+            ),
+            NavigationDestination(
+              icon: Icon(EneftyIcons.document_text_outline),
+              selectedIcon: Icon(EneftyIcons.document_text_bold, color: Color(0xFF1D4ED8)),
+              label: 'دستورات کار',
+            ),
+            NavigationDestination(
+              icon: Icon(EneftyIcons.box_outline),
+              selectedIcon: Icon(EneftyIcons.box_bold, color: Color(0xFF1D4ED8)),
+              label: 'انبار',
+            ),
+            NavigationDestination(
+              icon: Icon(EneftyIcons.setting_2_outline),
+              selectedIcon: Icon(EneftyIcons.setting_2_bold, color: Color(0xFF1D4ED8)),
+              label: 'تنظیمات',
+            ),
+          ],
+        ),
       ),
     );
   }

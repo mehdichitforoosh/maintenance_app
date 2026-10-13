@@ -72,6 +72,22 @@ class DashboardRepository {
     };
   }
 
+  Future<Map<String, int>> getWorkOrderStatusDistribution(String facilityId) async {
+    final db = await _dbHelper.db;
+    final results = await db.rawQuery('''
+      SELECT ${WorkOrderTable.status}, COUNT(*) as count
+      FROM ${WorkOrderTable.tableName}
+      WHERE ${WorkOrderTable.facilityId} = ? AND ${WorkOrderTable.deletedAt} IS NULL
+      GROUP BY ${WorkOrderTable.status}
+    ''', [facilityId]);
+
+    final map = <String, int>{};
+    for (final r in results) {
+      map[r[WorkOrderTable.status] as String] = (r['count'] as num).toInt();
+    }
+    return map;
+  }
+
   Future<List<Map<String, dynamic>>> getTodayTasks(String facilityId) async {
     final db = await _dbHelper.db;
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
@@ -81,7 +97,7 @@ class DashboardRepository {
       FROM ${WorkOrderTaskTable.tableName} t
       JOIN ${WorkOrderTable.tableName} w ON t.${WorkOrderTaskTable.workOrderId} = w.${WorkOrderTable.id}
       JOIN ${AssetTable.tableName} a ON t.${WorkOrderTaskTable.assetId} = a.${AssetTable.id}
-      WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} LIKE ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTaskTable.deletedAt} IS NULL
+      WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} LIKE ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTable.deletedAt} IS NULL
     ''', [facilityId, '$todayStr%']);
     return results;
   }
