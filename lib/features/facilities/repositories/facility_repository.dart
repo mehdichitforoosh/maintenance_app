@@ -1,9 +1,11 @@
 import '../../../core/storage/database/database_helper.dart';
+import '../../../core/storage/database/tables/facility_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../models/facility.dart';
 
 class FacilityRepository {
+  static const String _tableName = FacilityTable.tableName;
   final DatabaseHelper _dbHelper;
 
   FacilityRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
@@ -11,8 +13,8 @@ class FacilityRepository {
   Future<Facility?> getPrimaryFacility() async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'facilities',
-      where: 'deleted_at IS NULL',
+      _tableName,
+      where: '${FacilityTable.deletedAt} IS NULL',
       limit: 1,
     );
     if (results.isEmpty) return null;
@@ -41,7 +43,7 @@ class FacilityRepository {
       updatedAt: now,
     );
 
-    await db.insert('facilities', facility.toMap());
+    await db.insert(_tableName, facility.toMap());
     return facility;
   }
 
@@ -51,9 +53,9 @@ class FacilityRepository {
       updatedAt: AppDateUtils.nowUtcIso(),
     );
     await db.update(
-      'facilities',
+      _tableName,
       updated.toMap(),
-      where: 'id = ?',
+      where: '${FacilityTable.id} = ?',
       whereArgs: [facility.id],
     );
     return updated;

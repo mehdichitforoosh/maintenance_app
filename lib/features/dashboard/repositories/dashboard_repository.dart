@@ -1,4 +1,9 @@
 import '../../../core/storage/database/database_helper.dart';
+import '../../../core/storage/database/tables/asset_table.dart';
+import '../../../core/storage/database/tables/inventory_item_table.dart';
+import '../../../core/storage/database/tables/stock_transaction_table.dart';
+import '../../../core/storage/database/tables/work_order_table.dart';
+import '../../../core/storage/database/tables/work_order_task_table.dart';
 
 class DashboardRepository {
   final DatabaseHelper _dbHelper;
@@ -11,48 +16,48 @@ class DashboardRepository {
 
     // 1. Due today tasks
     final dueTodayRes = await db.rawQuery('''
-      SELECT COUNT(t.id) as count
-      FROM work_order_tasks t
-      JOIN work_orders w ON t.work_order_id = w.id
-      WHERE w.facility_id = ? AND t.status = 'PENDING' AND t.planned_due_at LIKE ? AND t.deleted_at IS NULL AND w.deleted_at IS NULL
+      SELECT COUNT(t.${WorkOrderTaskTable.id}) as count
+      FROM ${WorkOrderTaskTable.tableName} t
+      JOIN ${WorkOrderTable.tableName} w ON t.${WorkOrderTaskTable.workOrderId} = w.${WorkOrderTable.id}
+      WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} LIKE ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTable.deletedAt} IS NULL
     ''', [facilityId, '$todayStr%']);
     final dueToday = (dueTodayRes.first['count'] as num).toInt();
 
     // 2. Overdue tasks
     final overdueRes = await db.rawQuery('''
-      SELECT COUNT(t.id) as count
-      FROM work_order_tasks t
-      JOIN work_orders w ON t.work_order_id = w.id
-      WHERE w.facility_id = ? AND t.status = 'PENDING' AND t.planned_due_at < ? AND t.deleted_at IS NULL AND w.deleted_at IS NULL
+      SELECT COUNT(t.${WorkOrderTaskTable.id}) as count
+      FROM ${WorkOrderTaskTable.tableName} t
+      JOIN ${WorkOrderTable.tableName} w ON t.${WorkOrderTaskTable.workOrderId} = w.${WorkOrderTable.id}
+      WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} < ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTable.deletedAt} IS NULL
     ''', [facilityId, todayStr]);
     final overdue = (overdueRes.first['count'] as num).toInt();
 
     // 3. Open work orders
     final openWoRes = await db.rawQuery('''
-      SELECT COUNT(id) as count
-      FROM work_orders
-      WHERE facility_id = ? AND status IN ('OPEN', 'IN_PROGRESS', 'ON_HOLD') AND deleted_at IS NULL
+      SELECT COUNT(${WorkOrderTable.id}) as count
+      FROM ${WorkOrderTable.tableName}
+      WHERE ${WorkOrderTable.facilityId} = ? AND ${WorkOrderTable.status} IN ('OPEN', 'IN_PROGRESS', 'ON_HOLD') AND ${WorkOrderTable.deletedAt} IS NULL
     ''', [facilityId]);
     final openWorkOrders = (openWoRes.first['count'] as num).toInt();
 
     // 4. Low-stock items
     final items = await db.rawQuery('''
-      SELECT i.id, i.minimum_stock,
+      SELECT i.${InventoryItemTable.id}, i.${InventoryItemTable.minimumStock},
       COALESCE((
         SELECT SUM(
           CASE 
-            WHEN transaction_type IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN quantity
-            WHEN transaction_type IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -quantity
+            WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
+            WHEN ${StockTransactionTable.transactionType} IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -${StockTransactionTable.quantity}
             ELSE 0 
           END
-        ) FROM stock_transactions WHERE item_id = i.id AND deleted_at IS NULL
+        ) FROM ${StockTransactionTable.tableName} WHERE ${StockTransactionTable.itemId} = i.${InventoryItemTable.id} AND ${StockTransactionTable.deletedAt} IS NULL
       ), 0) as current_stock
-      FROM inventory_items i
-      WHERE i.is_active = 1 AND i.deleted_at IS NULL
+      FROM ${InventoryItemTable.tableName} i
+      WHERE i.${InventoryItemTable.isActive} = 1 AND i.${InventoryItemTable.deletedAt} IS NULL
     ''');
     int lowStockCount = 0;
     for (final row in items) {
-      final minStock = (row['minimum_stock'] as num).toDouble();
+      final minStock = (row[InventoryItemTable.minimumStock] as num).toDouble();
       final currStock = (row['current_stock'] as num).toDouble();
       if (currStock <= minStock) {
         lowStockCount++;
@@ -72,11 +77,11 @@ class DashboardRepository {
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
 
     final results = await db.rawQuery('''
-      SELECT t.*, a.name as asset_name, w.work_order_number
-      FROM work_order_tasks t
-      JOIN work_orders w ON t.work_order_id = w.id
-      JOIN assets a ON t.asset_id = a.id
-      WHERE w.facility_id = ? AND t.status = 'PENDING' AND t.planned_due_at LIKE ? AND t.deleted_at IS NULL AND w.deleted_at IS NULL
+      SELECT t.*, a.${AssetTable.name} as asset_name, w.${WorkOrderTable.workOrderNumber}
+      FROM ${WorkOrderTaskTable.tableName} t
+      JOIN ${WorkOrderTable.tableName} w ON t.${WorkOrderTaskTable.workOrderId} = w.${WorkOrderTable.id}
+      JOIN ${AssetTable.tableName} a ON t.${WorkOrderTaskTable.assetId} = a.${AssetTable.id}
+      WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} LIKE ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTaskTable.deletedAt} IS NULL
     ''', [facilityId, '$todayStr%']);
     return results;
   }

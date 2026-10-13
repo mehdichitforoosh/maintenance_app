@@ -1,10 +1,12 @@
 import '../../../core/enums/app_enums.dart';
 import '../../../core/storage/database/database_helper.dart';
+import '../../../core/storage/database/tables/asset_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../models/asset.dart';
 
 class AssetRepository {
+  static const String _tableName = AssetTable.tableName;
   final DatabaseHelper _dbHelper;
 
   AssetRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
@@ -16,28 +18,28 @@ class AssetRepository {
     AssetStatus? status,
   }) async {
     final db = await _dbHelper.db;
-    var where = 'facility_id = ? AND deleted_at IS NULL';
+    var where = '${AssetTable.facilityId} = ? AND ${AssetTable.deletedAt} IS NULL';
     var args = <dynamic>[facilityId];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      where += ' AND (name LIKE ? OR code LIKE ?)';
+      where += ' AND (${AssetTable.name} LIKE ? OR ${AssetTable.code} LIKE ?)';
       args.add('%${searchQuery.trim()}%');
       args.add('%${searchQuery.trim()}%');
     }
     if (locationId != null && locationId.isNotEmpty) {
-      where += ' AND location_id = ?';
+      where += ' AND ${AssetTable.locationId} = ?';
       args.add(locationId);
     }
     if (status != null) {
-      where += ' AND status = ?';
+      where += ' AND ${AssetTable.status} = ?';
       args.add(status.toDbString());
     }
 
     final results = await db.query(
-      'assets',
+      _tableName,
       where: where,
       whereArgs: args,
-      orderBy: 'name ASC',
+      orderBy: '${AssetTable.name} ASC',
     );
     return results.map((m) => Asset.fromMap(m)).toList();
   }
@@ -45,8 +47,8 @@ class AssetRepository {
   Future<Asset?> getAssetById(String id) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'assets',
-      where: 'id = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${AssetTable.id} = ? AND ${AssetTable.deletedAt} IS NULL',
       whereArgs: [id],
       limit: 1,
     );
@@ -57,10 +59,10 @@ class AssetRepository {
   Future<List<Asset>> getChildAssets(String parentAssetId) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'assets',
-      where: 'parent_asset_id = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${AssetTable.parentAssetId} = ? AND ${AssetTable.deletedAt} IS NULL',
       whereArgs: [parentAssetId],
-      orderBy: 'name ASC',
+      orderBy: '${AssetTable.name} ASC',
     );
     return results.map((m) => Asset.fromMap(m)).toList();
   }
@@ -85,8 +87,8 @@ class AssetRepository {
 
     // Check code uniqueness within facility
     final existing = await db.query(
-      'assets',
-      where: 'facility_id = ? AND code = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${AssetTable.facilityId} = ? AND ${AssetTable.code} = ? AND ${AssetTable.deletedAt} IS NULL',
       whereArgs: [facilityId, code],
       limit: 1,
     );
@@ -124,7 +126,7 @@ class AssetRepository {
       updatedAt: now,
     );
 
-    await db.insert('assets', asset.toMap());
+    await db.insert(_tableName, asset.toMap());
     return asset;
   }
 
@@ -133,8 +135,8 @@ class AssetRepository {
 
     // Check code uniqueness
     final existing = await db.query(
-      'assets',
-      where: 'facility_id = ? AND code = ? AND id != ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${AssetTable.facilityId} = ? AND ${AssetTable.code} = ? AND ${AssetTable.id} != ? AND ${AssetTable.deletedAt} IS NULL',
       whereArgs: [asset.facilityId, asset.code, asset.id],
       limit: 1,
     );
@@ -147,9 +149,9 @@ class AssetRepository {
     );
 
     await db.update(
-      'assets',
+      _tableName,
       updated.toMap(),
-      where: 'id = ?',
+      where: '${AssetTable.id} = ?',
       whereArgs: [asset.id],
     );
     return updated;
@@ -159,9 +161,9 @@ class AssetRepository {
     final db = await _dbHelper.db;
     final now = AppDateUtils.nowUtcIso();
     await db.update(
-      'assets',
-      {'deleted_at': now, 'updated_at': now},
-      where: 'id = ?',
+      _tableName,
+      {AssetTable.deletedAt: now, AssetTable.updatedAt: now},
+      where: '${AssetTable.id} = ?',
       whereArgs: [id],
     );
   }

@@ -1,12 +1,16 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/storage/database/database_helper.dart';
+import '../../../core/storage/database/tables/asset_table.dart';
+import '../../../core/storage/database/tables/maintenance_plan_material_table.dart';
+import '../../../core/storage/database/tables/maintenance_plan_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../models/maintenance_plan.dart';
 import '../models/maintenance_plan_material.dart';
 
 class MaintenancePlanRepository {
+  static const String _tableName = MaintenancePlanTable.tableName;
   final DatabaseHelper _dbHelper;
 
   MaintenancePlanRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
@@ -14,10 +18,10 @@ class MaintenancePlanRepository {
   Future<List<MaintenancePlan>> getPlans(String assetId) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'maintenance_plans',
-      where: 'asset_id = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${MaintenancePlanTable.assetId} = ? AND ${MaintenancePlanTable.deletedAt} IS NULL',
       whereArgs: [assetId],
-      orderBy: 'title ASC',
+      orderBy: '${MaintenancePlanTable.title} ASC',
     );
     return results.map((m) => MaintenancePlan.fromMap(m)).toList();
   }
@@ -25,9 +29,9 @@ class MaintenancePlanRepository {
   Future<List<MaintenancePlan>> getAllActivePlans(String facilityId) async {
     final db = await _dbHelper.db;
     final results = await db.rawQuery('''
-      SELECT p.* FROM maintenance_plans p
-      JOIN assets a ON p.asset_id = a.id
-      WHERE a.facility_id = ? AND p.is_active = 1 AND p.deleted_at IS NULL AND a.deleted_at IS NULL
+      SELECT p.* FROM $_tableName p
+      JOIN ${AssetTable.tableName} a ON p.${MaintenancePlanTable.assetId} = a.${AssetTable.id}
+      WHERE a.${AssetTable.facilityId} = ? AND p.${MaintenancePlanTable.isActive} = 1 AND p.${MaintenancePlanTable.deletedAt} IS NULL AND a.${AssetTable.deletedAt} IS NULL
     ''', [facilityId]);
     return results.map((m) => MaintenancePlan.fromMap(m)).toList();
   }
@@ -35,8 +39,8 @@ class MaintenancePlanRepository {
   Future<MaintenancePlan?> getPlanById(String id) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'maintenance_plans',
-      where: 'id = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${MaintenancePlanTable.id} = ? AND ${MaintenancePlanTable.deletedAt} IS NULL',
       whereArgs: [id],
       limit: 1,
     );
@@ -96,7 +100,7 @@ class MaintenancePlanRepository {
       updatedAt: now,
     );
 
-    await db.insert('maintenance_plans', plan.toMap());
+    await db.insert(_tableName, plan.toMap());
     return plan;
   }
 
@@ -104,9 +108,9 @@ class MaintenancePlanRepository {
     final db = await _dbHelper.db;
     final updated = plan.copyWith(updatedAt: AppDateUtils.nowUtcIso());
     await db.update(
-      'maintenance_plans',
+      _tableName,
       updated.toMap(),
-      where: 'id = ?',
+      where: '${MaintenancePlanTable.id} = ?',
       whereArgs: [plan.id],
     );
     return updated;
@@ -116,9 +120,9 @@ class MaintenancePlanRepository {
     final db = await _dbHelper.db;
     final now = AppDateUtils.nowUtcIso();
     await db.update(
-      'maintenance_plans',
-      {'deleted_at': now, 'updated_at': now},
-      where: 'id = ?',
+      _tableName,
+      {MaintenancePlanTable.deletedAt: now, MaintenancePlanTable.updatedAt: now},
+      where: '${MaintenancePlanTable.id} = ?',
       whereArgs: [id],
     );
   }
@@ -126,8 +130,8 @@ class MaintenancePlanRepository {
   Future<List<MaintenancePlanMaterial>> getPlanMaterials(String planId) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'maintenance_plan_materials',
-      where: 'maintenance_plan_id = ? AND deleted_at IS NULL',
+      MaintenancePlanMaterialTable.tableName,
+      where: '${MaintenancePlanMaterialTable.maintenancePlanId} = ? AND ${MaintenancePlanMaterialTable.deletedAt} IS NULL',
       whereArgs: [planId],
     );
     return results.map((m) => MaintenancePlanMaterial.fromMap(m)).toList();
@@ -142,16 +146,16 @@ class MaintenancePlanRepository {
     final db = await _dbHelper.db;
     final now = AppDateUtils.nowUtcIso();
     await db.insert(
-      'maintenance_plan_materials',
+      MaintenancePlanMaterialTable.tableName,
       {
-        'id': IdGenerator.generate(),
-        'maintenance_plan_id': planId,
-        'item_id': itemId,
-        'planned_quantity': plannedQuantity,
-        'notes': notes,
-        'created_at': now,
-        'updated_at': now,
-        'sync_status': 'pending',
+        MaintenancePlanMaterialTable.id: IdGenerator.generate(),
+        MaintenancePlanMaterialTable.maintenancePlanId: planId,
+        MaintenancePlanMaterialTable.itemId: itemId,
+        MaintenancePlanMaterialTable.plannedQuantity: plannedQuantity,
+        MaintenancePlanMaterialTable.notes: notes,
+        MaintenancePlanMaterialTable.createdAt: now,
+        MaintenancePlanMaterialTable.updatedAt: now,
+        MaintenancePlanMaterialTable.syncStatus: 'pending',
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );

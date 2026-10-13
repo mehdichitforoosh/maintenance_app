@@ -1,5 +1,10 @@
 import '../../../core/enums/app_enums.dart';
 import '../../../core/storage/database/database_helper.dart';
+import '../../../core/storage/database/tables/maintenance_plan_table.dart';
+import '../../../core/storage/database/tables/stock_transaction_table.dart';
+import '../../../core/storage/database/tables/work_order_material_table.dart';
+import '../../../core/storage/database/tables/work_order_table.dart';
+import '../../../core/storage/database/tables/work_order_task_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../models/work_order.dart';
@@ -8,29 +13,30 @@ import '../models/work_order_task.dart';
 import '../../maintenance/models/maintenance_plan.dart';
 
 class WorkOrderRepository {
+  static const String _tableName = WorkOrderTable.tableName;
   final DatabaseHelper _dbHelper;
 
   WorkOrderRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
 
   Future<List<WorkOrder>> getWorkOrders(String facilityId, {WorkOrderStatus? status, WorkOrderType? type}) async {
     final db = await _dbHelper.db;
-    var where = 'facility_id = ? AND deleted_at IS NULL';
+    var where = '${WorkOrderTable.facilityId} = ? AND ${WorkOrderTable.deletedAt} IS NULL';
     var args = <dynamic>[facilityId];
 
     if (status != null) {
-      where += ' AND status = ?';
+      where += ' AND ${WorkOrderTable.status} = ?';
       args.add(status.toDbString());
     }
     if (type != null) {
-      where += ' AND work_order_type = ?';
+      where += ' AND ${WorkOrderTable.workOrderType} = ?';
       args.add(type.toDbString());
     }
 
     final results = await db.query(
-      'work_orders',
+      _tableName,
       where: where,
       whereArgs: args,
-      orderBy: 'created_at DESC',
+      orderBy: '${WorkOrderTable.createdAt} DESC',
     );
     return results.map((m) => WorkOrder.fromMap(m)).toList();
   }
@@ -38,8 +44,8 @@ class WorkOrderRepository {
   Future<WorkOrder?> getWorkOrderById(String id) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'work_orders',
-      where: 'id = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${WorkOrderTable.id} = ? AND ${WorkOrderTable.deletedAt} IS NULL',
       whereArgs: [id],
       limit: 1,
     );
@@ -50,8 +56,8 @@ class WorkOrderRepository {
   Future<List<WorkOrderTask>> getTasksForWorkOrder(String workOrderId) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'work_order_tasks',
-      where: 'work_order_id = ? AND deleted_at IS NULL',
+      WorkOrderTaskTable.tableName,
+      where: '${WorkOrderTaskTable.workOrderId} = ? AND ${WorkOrderTaskTable.deletedAt} IS NULL',
       whereArgs: [workOrderId],
     );
     return results.map((m) => WorkOrderTask.fromMap(m)).toList();
@@ -60,8 +66,8 @@ class WorkOrderRepository {
   Future<List<WorkOrderMaterial>> getMaterialsForTask(String taskId) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'work_order_materials',
-      where: 'work_order_task_id = ? AND deleted_at IS NULL',
+      WorkOrderMaterialTable.tableName,
+      where: '${WorkOrderMaterialTable.workOrderTaskId} = ? AND ${WorkOrderMaterialTable.deletedAt} IS NULL',
       whereArgs: [taskId],
     );
     return results.map((m) => WorkOrderMaterial.fromMap(m)).toList();
@@ -98,21 +104,21 @@ class WorkOrderRepository {
     );
 
     await db.transaction((txn) async {
-      await txn.insert('work_orders', workOrder.toMap());
+      await txn.insert(_tableName, workOrder.toMap());
 
       if (initialTasks != null) {
         for (final t in initialTasks) {
-          await txn.insert('work_order_tasks', {
-            'id': IdGenerator.generate(),
-            'work_order_id': id,
-            'asset_id': t['asset_id'],
-            'title': t['title'],
-            'description': t['description'],
-            'activity_type': t['activity_type'] ?? 'INSPECTION',
-            'status': 'PENDING',
-            'created_at': now,
-            'updated_at': now,
-            'sync_status': 'pending',
+          await txn.insert(WorkOrderTaskTable.tableName, {
+            WorkOrderTaskTable.id: IdGenerator.generate(),
+            WorkOrderTaskTable.workOrderId: id,
+            WorkOrderTaskTable.assetId: t['asset_id'],
+            WorkOrderTaskTable.title: t['title'],
+            WorkOrderTaskTable.description: t['description'],
+            WorkOrderTaskTable.activityType: t['activity_type'] ?? 'INSPECTION',
+            WorkOrderTaskTable.status: 'PENDING',
+            WorkOrderTaskTable.createdAt: now,
+            WorkOrderTaskTable.updatedAt: now,
+            WorkOrderTaskTable.syncStatus: 'pending',
           });
         }
       }
@@ -125,9 +131,9 @@ class WorkOrderRepository {
     final db = await _dbHelper.db;
     final updated = order.copyWith(updatedAt: AppDateUtils.nowUtcIso());
     await db.update(
-      'work_orders',
+      _tableName,
       updated.toMap(),
-      where: 'id = ?',
+      where: '${WorkOrderTable.id} = ?',
       whereArgs: [order.id],
     );
     return updated;
@@ -143,18 +149,18 @@ class WorkOrderRepository {
   }) async {
     final db = await _dbHelper.db;
     final now = AppDateUtils.nowUtcIso();
-    await db.insert('work_order_tasks', {
-      'id': IdGenerator.generate(),
-      'work_order_id': workOrderId,
-      'asset_id': assetId,
-      'title': title,
-      'description': description,
-      'activity_type': activityType.toDbString(),
-      'status': 'PENDING',
-      'planned_due_at': plannedDueAt,
-      'created_at': now,
-      'updated_at': now,
-      'sync_status': 'pending',
+    await db.insert(WorkOrderTaskTable.tableName, {
+      WorkOrderTaskTable.id: IdGenerator.generate(),
+      WorkOrderTaskTable.workOrderId: workOrderId,
+      WorkOrderTaskTable.assetId: assetId,
+      WorkOrderTaskTable.title: title,
+      WorkOrderTaskTable.description: description,
+      WorkOrderTaskTable.activityType: activityType.toDbString(),
+      WorkOrderTaskTable.status: 'PENDING',
+      WorkOrderTaskTable.plannedDueAt: plannedDueAt,
+      WorkOrderTaskTable.createdAt: now,
+      WorkOrderTaskTable.updatedAt: now,
+      WorkOrderTaskTable.syncStatus: 'pending',
     });
   }
 
@@ -171,7 +177,7 @@ class WorkOrderRepository {
 
     await db.transaction((txn) async {
       // 1. Fetch task
-      final taskMaps = await txn.query('work_order_tasks', where: 'id = ?', whereArgs: [taskId], limit: 1);
+      final taskMaps = await txn.query(WorkOrderTaskTable.tableName, where: '${WorkOrderTaskTable.id} = ?', whereArgs: [taskId], limit: 1);
       if (taskMaps.isEmpty) throw ArgumentError('وظیفه یافت نشد.');
       final task = WorkOrderTask.fromMap(taskMaps.first);
 
@@ -186,13 +192,13 @@ class WorkOrderRepository {
           final stockRes = await txn.rawQuery('''
             SELECT COALESCE(SUM(
               CASE 
-                WHEN transaction_type IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN quantity
-                WHEN transaction_type IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -quantity
+                WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
+                WHEN ${StockTransactionTable.transactionType} IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -${StockTransactionTable.quantity}
                 ELSE 0 
               END
             ), 0) as current_stock
-            FROM stock_transactions
-            WHERE item_id = ? AND deleted_at IS NULL
+            FROM ${StockTransactionTable.tableName}
+            WHERE ${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL
           ''', [itemId]);
 
           final currentStock = (stockRes.first['current_stock'] as num).toDouble();
@@ -202,52 +208,52 @@ class WorkOrderRepository {
 
           // Insert work_order_material record
           final womId = IdGenerator.generate();
-          await txn.insert('work_order_materials', {
-            'id': womId,
-            'work_order_task_id': taskId,
-            'item_id': itemId,
-            'actual_quantity': qty,
-            'unit_cost_at_use': cost,
-            'created_at': nowIso,
-            'updated_at': nowIso,
-            'sync_status': 'pending',
+          await txn.insert(WorkOrderMaterialTable.tableName, {
+            WorkOrderMaterialTable.id: womId,
+            WorkOrderMaterialTable.workOrderTaskId: taskId,
+            WorkOrderMaterialTable.itemId: itemId,
+            WorkOrderMaterialTable.actualQuantity: qty,
+            WorkOrderMaterialTable.unitCostAtUse: cost,
+            WorkOrderMaterialTable.createdAt: nowIso,
+            WorkOrderMaterialTable.updatedAt: nowIso,
+            WorkOrderMaterialTable.syncStatus: 'pending',
           });
 
           // Insert stock transaction (MAINTENANCE_CONSUMPTION)
-          await txn.insert('stock_transactions', {
-            'id': IdGenerator.generate(),
-            'item_id': itemId,
-            'transaction_type': 'MAINTENANCE_CONSUMPTION',
-            'quantity': qty,
-            'unit_cost': cost,
-            'transaction_date': nowIso,
-            'work_order_material_id': womId,
-            'created_at': nowIso,
-            'updated_at': nowIso,
-            'sync_status': 'pending',
+          await txn.insert(StockTransactionTable.tableName, {
+            StockTransactionTable.id: IdGenerator.generate(),
+            StockTransactionTable.itemId: itemId,
+            StockTransactionTable.transactionType: 'MAINTENANCE_CONSUMPTION',
+            StockTransactionTable.quantity: qty,
+            StockTransactionTable.unitCost: cost,
+            StockTransactionTable.transactionDate: nowIso,
+            StockTransactionTable.workOrderMaterialId: womId,
+            StockTransactionTable.createdAt: nowIso,
+            StockTransactionTable.updatedAt: nowIso,
+            StockTransactionTable.syncStatus: 'pending',
           });
         }
       }
 
       // 3. Update task status
       await txn.update(
-        'work_order_tasks',
+        WorkOrderTaskTable.tableName,
         {
-          'status': 'COMPLETED',
-          'result': result.toDbString(),
-          'findings': findings,
-          'labor_minutes': laborMinutes,
-          'downtime_minutes': downtimeMinutes,
-          'completed_at': nowIso,
-          'updated_at': nowIso,
+          WorkOrderTaskTable.status: 'COMPLETED',
+          WorkOrderTaskTable.result: result.toDbString(),
+          WorkOrderTaskTable.findings: findings,
+          WorkOrderTaskTable.laborMinutes: laborMinutes,
+          WorkOrderTaskTable.downtimeMinutes: downtimeMinutes,
+          WorkOrderTaskTable.completedAt: nowIso,
+          WorkOrderTaskTable.updatedAt: nowIso,
         },
-        where: 'id = ?',
+        where: '${WorkOrderTaskTable.id} = ?',
         whereArgs: [taskId],
       );
 
       // 4. If task came from maintenance plan, update plan schedule
       if (task.maintenancePlanId != null) {
-        final planMaps = await txn.query('maintenance_plans', where: 'id = ?', whereArgs: [task.maintenancePlanId], limit: 1);
+        final planMaps = await txn.query(MaintenancePlanTable.tableName, where: '${MaintenancePlanTable.id} = ?', whereArgs: [task.maintenancePlanId], limit: 1);
         if (planMaps.isNotEmpty) {
           final plan = MaintenancePlan.fromMap(planMaps.first);
           if (plan.scheduleType == ScheduleType.calendar && plan.calendarIntervalValue != null && plan.calendarIntervalUnit != null) {
@@ -255,13 +261,13 @@ class WorkOrderRepository {
               AppDateUtils.addCalendarInterval(DateTime.now(), plan.calendarIntervalValue!, plan.calendarIntervalUnit!.toDbString()),
             );
             await txn.update(
-              'maintenance_plans',
+              MaintenancePlanTable.tableName,
               {
-                'last_completed_at': nowIso,
-                'next_due_at': nextDue,
-                'updated_at': nowIso,
+                MaintenancePlanTable.lastCompletedAt: nowIso,
+                MaintenancePlanTable.nextDueAt: nextDue,
+                MaintenancePlanTable.updatedAt: nowIso,
               },
-              where: 'id = ?',
+              where: '${MaintenancePlanTable.id} = ?',
               whereArgs: [plan.id],
             );
           }
@@ -270,20 +276,20 @@ class WorkOrderRepository {
 
       // 5. Check if work order can be completed (if all tasks are completed)
       final remainingTasks = await txn.query(
-        'work_order_tasks',
-        where: 'work_order_id = ? AND status NOT IN (?, ?) AND deleted_at IS NULL',
+        WorkOrderTaskTable.tableName,
+        where: '${WorkOrderTaskTable.workOrderId} = ? AND ${WorkOrderTaskTable.status} NOT IN (?, ?) AND ${WorkOrderTaskTable.deletedAt} IS NULL',
         whereArgs: [task.workOrderId, 'COMPLETED', 'CANCELLED'],
       );
 
       if (remainingTasks.isEmpty) {
         await txn.update(
-          'work_orders',
+          _tableName,
           {
-            'status': 'COMPLETED',
-            'completed_at': nowIso,
-            'updated_at': nowIso,
+            WorkOrderTable.status: 'COMPLETED',
+            WorkOrderTable.completedAt: nowIso,
+            WorkOrderTable.updatedAt: nowIso,
           },
-          where: 'id = ?',
+          where: '${WorkOrderTable.id} = ?',
           whereArgs: [task.workOrderId],
         );
       }
@@ -296,8 +302,8 @@ class WorkOrderRepository {
 
     // Verify no open tasks remain
     final openTasks = await db.query(
-      'work_order_tasks',
-      where: 'work_order_id = ? AND status NOT IN (?, ?, ?) AND deleted_at IS NULL',
+      WorkOrderTaskTable.tableName,
+      where: '${WorkOrderTaskTable.workOrderId} = ? AND ${WorkOrderTaskTable.status} NOT IN (?, ?, ?) AND ${WorkOrderTaskTable.deletedAt} IS NULL',
       whereArgs: [workOrderId, 'COMPLETED', 'SKIPPED', 'CANCELLED'],
     );
 
@@ -306,14 +312,14 @@ class WorkOrderRepository {
     }
 
     await db.update(
-      'work_orders',
+      _tableName,
       {
-        'status': 'COMPLETED',
-        'closed_at': nowIso,
-        'completed_at': nowIso,
-        'updated_at': nowIso,
+        WorkOrderTable.status: 'COMPLETED',
+        WorkOrderTable.closedAt: nowIso,
+        WorkOrderTable.completedAt: nowIso,
+        WorkOrderTable.updatedAt: nowIso,
       },
-      where: 'id = ?',
+      where: '${WorkOrderTable.id} = ?',
       whereArgs: [workOrderId],
     );
   }

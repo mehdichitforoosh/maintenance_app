@@ -15,6 +15,7 @@ import '../../features/inventory/screens/inventory_list_screen.dart';
 import '../../features/inventory/screens/stock_adjustment_screen.dart';
 import '../../features/maintenance/screens/maintenance_plan_form_screen.dart';
 import '../../features/maintenance/screens/maintenance_plan_list_screen.dart';
+import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/purchases/screens/purchase_order_detail_screen.dart';
 import '../../features/purchases/screens/purchase_order_form_screen.dart';
 import '../../features/purchases/screens/purchase_order_list_screen.dart';
@@ -24,11 +25,16 @@ import '../../features/work_orders/screens/complete_task_screen.dart';
 import '../../features/work_orders/screens/work_order_detail_screen.dart';
 import '../../features/work_orders/screens/work_order_form_screen.dart';
 import '../../features/work_orders/screens/work_order_list_screen.dart';
+import '../storage/key_value_storage.dart';
 import '../widgets/app_scaffold_shell.dart';
 
 final router = GoRouter(
-  initialLocation: '/',
+  initialLocation: KeyValueStorage.instance.isFirstRun ? '/onboarding' : '/',
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      builder: (_, __) => const OnboardingScreen(),
+    ),
     GoRoute(
       path: '/setup/facility',
       builder: (_, __) => const FacilitySetupScreen(),

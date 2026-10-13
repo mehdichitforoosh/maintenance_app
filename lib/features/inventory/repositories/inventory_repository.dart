@@ -1,36 +1,39 @@
 import '../../../core/enums/app_enums.dart';
 import '../../../core/storage/database/database_helper.dart';
+import '../../../core/storage/database/tables/inventory_item_table.dart';
+import '../../../core/storage/database/tables/stock_transaction_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../models/inventory_item.dart';
 import '../models/stock_transaction.dart';
 
 class InventoryRepository {
+  static const String _tableName = InventoryItemTable.tableName;
   final DatabaseHelper _dbHelper;
 
   InventoryRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
 
   Future<List<InventoryItem>> getItems({String? searchQuery, bool activeOnly = true}) async {
     final db = await _dbHelper.db;
-    var where = 'deleted_at IS NULL';
+    var where = '${InventoryItemTable.deletedAt} IS NULL';
     var args = <dynamic>[];
 
     if (activeOnly) {
-      where += ' AND is_active = 1';
+      where += ' AND ${InventoryItemTable.isActive} = 1';
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      where += ' AND (name LIKE ? OR code LIKE ?)';
+      where += ' AND (${InventoryItemTable.name} LIKE ? OR ${InventoryItemTable.code} LIKE ?)';
       args.add('%${searchQuery.trim()}%');
       args.add('%${searchQuery.trim()}%');
     }
 
-    final results = await db.query('inventory_items', where: where, whereArgs: args, orderBy: 'name ASC');
+    final results = await db.query(_tableName, where: where, whereArgs: args, orderBy: '${InventoryItemTable.name} ASC');
     return results.map((m) => InventoryItem.fromMap(m)).toList();
   }
 
   Future<InventoryItem?> getItemById(String id) async {
     final db = await _dbHelper.db;
-    final results = await db.query('inventory_items', where: 'id = ? AND deleted_at IS NULL', whereArgs: [id], limit: 1);
+    final results = await db.query(_tableName, where: '${InventoryItemTable.id} = ? AND ${InventoryItemTable.deletedAt} IS NULL', whereArgs: [id], limit: 1);
     if (results.isEmpty) return null;
     return InventoryItem.fromMap(results.first);
   }
@@ -40,13 +43,13 @@ class InventoryRepository {
     final res = await db.rawQuery('''
       SELECT COALESCE(SUM(
         CASE 
-          WHEN transaction_type IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN quantity
-          WHEN transaction_type IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -quantity
+          WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
+          WHEN ${StockTransactionTable.transactionType} IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -${StockTransactionTable.quantity}
           ELSE 0 
         END
       ), 0) as current_stock
-      FROM stock_transactions
-      WHERE item_id = ? AND deleted_at IS NULL
+      FROM ${StockTransactionTable.tableName}
+      WHERE ${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL
     ''', [itemId]);
     return (res.first['current_stock'] as num).toDouble();
   }
@@ -58,14 +61,14 @@ class InventoryRepository {
       COALESCE((
         SELECT SUM(
           CASE 
-            WHEN transaction_type IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN quantity
-            WHEN transaction_type IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -quantity
+            WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
+            WHEN ${StockTransactionTable.transactionType} IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -${StockTransactionTable.quantity}
             ELSE 0 
           END
-        ) FROM stock_transactions WHERE item_id = i.id AND deleted_at IS NULL
+        ) FROM ${StockTransactionTable.tableName} WHERE ${StockTransactionTable.itemId} = i.${InventoryItemTable.id} AND ${StockTransactionTable.deletedAt} IS NULL
       ), 0) as current_stock
-      FROM inventory_items i
-      WHERE i.is_active = 1 AND i.deleted_at IS NULL
+      FROM $_tableName i
+      WHERE i.${InventoryItemTable.isActive} = 1 AND i.${InventoryItemTable.deletedAt} IS NULL
     ''');
 
     final lowStock = <Map<String, dynamic>>[];
@@ -105,7 +108,7 @@ class InventoryRepository {
       updatedAt: now,
     );
 
-    await db.insert('inventory_items', item.toMap());
+    await db.insert(_tableName, item.toMap());
     return item;
   }
 
@@ -113,9 +116,9 @@ class InventoryRepository {
     final db = await _dbHelper.db;
     final updated = item.copyWith(updatedAt: AppDateUtils.nowUtcIso());
     await db.update(
-      'inventory_items',
+      _tableName,
       updated.toMap(),
-      where: 'id = ?',
+      where: '${InventoryItemTable.id} = ?',
       whereArgs: [item.id],
     );
     return updated;
@@ -140,13 +143,13 @@ class InventoryRepository {
         final stockRes = await txn.rawQuery('''
           SELECT COALESCE(SUM(
             CASE 
-              WHEN transaction_type IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN quantity
-              WHEN transaction_type IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -quantity
+              WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
+              WHEN ${StockTransactionTable.transactionType} IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -${StockTransactionTable.quantity}
               ELSE 0 
             END
           ), 0) as current_stock
-          FROM stock_transactions
-          WHERE item_id = ? AND deleted_at IS NULL
+          FROM ${StockTransactionTable.tableName}
+          WHERE ${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL
         ''', [itemId]);
         final currentStock = (stockRes.first['current_stock'] as num).toDouble();
         if (currentStock < quantity) {
@@ -154,17 +157,17 @@ class InventoryRepository {
         }
       }
 
-      await txn.insert('stock_transactions', {
-        'id': IdGenerator.generate(),
-        'item_id': itemId,
-        'transaction_type': type.toDbString(),
-        'quantity': quantity,
-        'unit_cost': unitCost,
-        'transaction_date': nowIso,
-        'notes': notes,
-        'created_at': nowIso,
-        'updated_at': nowIso,
-        'sync_status': 'pending',
+      await txn.insert(StockTransactionTable.tableName, {
+        StockTransactionTable.id: IdGenerator.generate(),
+        StockTransactionTable.itemId: itemId,
+        StockTransactionTable.transactionType: type.toDbString(),
+        StockTransactionTable.quantity: quantity,
+        StockTransactionTable.unitCost: unitCost,
+        StockTransactionTable.transactionDate: nowIso,
+        StockTransactionTable.notes: notes,
+        StockTransactionTable.createdAt: nowIso,
+        StockTransactionTable.updatedAt: nowIso,
+        StockTransactionTable.syncStatus: 'pending',
       });
     });
   }
@@ -172,10 +175,10 @@ class InventoryRepository {
   Future<List<StockTransaction>> getStockTransactions(String itemId) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'stock_transactions',
-      where: 'item_id = ? AND deleted_at IS NULL',
+      StockTransactionTable.tableName,
+      where: '${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL',
       whereArgs: [itemId],
-      orderBy: 'transaction_date DESC',
+      orderBy: '${StockTransactionTable.transactionDate} DESC',
     );
     return results.map((m) => StockTransaction.fromMap(m)).toList();
   }

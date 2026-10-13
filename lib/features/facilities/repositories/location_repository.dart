@@ -1,9 +1,11 @@
 import '../../../core/storage/database/database_helper.dart';
+import '../../../core/storage/database/tables/location_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../models/location.dart';
 
 class LocationRepository {
+  static const String _tableName = LocationTable.tableName;
   final DatabaseHelper _dbHelper;
 
   LocationRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
@@ -11,10 +13,10 @@ class LocationRepository {
   Future<List<Location>> getLocations(String facilityId) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'locations',
-      where: 'facility_id = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${LocationTable.facilityId} = ? AND ${LocationTable.deletedAt} IS NULL',
       whereArgs: [facilityId],
-      orderBy: 'name ASC',
+      orderBy: '${LocationTable.name} ASC',
     );
     return results.map((m) => Location.fromMap(m)).toList();
   }
@@ -22,8 +24,8 @@ class LocationRepository {
   Future<Location?> getLocationById(String id) async {
     final db = await _dbHelper.db;
     final results = await db.query(
-      'locations',
-      where: 'id = ? AND deleted_at IS NULL',
+      _tableName,
+      where: '${LocationTable.id} = ? AND ${LocationTable.deletedAt} IS NULL',
       whereArgs: [id],
       limit: 1,
     );
@@ -60,7 +62,7 @@ class LocationRepository {
       updatedAt: now,
     );
 
-    await db.insert('locations', location.toMap());
+    await db.insert(_tableName, location.toMap());
     return location;
   }
 
@@ -82,9 +84,9 @@ class LocationRepository {
     );
 
     await db.update(
-      'locations',
+      _tableName,
       updated.toMap(),
-      where: 'id = ?',
+      where: '${LocationTable.id} = ?',
       whereArgs: [location.id],
     );
     return updated;
@@ -94,9 +96,9 @@ class LocationRepository {
     final db = await _dbHelper.db;
     final now = AppDateUtils.nowUtcIso();
     await db.update(
-      'locations',
-      {'deleted_at': now, 'updated_at': now},
-      where: 'id = ?',
+      _tableName,
+      {LocationTable.deletedAt: now, LocationTable.updatedAt: now},
+      where: '${LocationTable.id} = ?',
       whereArgs: [id],
     );
   }
