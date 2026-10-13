@@ -24,9 +24,24 @@ class _InventoryItemFormScreenState extends ConsumerState<InventoryItemFormScree
   final _minStockController = TextEditingController(text: '5');
   final _costController = TextEditingController();
   final _descController = TextEditingController();
+
   ItemType _itemType = ItemType.consumable;
+  bool _isActive = true;
   bool _isLoading = false;
   InventoryItem? _existingItem;
+
+  static const List<String> _presetUnits = [
+    'کیلوگرم',
+    'عدد',
+    'میلی‌لیتر',
+    'گرم',
+    'لیتر',
+    'بسته',
+    'متر',
+    'رول',
+    'دستگاه',
+    'سایر...',
+  ];
 
   @override
   void initState() {
@@ -50,6 +65,7 @@ class _InventoryItemFormScreenState extends ConsumerState<InventoryItemFormScree
         _costController.text = item.defaultUnitCost?.toString() ?? '';
         _descController.text = item.description ?? '';
         _itemType = item.itemType;
+        _isActive = item.isActive;
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -83,6 +99,7 @@ class _InventoryItemFormScreenState extends ConsumerState<InventoryItemFormScree
           minimumStock: double.tryParse(_minStockController.text.trim()) ?? 0.0,
           defaultUnitCost: _costController.text.trim().isEmpty ? null : double.tryParse(_costController.text.trim()),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          isActive: _isActive,
         );
         await repo.updateItem(updated);
       } else {
@@ -94,6 +111,7 @@ class _InventoryItemFormScreenState extends ConsumerState<InventoryItemFormScree
           minimumStock: double.tryParse(_minStockController.text.trim()) ?? 0.0,
           defaultUnitCost: _costController.text.trim().isEmpty ? null : double.tryParse(_costController.text.trim()),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          isActive: _isActive,
         );
       }
 
@@ -154,16 +172,67 @@ class _InventoryItemFormScreenState extends ConsumerState<InventoryItemFormScree
                 onChanged: (v) => setState(() => _itemType = v ?? ItemType.consumable),
               ),
               const SizedBox(height: 16),
+
+              // Unit Input & Visual Preset Unit Chips (Matching attached image)
               TextFormField(
                 controller: _unitController,
                 decoration: const InputDecoration(
-                  labelText: 'واحد اندازه‌گیری (مثل عدد، کیلوگرم، متر) *',
+                  labelText: 'واحد اندازه‌گیری *',
                   prefixIcon: Icon(EneftyIcons.ruler_bold),
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) => AppValidators.required(v, fieldName: 'واحد اندازه‌گیری'),
               ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _presetUnits.map((u) {
+                  final isSelected = u != 'سایر...' && _unitController.text == u;
+                  return InkWell(
+                    onTap: () {
+                      if (u == 'سایر...') {
+                        _unitController.clear();
+                      } else {
+                        _unitController.text = u;
+                      }
+                      setState(() {});
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFD1FAE5) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFF10B981) : Colors.grey.shade300,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSelected) ...[
+                            const Icon(Icons.check, size: 16, color: Color(0xFF065F46)),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            u,
+                            style: TextStyle(
+                              color: isSelected ? const Color(0xFF065F46) : Colors.grey.shade800,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
               const SizedBox(height: 16),
+
               TextFormField(
                 controller: _minStockController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -185,6 +254,23 @@ class _InventoryItemFormScreenState extends ConsumerState<InventoryItemFormScree
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Active / Inactive Switch
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  value: _isActive,
+                  onChanged: (v) => setState(() => _isActive = v),
+                  title: const Text('وضعیت فعال بودن کالا', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: Text(_isActive ? 'کالا فعال و آماده بهره‌برداری در سیستم است' : 'کالا غیرفعال شده است'),
+                  secondary: Icon(
+                    _isActive ? EneftyIcons.tick_circle_bold : EneftyIcons.close_circle_bold,
+                    color: _isActive ? Colors.green : Colors.grey,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               TextFormField(
                 controller: _descController,
                 decoration: const InputDecoration(

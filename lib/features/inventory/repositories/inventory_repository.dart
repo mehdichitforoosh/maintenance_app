@@ -90,6 +90,7 @@ class InventoryRepository {
     String? description,
     double minimumStock = 0.0,
     double? defaultUnitCost,
+    bool isActive = true,
   }) async {
     final db = await _dbHelper.db;
     final id = IdGenerator.generate();
@@ -104,6 +105,7 @@ class InventoryRepository {
       description: description,
       minimumStock: minimumStock,
       defaultUnitCost: defaultUnitCost,
+      isActive: isActive,
       createdAt: now,
       updatedAt: now,
     );
