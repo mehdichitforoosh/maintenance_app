@@ -39,17 +39,31 @@ class LocationListScreen extends ConsumerWidget {
                 itemBuilder: (context, index) {
                   final loc = locations[index];
                   return Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFE0F2FE),
-                        child: Icon(EneftyIcons.location_bold, color: Color(0xFF0284C7)),
-                      ),
-                      title: Text(loc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(loc.code != null ? 'کد: ${loc.code}' : 'بدون کد'),
-                      trailing: IconButton(
-                        icon: const Icon(EneftyIcons.edit_2_outline, color: Color(0xFF2563EB)),
-                        tooltip: 'ویرایش موقعیت',
-                        onPressed: () => context.push('/locations/${loc.id}/edit'),
+                    child: InkWell(
+                      onTap: () => context.push('/locations/${loc.id}/edit'),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          children: [
+                            const CircleAvatar(
+                              radius: 22,
+                              backgroundColor: Color(0xFFE0F2FE),
+                              child: Icon(EneftyIcons.location_bold, color: Color(0xFF0284C7), size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(loc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                  const SizedBox(height: 4),
+                                  Text(loc.code != null ? 'کد موقعیت: ${loc.code}' : 'بدون کد', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );

@@ -6,6 +6,7 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_search_filter_bar.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_providers.dart';
 
@@ -19,6 +20,7 @@ class InventoryListScreen extends ConsumerStatefulWidget {
 class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
   final _searchController = TextEditingController();
   ItemType? _selectedType;
+  SortOrder _sortOrder = SortOrder.nameAsc;
 
   @override
   void dispose() {
@@ -26,15 +28,31 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
     super.dispose();
   }
 
-  List<InventoryItem> _filterItems(List<InventoryItem> items) {
+  List<InventoryItem> _filterAndSortItems(List<InventoryItem> items) {
     final query = _searchController.text.trim().toLowerCase();
-    return items.where((i) {
+    var filtered = items.where((i) {
       final matchesQuery = query.isEmpty ||
           i.name.toLowerCase().contains(query) ||
           i.code.toLowerCase().contains(query);
       final matchesType = _selectedType == null || i.itemType == _selectedType;
       return matchesQuery && matchesType;
     }).toList();
+
+    switch (_sortOrder) {
+      case SortOrder.nameAsc:
+        filtered.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case SortOrder.nameDesc:
+        filtered.sort((a, b) => b.name.compareTo(a.name));
+        break;
+      case SortOrder.dateNewest:
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case SortOrder.dateOldest:
+        filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+    }
+    return filtered;
   }
 
   @override
@@ -54,54 +72,32 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
       ),
       body: Column(
         children: [
-          // Search & Filter Header
-          Container(
-            color: Theme.of(context).cardColor,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'جستجوی قلم انبار با نام یا کد...',
-                    prefixIcon: const Icon(EneftyIcons.search_normal_outline),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {});
-                            },
-                          )
-                        : null,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          AppSearchFilterBar(
+            searchController: _searchController,
+            hintText: 'جستجوی قلم انبار با نام یا کد...',
+            onChanged: () => setState(() {}),
+            currentSortOrder: _sortOrder,
+            onSortOrderChanged: (newSort) => setState(() => _sortOrder = newSort),
+            filterChips: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  FilterChip(
+                    label: const Text('همه انواع'),
+                    selected: _selectedType == null,
+                    onSelected: (_) => setState(() => _selectedType = null),
                   ),
-                ),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      FilterChip(
-                        label: const Text('همه انواع'),
-                        selected: _selectedType == null,
-                        onSelected: (_) => setState(() => _selectedType = null),
-                      ),
-                      const SizedBox(width: 8),
-                      ...ItemType.values.map((t) => Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: FilterChip(
-                              label: Text(t.displayName),
-                              selected: _selectedType == t,
-                              onSelected: (selected) => setState(() => _selectedType = selected ? t : null),
-                            ),
-                          )),
-                    ],
-                  ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  ...ItemType.values.map((t) => Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: FilterChip(
+                          label: Text(t.displayName),
+                          selected: _selectedType == t,
+                          onSelected: (selected) => setState(() => _selectedType = selected ? t : null),
+                        ),
+                      )),
+                ],
+              ),
             ),
           ),
 
@@ -109,7 +105,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
           Expanded(
             child: itemsAsync.when(
               data: (allItems) {
-                final filtered = _filterItems(allItems);
+                final filtered = _filterAndSortItems(allItems);
 
                 if (filtered.isEmpty) {
                   return AppEmptyState(
@@ -135,9 +131,9 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                           child: Row(
                             children: [
                               CircleAvatar(
-                                radius: 24,
+                                radius: 22,
                                 backgroundColor: const Color(0xFFDBEAFE),
-                                child: const Icon(EneftyIcons.box_bold, color: Color(0xFF2563EB)),
+                                child: const Icon(EneftyIcons.box_bold, color: Color(0xFF2563EB), size: 22),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -170,17 +166,6 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                                     ),
                                   ],
                                 ),
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(EneftyIcons.edit_2_outline, color: Color(0xFF2563EB)),
-                                    tooltip: 'ویرایش قلم انبار',
-                                    onPressed: () => context.push('/inventory/${item.id}/edit'),
-                                  ),
-                                  const Icon(EneftyIcons.arrow_left_3_outline, size: 18, color: Colors.grey),
-                                ],
                               ),
                             ],
                           ),

@@ -2,6 +2,7 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/validators.dart';
 import '../../facilities/providers/facility_providers.dart';
@@ -25,6 +26,11 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
   final _modelController = TextEditingController();
   final _serialController = TextEditingController();
   final _descController = TextEditingController();
+  final _installDateController = TextEditingController();
+  final _commDateController = TextEditingController();
+
+  String? _selectedLocationId;
+  String? _selectedParentAssetId;
   AssetType _assetType = AssetType.machine;
   AssetStatus _status = AssetStatus.active;
   bool _isLoading = false;
@@ -51,6 +57,10 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
         _modelController.text = asset.model ?? '';
         _serialController.text = asset.serialNumber ?? '';
         _descController.text = asset.description ?? '';
+        _installDateController.text = asset.installationDate ?? '';
+        _commDateController.text = asset.commissioningDate ?? '';
+        _selectedLocationId = asset.locationId;
+        _selectedParentAssetId = asset.parentAssetId;
         _assetType = asset.assetType;
         _status = asset.status;
       }
@@ -67,7 +77,22 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
     _modelController.dispose();
     _serialController.dispose();
     _descController.dispose();
+    _installDateController.dispose();
+    _commDateController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectPersianDate(TextEditingController controller) async {
+    final picked = await showPersianDatePicker(
+      context: context,
+      initialDate: Jalali.now(),
+      firstDate: Jalali(1370, 1),
+      lastDate: Jalali(1450, 12),
+    );
+    if (picked != null) {
+      final formatted = '${picked.year}/${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}';
+      setState(() => controller.text = formatted);
+    }
   }
 
   Future<void> _save() async {
@@ -81,6 +106,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
 
       if (_existingAsset != null) {
         final updated = _existingAsset!.copyWith(
+          locationId: _selectedLocationId,
+          parentAssetId: _selectedParentAssetId,
           name: _nameController.text.trim(),
           code: _codeController.text.trim(),
           assetType: _assetType,
@@ -88,6 +115,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
           manufacturer: _mfrController.text.trim().isEmpty ? null : _mfrController.text.trim(),
           model: _modelController.text.trim().isEmpty ? null : _modelController.text.trim(),
           serialNumber: _serialController.text.trim().isEmpty ? null : _serialController.text.trim(),
+          installationDate: _installDateController.text.trim().isEmpty ? null : _installDateController.text.trim(),
+          commissioningDate: _commDateController.text.trim().isEmpty ? null : _commDateController.text.trim(),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
         );
         await repo.updateAsset(updated);
@@ -95,6 +124,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
       } else {
         await repo.createAsset(
           facilityId: facility.id,
+          locationId: _selectedLocationId,
+          parentAssetId: _selectedParentAssetId,
           name: _nameController.text.trim(),
           code: _codeController.text.trim(),
           assetType: _assetType,
@@ -102,6 +133,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
           manufacturer: _mfrController.text.trim().isEmpty ? null : _mfrController.text.trim(),
           model: _modelController.text.trim().isEmpty ? null : _modelController.text.trim(),
           serialNumber: _serialController.text.trim().isEmpty ? null : _serialController.text.trim(),
+          installationDate: _installDateController.text.trim().isEmpty ? null : _installDateController.text.trim(),
+          commissioningDate: _commDateController.text.trim().isEmpty ? null : _commDateController.text.trim(),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
         );
       }
@@ -120,6 +153,7 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.assetId != null;
+    final facilityAsync = ref.watch(primaryFacilityProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -153,6 +187,68 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       validator: AppValidators.code,
                     ),
                     const SizedBox(height: 16),
+
+                    // Location Selector
+                    facilityAsync.when(
+                      data: (facility) {
+                        if (facility == null) return const SizedBox.shrink();
+                        final locationsAsync = ref.watch(locationsProvider(facility.id));
+                        return locationsAsync.when(
+                          data: (locations) {
+                            return DropdownButtonFormField<String?>(
+                              initialValue: _selectedLocationId,
+                              decoration: const InputDecoration(
+                                labelText: 'موقعیت استقرار در کارگاه',
+                                prefixIcon: Icon(EneftyIcons.location_bold),
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                const DropdownMenuItem<String?>(value: null, child: Text('بدون موقعیت مشخص')),
+                                ...locations.map((loc) => DropdownMenuItem<String?>(value: loc.id, child: Text(loc.name))),
+                              ],
+                              onChanged: (v) => setState(() => _selectedLocationId = v),
+                            );
+                          },
+                          loading: () => const LinearProgressIndicator(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Parent Asset Selector
+                    facilityAsync.when(
+                      data: (facility) {
+                        if (facility == null) return const SizedBox.shrink();
+                        final assetsAsync = ref.watch(assetsProvider(facility.id));
+                        return assetsAsync.when(
+                          data: (assets) {
+                            final candidates = assets.where((a) => a.id != widget.assetId).toList();
+                            return DropdownButtonFormField<String?>(
+                              initialValue: _selectedParentAssetId,
+                              decoration: const InputDecoration(
+                                labelText: 'تجهیز والد (در صورت وجود)',
+                                prefixIcon: Icon(EneftyIcons.chart_2_bold),
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                const DropdownMenuItem<String?>(value: null, child: Text('اصلی (بدون والد)')),
+                                ...candidates.map((a) => DropdownMenuItem<String?>(value: a.id, child: Text('${a.name} (${a.code})'))),
+                              ],
+                              onChanged: (v) => setState(() => _selectedParentAssetId = v),
+                            );
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 16),
+
                     DropdownButtonFormField<AssetType>(
                       initialValue: _assetType,
                       decoration: const InputDecoration(
@@ -202,6 +298,39 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+
+                    // Persian Date Pickers
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _installDateController,
+                            readOnly: true,
+                            onTap: () => _selectPersianDate(_installDateController),
+                            decoration: const InputDecoration(
+                              labelText: 'تاریخ نصب (شمسی)',
+                              prefixIcon: Icon(EneftyIcons.calendar_2_bold),
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _commDateController,
+                            readOnly: true,
+                            onTap: () => _selectPersianDate(_commDateController),
+                            decoration: const InputDecoration(
+                              labelText: 'تاریخ راه اندازی (شمسی)',
+                              prefixIcon: Icon(EneftyIcons.calendar_bold),
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
                     TextFormField(
                       controller: _descController,
                       decoration: const InputDecoration(

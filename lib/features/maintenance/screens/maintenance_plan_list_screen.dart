@@ -6,6 +6,7 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_search_filter_bar.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../models/maintenance_plan.dart';
 import '../providers/maintenance_providers.dart';
@@ -20,6 +21,7 @@ class MaintenancePlanListScreen extends ConsumerStatefulWidget {
 class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListScreen> {
   final _searchController = TextEditingController();
   ScheduleType? _selectedScheduleType;
+  SortOrder _sortOrder = SortOrder.nameAsc;
 
   @override
   void dispose() {
@@ -40,13 +42,29 @@ class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListS
     }
   }
 
-  List<MaintenancePlan> _filterPlans(List<MaintenancePlan> plans) {
+  List<MaintenancePlan> _filterAndSortPlans(List<MaintenancePlan> plans) {
     final query = _searchController.text.trim().toLowerCase();
-    return plans.where((p) {
+    var filtered = plans.where((p) {
       final matchesQuery = query.isEmpty || p.title.toLowerCase().contains(query);
       final matchesType = _selectedScheduleType == null || p.scheduleType == _selectedScheduleType;
       return matchesQuery && matchesType;
     }).toList();
+
+    switch (_sortOrder) {
+      case SortOrder.nameAsc:
+        filtered.sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case SortOrder.nameDesc:
+        filtered.sort((a, b) => b.title.compareTo(a.title));
+        break;
+      case SortOrder.dateNewest:
+        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case SortOrder.dateOldest:
+        filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+    }
+    return filtered;
   }
 
   @override
@@ -64,54 +82,32 @@ class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListS
           ),
           body: Column(
             children: [
-              // Search & Filter Header
-              Container(
-                color: Theme.of(context).cardColor,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'جستجوی برنامه PM با عنوان...',
-                        prefixIcon: const Icon(EneftyIcons.search_normal_outline),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              AppSearchFilterBar(
+                searchController: _searchController,
+                hintText: 'جستجوی برنامه PM با عنوان...',
+                onChanged: () => setState(() {}),
+                currentSortOrder: _sortOrder,
+                onSortOrderChanged: (newSort) => setState(() => _sortOrder = newSort),
+                filterChips: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FilterChip(
+                        label: const Text('همه زمان‌بندی‌ها'),
+                        selected: _selectedScheduleType == null,
+                        onSelected: (_) => setState(() => _selectedScheduleType = null),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          FilterChip(
-                            label: const Text('همه زمان‌بندی‌ها'),
-                            selected: _selectedScheduleType == null,
-                            onSelected: (_) => setState(() => _selectedScheduleType = null),
-                          ),
-                          const SizedBox(width: 8),
-                          ...ScheduleType.values.map((s) => Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: FilterChip(
-                                  label: Text(s.displayName),
-                                  selected: _selectedScheduleType == s,
-                                  onSelected: (selected) => setState(() => _selectedScheduleType = selected ? s : null),
-                                ),
-                              )),
-                        ],
-                      ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      ...ScheduleType.values.map((s) => Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: FilterChip(
+                              label: Text(s.displayName),
+                              selected: _selectedScheduleType == s,
+                              onSelected: (selected) => setState(() => _selectedScheduleType = selected ? s : null),
+                            ),
+                          )),
+                    ],
+                  ),
                 ),
               ),
 
@@ -119,7 +115,7 @@ class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListS
               Expanded(
                 child: plansAsync.when(
                   data: (allPlans) {
-                    final filtered = _filterPlans(allPlans);
+                    final filtered = _filterAndSortPlans(allPlans);
 
                     if (filtered.isEmpty) {
                       return AppEmptyState(
@@ -146,9 +142,9 @@ class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListS
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    radius: 24,
+                                    radius: 22,
                                     backgroundColor: const Color(0xFFDBEAFE),
-                                    child: const Icon(EneftyIcons.calendar_2_bold, color: Color(0xFF2563EB)),
+                                    child: const Icon(EneftyIcons.calendar_2_bold, color: Color(0xFF2563EB), size: 22),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -181,11 +177,6 @@ class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListS
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(EneftyIcons.edit_2_outline, color: Color(0xFF2563EB)),
-                                    tooltip: 'ویرایش برنامه PM',
-                                    onPressed: () => context.push('/maintenance-plans/${plan.id}/edit?assetId=${plan.assetId}'),
                                   ),
                                 ],
                               ),

@@ -6,6 +6,7 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_search_filter_bar.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../models/purchase_order.dart';
 import '../providers/purchase_providers.dart';
@@ -20,6 +21,7 @@ class PurchaseOrderListScreen extends ConsumerStatefulWidget {
 class _PurchaseOrderListScreenState extends ConsumerState<PurchaseOrderListScreen> {
   final _searchController = TextEditingController();
   PurchaseOrderStatus? _selectedStatus;
+  SortOrder _sortOrder = SortOrder.dateNewest;
 
   @override
   void dispose() {
@@ -42,15 +44,31 @@ class _PurchaseOrderListScreenState extends ConsumerState<PurchaseOrderListScree
     }
   }
 
-  List<PurchaseOrder> _filterOrders(List<PurchaseOrder> orders) {
+  List<PurchaseOrder> _filterAndSortOrders(List<PurchaseOrder> orders) {
     final query = _searchController.text.trim().toLowerCase();
-    return orders.where((o) {
+    var filtered = orders.where((o) {
       final matchesQuery = query.isEmpty ||
           o.purchaseOrderNumber.toLowerCase().contains(query) ||
           (o.supplierName != null && o.supplierName!.toLowerCase().contains(query));
       final matchesStatus = _selectedStatus == null || o.status == _selectedStatus;
       return matchesQuery && matchesStatus;
     }).toList();
+
+    switch (_sortOrder) {
+      case SortOrder.nameAsc:
+        filtered.sort((a, b) => (a.supplierName ?? '').compareTo(b.supplierName ?? ''));
+        break;
+      case SortOrder.nameDesc:
+        filtered.sort((a, b) => (b.supplierName ?? '').compareTo(a.supplierName ?? ''));
+        break;
+      case SortOrder.dateNewest:
+        filtered.sort((a, b) => b.orderDate.compareTo(a.orderDate));
+        break;
+      case SortOrder.dateOldest:
+        filtered.sort((a, b) => a.orderDate.compareTo(b.orderDate));
+        break;
+    }
+    return filtered;
   }
 
   @override
@@ -68,54 +86,32 @@ class _PurchaseOrderListScreenState extends ConsumerState<PurchaseOrderListScree
           ),
           body: Column(
             children: [
-              // Search & Filter Header
-              Container(
-                color: Theme.of(context).cardColor,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'جستجو با شماره PO یا تأمین‌کننده...',
-                        prefixIcon: const Icon(EneftyIcons.search_normal_outline),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              AppSearchFilterBar(
+                searchController: _searchController,
+                hintText: 'جستجو با شماره PO یا تأمین‌کننده...',
+                onChanged: () => setState(() {}),
+                currentSortOrder: _sortOrder,
+                onSortOrderChanged: (newSort) => setState(() => _sortOrder = newSort),
+                filterChips: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FilterChip(
+                        label: const Text('همه وضعیت‌ها'),
+                        selected: _selectedStatus == null,
+                        onSelected: (_) => setState(() => _selectedStatus = null),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          FilterChip(
-                            label: const Text('همه وضعیت‌ها'),
-                            selected: _selectedStatus == null,
-                            onSelected: (_) => setState(() => _selectedStatus = null),
-                          ),
-                          const SizedBox(width: 8),
-                          ...PurchaseOrderStatus.values.map((s) => Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: FilterChip(
-                                  label: Text(s.displayName),
-                                  selected: _selectedStatus == s,
-                                  onSelected: (selected) => setState(() => _selectedStatus = selected ? s : null),
-                                ),
-                              )),
-                        ],
-                      ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      ...PurchaseOrderStatus.values.map((s) => Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: FilterChip(
+                              label: Text(s.displayName),
+                              selected: _selectedStatus == s,
+                              onSelected: (selected) => setState(() => _selectedStatus = selected ? s : null),
+                            ),
+                          )),
+                    ],
+                  ),
                 ),
               ),
 
@@ -123,7 +119,7 @@ class _PurchaseOrderListScreenState extends ConsumerState<PurchaseOrderListScree
               Expanded(
                 child: poAsync.when(
                   data: (allOrders) {
-                    final filtered = _filterOrders(allOrders);
+                    final filtered = _filterAndSortOrders(allOrders);
 
                     if (filtered.isEmpty) {
                       return AppEmptyState(
@@ -150,9 +146,9 @@ class _PurchaseOrderListScreenState extends ConsumerState<PurchaseOrderListScree
                               child: Row(
                                 children: [
                                   CircleAvatar(
-                                    radius: 24,
+                                    radius: 22,
                                     backgroundColor: const Color(0xFFDBEAFE),
-                                    child: const Icon(EneftyIcons.shopping_cart_bold, color: Color(0xFF2563EB)),
+                                    child: const Icon(EneftyIcons.shopping_cart_bold, color: Color(0xFF2563EB), size: 22),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -172,17 +168,6 @@ class _PurchaseOrderListScreenState extends ConsumerState<PurchaseOrderListScree
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(EneftyIcons.edit_2_outline, color: Color(0xFF2563EB)),
-                                        tooltip: 'ویرایش سفارش',
-                                        onPressed: () => context.push('/purchases/${po.id}/edit'),
-                                      ),
-                                      const Icon(EneftyIcons.arrow_left_3_outline, size: 18, color: Colors.grey),
-                                    ],
                                   ),
                                 ],
                               ),
