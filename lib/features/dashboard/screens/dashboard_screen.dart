@@ -20,9 +20,6 @@ class DashboardScreen extends ConsumerWidget {
     return facilityAsync.when(
       data: (facility) {
         if (facility == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.go('/setup/facility');
-          });
           return const Scaffold(body: AppLoading(message: 'در حال بررسی اطلاعات کارگاه...'));
         }
 

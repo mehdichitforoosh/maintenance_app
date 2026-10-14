@@ -10,13 +10,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:maintenance_app/main.dart';
+import 'package:maintenance_app/core/routes/app_router.dart';
 
 void main() {
   testWidgets('CMMS App smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame inside ProviderScope.
-    await tester.pumpWidget(const ProviderScope(child: MyApp()));
+    final appRouter = createAppRouter(initialLocation: '/onboarding');
+    addTearDown(appRouter.dispose);
 
-    // Verify app starts up and renders without crashing
+    await tester.pumpWidget(ProviderScope(child: MyApp(router: appRouter)));
+    await tester.pumpAndSettle();
+
     expect(find.byType(MaterialApp), findsOneWidget);
+    expect(find.text('مدیریت تجهیزات و ماشین‌آلات'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

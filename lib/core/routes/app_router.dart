@@ -28,37 +28,24 @@ import '../../features/work_orders/screens/work_order_form_screen.dart';
 import '../../features/work_orders/screens/work_order_list_screen.dart';
 import '../../features/work_orders/screens/work_order_material_form_screen.dart';
 import '../../features/work_orders/screens/work_order_task_form_screen.dart';
-import '../storage/key_value_storage.dart';
 import '../widgets/app_scaffold_shell.dart';
 
-final router = GoRouter(
-  initialLocation: KeyValueStorage.instance.isFirstRun ? '/onboarding' : '/',
+GoRouter createAppRouter({required String initialLocation}) => GoRouter(
+  initialLocation: initialLocation,
   routes: [
-    GoRoute(
-      path: '/onboarding',
-      builder: (_, __) => const OnboardingScreen(),
-    ),
+    GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
     GoRoute(
       path: '/setup/facility',
       builder: (_, __) => const FacilitySetupScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) {
-        return AppScaffoldShell(
-          location: state.uri.path,
-          child: child,
-        );
+        return AppScaffoldShell(location: state.uri.path, child: child);
       },
       routes: [
-        GoRoute(
-          path: '/',
-          builder: (_, __) => const DashboardScreen(),
-        ),
+        GoRoute(path: '/', builder: (_, __) => const DashboardScreen()),
         // Assets
-        GoRoute(
-          path: '/assets',
-          builder: (_, __) => const AssetListScreen(),
-        ),
+        GoRoute(path: '/assets', builder: (_, __) => const AssetListScreen()),
         GoRoute(
           path: '/assets/new',
           builder: (_, __) => const AssetFormScreen(),
@@ -69,15 +56,18 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/assets/:id',
-          builder: (_, state) => AssetDetailScreen(assetId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              AssetDetailScreen(assetId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/assets/:id/edit',
-          builder: (_, state) => AssetFormScreen(assetId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              AssetFormScreen(assetId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/assets/:id/readings',
-          builder: (_, state) => AssetReadingsScreen(assetId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              AssetReadingsScreen(assetId: state.pathParameters['id']!),
         ),
         // Locations
         GoRoute(
@@ -94,7 +84,8 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/locations/:id/edit',
-          builder: (_, state) => LocationFormScreen(locationId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              LocationFormScreen(locationId: state.pathParameters['id']!),
         ),
         // Maintenance Plans
         GoRoute(
@@ -112,7 +103,10 @@ final router = GoRouter(
           path: '/maintenance-plans/:id/edit',
           builder: (_, state) {
             final assetId = state.uri.queryParameters['assetId'] ?? '';
-            return MaintenancePlanFormScreen(assetId: assetId, planId: state.pathParameters['id']!);
+            return MaintenancePlanFormScreen(
+              assetId: assetId,
+              planId: state.pathParameters['id']!,
+            );
           },
         ),
         // Work Orders
@@ -126,19 +120,24 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/work-orders/:id',
-          builder: (_, state) => WorkOrderDetailScreen(workOrderId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              WorkOrderDetailScreen(workOrderId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/work-orders/:id/edit',
-          builder: (_, state) => WorkOrderFormScreen(workOrderId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              WorkOrderFormScreen(workOrderId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/work-orders/:id/tasks/new',
-          builder: (_, state) => WorkOrderTaskFormScreen(workOrderId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              WorkOrderTaskFormScreen(workOrderId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/work-orders/:id/materials/new',
-          builder: (_, state) => WorkOrderMaterialFormScreen(workOrderId: state.pathParameters['id']!),
+          builder: (_, state) => WorkOrderMaterialFormScreen(
+            workOrderId: state.pathParameters['id']!,
+          ),
         ),
         GoRoute(
           path: '/work-orders/:id/tasks/:taskId/complete',
@@ -162,11 +161,13 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/inventory/:id',
-          builder: (_, state) => InventoryItemDetailScreen(itemId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              InventoryItemDetailScreen(itemId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/inventory/:id/edit',
-          builder: (_, state) => InventoryItemFormScreen(itemId: state.pathParameters['id']!),
+          builder: (_, state) =>
+              InventoryItemFormScreen(itemId: state.pathParameters['id']!),
         ),
         // Purchases
         GoRoute(
@@ -179,25 +180,25 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/purchases/:id',
-          builder: (_, state) => PurchaseOrderDetailScreen(purchaseOrderId: state.pathParameters['id']!),
+          builder: (_, state) => PurchaseOrderDetailScreen(
+            purchaseOrderId: state.pathParameters['id']!,
+          ),
         ),
         GoRoute(
           path: '/purchases/:id/edit',
-          builder: (_, state) => PurchaseOrderFormScreen(purchaseOrderId: state.pathParameters['id']!),
+          builder: (_, state) => PurchaseOrderFormScreen(
+            purchaseOrderId: state.pathParameters['id']!,
+          ),
         ),
         GoRoute(
           path: '/purchases/:id/receive',
-          builder: (_, state) => ReceivePurchaseScreen(purchaseOrderId: state.pathParameters['id']!),
+          builder: (_, state) => ReceivePurchaseScreen(
+            purchaseOrderId: state.pathParameters['id']!,
+          ),
         ),
         // Alerts & Settings
-        GoRoute(
-          path: '/alerts',
-          builder: (_, __) => const AlertsScreen(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (_, __) => const SettingsScreen(),
-        ),
+        GoRoute(path: '/alerts', builder: (_, __) => const AlertsScreen()),
+        GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       ],
     ),
   ],

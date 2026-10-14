@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
@@ -12,6 +13,7 @@ import 'core/storage/database/database_helper.dart';
 import 'core/storage/key_value_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
+import 'features/facilities/repositories/facility_repository.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -23,15 +25,23 @@ void main() async {
   await initializeDateFormatting('fa_IR');
   Intl.defaultLocale = 'fa_IR';
 
-  FlutterNativeSplash.remove();
+  final initialLocation = KeyValueStorage.instance.isFirstRun
+      ? '/onboarding'
+      : await FacilityRepository().hasFacility()
+      ? '/'
+      : '/setup/facility';
+  final appRouter = createAppRouter(initialLocation: initialLocation);
 
-  runApp(
-    const ProviderScope(child: MyApp()),
-  );
+  runApp(ProviderScope(child: MyApp(router: appRouter)));
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    FlutterNativeSplash.remove();
+  });
 }
 
 class MyApp extends ConsumerWidget {
-  const MyApp({super.key});
+  const MyApp({required this.router, super.key});
+
+  final GoRouter router;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,10 +49,7 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp.router(
       locale: const Locale('fa', 'IR'),
-      supportedLocales: const [
-        Locale('fa', 'IR'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: const [Locale('fa', 'IR'), Locale('en', 'US')],
       localizationsDelegates: const [
         CustomPersianMaterialLocalizations.delegate,
         PersianCupertinoLocalizations.delegate,
