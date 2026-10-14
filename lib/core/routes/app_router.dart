@@ -26,6 +26,8 @@ import '../../features/work_orders/screens/complete_task_screen.dart';
 import '../../features/work_orders/screens/work_order_detail_screen.dart';
 import '../../features/work_orders/screens/work_order_form_screen.dart';
 import '../../features/work_orders/screens/work_order_list_screen.dart';
+import '../../features/work_orders/screens/work_order_material_form_screen.dart';
+import '../../features/work_orders/screens/work_order_task_form_screen.dart';
 import '../storage/key_value_storage.dart';
 import '../widgets/app_scaffold_shell.dart';
 
@@ -129,6 +131,14 @@ final router = GoRouter(
         GoRoute(
           path: '/work-orders/:id/edit',
           builder: (_, state) => WorkOrderFormScreen(workOrderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/work-orders/:id/tasks/new',
+          builder: (_, state) => WorkOrderTaskFormScreen(workOrderId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/work-orders/:id/materials/new',
+          builder: (_, state) => WorkOrderMaterialFormScreen(workOrderId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/work-orders/:id/tasks/:taskId/complete',

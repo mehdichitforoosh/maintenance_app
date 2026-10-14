@@ -2,6 +2,7 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/validators.dart';
 import '../../facilities/providers/facility_providers.dart';
@@ -21,6 +22,9 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
+  final _scheduledAtController = TextEditingController();
+  final _notesController = TextEditingController();
+
   WorkOrderType _workOrderType = WorkOrderType.corrective;
   Priority _priority = Priority.medium;
   bool _isLoading = false;
@@ -43,6 +47,8 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
         _existingWorkOrder = wo;
         _titleController.text = wo.title;
         _descController.text = wo.description ?? '';
+        _scheduledAtController.text = wo.scheduledAt ?? '';
+        _notesController.text = wo.notes ?? '';
         _workOrderType = wo.workOrderType;
         _priority = wo.priority;
       }
@@ -55,7 +61,22 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
+    _scheduledAtController.dispose();
+    _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectScheduledDate() async {
+    final picked = await showPersianDatePicker(
+      context: context,
+      initialDate: Jalali.now(),
+      firstDate: Jalali.now(),
+      lastDate: Jalali(1450, 12),
+    );
+    if (picked != null) {
+      final formatted = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      setState(() => _scheduledAtController.text = formatted);
+    }
   }
 
   Future<void> _save() async {
@@ -71,6 +92,8 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
         final updated = _existingWorkOrder!.copyWith(
           title: _titleController.text.trim(),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          scheduledAt: _scheduledAtController.text.trim().isEmpty ? null : _scheduledAtController.text.trim(),
+          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           workOrderType: _workOrderType,
           priority: _priority,
         );
@@ -81,6 +104,8 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
           facilityId: facility.id,
           title: _titleController.text.trim(),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          scheduledAt: _scheduledAtController.text.trim().isEmpty ? null : _scheduledAtController.text.trim(),
+          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           workOrderType: _workOrderType,
           priority: _priority,
         );
@@ -144,12 +169,32 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _scheduledAtController,
+                readOnly: true,
+                onTap: _selectScheduledDate,
+                decoration: const InputDecoration(
+                  labelText: 'تاریخ زمان‌بندی (شمسی)',
+                  prefixIcon: Icon(EneftyIcons.calendar_2_bold),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _descController,
                 decoration: const InputDecoration(
                   labelText: 'توضیحات / شرح کار',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'یادداشت‌ها',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
               ),
               const SizedBox(height: 24),
               FilledButton.icon(

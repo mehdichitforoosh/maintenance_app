@@ -139,6 +139,28 @@ class WorkOrderRepository {
     return updated;
   }
 
+  Future<void> updateWorkOrderStatus(String workOrderId, WorkOrderStatus newStatus) async {
+    final db = await _dbHelper.db;
+    final nowIso = AppDateUtils.nowUtcIso();
+    final updates = <String, dynamic>{
+      WorkOrderTable.status: newStatus.toDbString(),
+      WorkOrderTable.updatedAt: nowIso,
+    };
+    if (newStatus == WorkOrderStatus.completed) {
+      updates[WorkOrderTable.completedAt] = nowIso;
+      updates[WorkOrderTable.closedAt] = nowIso;
+    } else if (newStatus == WorkOrderStatus.inProgress) {
+      updates[WorkOrderTable.startedAt] = nowIso;
+    }
+
+    await db.update(
+      _tableName,
+      updates,
+      where: '${WorkOrderTable.id} = ?',
+      whereArgs: [workOrderId],
+    );
+  }
+
   Future<void> addTaskToWorkOrder({
     required String workOrderId,
     required String assetId,
@@ -162,6 +184,33 @@ class WorkOrderRepository {
       WorkOrderTaskTable.updatedAt: now,
       WorkOrderTaskTable.syncStatus: 'pending',
     });
+  }
+
+  Future<void> addMaterialToTask({
+    required String workOrderTaskId,
+    required String itemId,
+    double? plannedQuantity,
+    double? actualQuantity,
+    double? unitCostAtUse,
+    String? notes,
+  }) async {
+    final db = await _dbHelper.db;
+    final now = AppDateUtils.nowUtcIso();
+    await db.insert(
+      WorkOrderMaterialTable.tableName,
+      {
+        WorkOrderMaterialTable.id: IdGenerator.generate(),
+        WorkOrderMaterialTable.workOrderTaskId: workOrderTaskId,
+        WorkOrderMaterialTable.itemId: itemId,
+        WorkOrderMaterialTable.plannedQuantity: plannedQuantity,
+        WorkOrderMaterialTable.actualQuantity: actualQuantity,
+        WorkOrderMaterialTable.unitCostAtUse: unitCostAtUse,
+        WorkOrderMaterialTable.notes: notes,
+        WorkOrderMaterialTable.createdAt: now,
+        WorkOrderMaterialTable.updatedAt: now,
+        WorkOrderMaterialTable.syncStatus: 'pending',
+      },
+    );
   }
 
   Future<void> completeTask({

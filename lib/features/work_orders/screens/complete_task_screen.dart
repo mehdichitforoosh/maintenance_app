@@ -1,8 +1,10 @@
+import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/validators.dart';
+import '../../inventory/providers/inventory_providers.dart';
 import '../providers/work_order_providers.dart';
 
 class CompleteTaskScreen extends ConsumerStatefulWidget {
@@ -23,11 +25,17 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
   TaskResult _result = TaskResult.success;
   bool _isLoading = false;
 
+  // Selected consumed material
+  String? _selectedItemId;
+  final _qtyController = TextEditingController(text: '1');
+  final List<Map<String, dynamic>> _consumedMaterials = [];
+
   @override
   void dispose() {
     _findingsController.dispose();
     _laborController.dispose();
     _downtimeController.dispose();
+    _qtyController.dispose();
     super.dispose();
   }
 
@@ -43,10 +51,12 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
         findings: _findingsController.text.trim().isEmpty ? null : _findingsController.text.trim(),
         laborMinutes: int.tryParse(_laborController.text.trim()) ?? 0,
         downtimeMinutes: int.tryParse(_downtimeController.text.trim()) ?? 0,
+        consumedMaterials: _consumedMaterials.isEmpty ? null : _consumedMaterials,
       );
 
       ref.invalidate(workOrderDetailProvider(widget.workOrderId));
       ref.invalidate(workOrderTasksProvider(widget.workOrderId));
+      ref.invalidate(inventoryItemsProvider);
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
@@ -59,8 +69,10 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final inventoryAsync = ref.watch(inventoryItemsProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('تکمیل وظیفه تعمیراتی')),
+      appBar: AppBar(title: const Text('تکمیل وظیفه تعمیراتی و ثبت قطعات')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -68,7 +80,7 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
           child: ListView(
             children: [
               DropdownButtonFormField<TaskResult>(
-                value: _result,
+                initialValue: _result,
                 decoration: const InputDecoration(labelText: 'نتیجه انجام کار *', border: OutlineInputBorder()),
                 items: TaskResult.values.map((r) => DropdownMenuItem(value: r, child: Text(r.displayName))).toList(),
                 onChanged: (v) => setState(() => _result = v ?? TaskResult.success),
@@ -102,6 +114,82 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
                 ],
               ),
               const SizedBox(height: 24),
+              const Text('قطعات و اقلام مصرفی انبار در این وظیفه', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+
+              inventoryAsync.when(
+                data: (items) {
+                  if (items.isEmpty) return const Text('کالایی در انبار ثبت نشده است.');
+                  _selectedItemId ??= items.first.id;
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedItemId,
+                          decoration: const InputDecoration(labelText: 'انتخاب کالا', border: OutlineInputBorder()),
+                          items: items.map((i) => DropdownMenuItem(value: i.id, child: Text('${i.name} (${i.code})'))).toList(),
+                          onChanged: (v) => setState(() => _selectedItemId = v),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 1,
+                        child: TextFormField(
+                          controller: _qtyController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(labelText: 'مقدار', border: OutlineInputBorder()),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        icon: const Icon(EneftyIcons.add_bold),
+                        onPressed: () {
+                          if (_selectedItemId != null) {
+                            final qty = double.tryParse(_qtyController.text.trim()) ?? 1.0;
+                            final item = items.firstWhere((i) => i.id == _selectedItemId);
+                            setState(() {
+                              _consumedMaterials.add({
+                                'item_id': item.id,
+                                'item_name': item.name,
+                                'quantity': qty,
+                                'unit_cost': item.defaultUnitCost ?? 0.0,
+                              });
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const LinearProgressIndicator(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+
+              if (_consumedMaterials.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _consumedMaterials.length,
+                  itemBuilder: (context, index) {
+                    final mat = _consumedMaterials[index];
+                    return Card(
+                      child: ListTile(
+                        title: Text(mat['item_name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('مقدار مصرفی: ${mat['quantity']}'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => setState(() => _consumedMaterials.removeAt(index)),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 32),
               FilledButton(
                 onPressed: _isLoading ? null : _complete,
                 child: const Text('ثبت و تکمیل وظیفه'),
