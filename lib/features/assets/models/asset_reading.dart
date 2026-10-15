@@ -6,6 +6,8 @@ class AssetReading {
   final String unit;
   final String recordedAt;
   final String? notes;
+  final String? supersededByReadingId;
+  final String? correctionReason;
   final String createdAt;
   final String updatedAt;
   final String? deletedAt;
@@ -19,6 +21,8 @@ class AssetReading {
     required this.unit,
     required this.recordedAt,
     this.notes,
+    this.supersededByReadingId,
+    this.correctionReason,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -34,6 +38,8 @@ class AssetReading {
       'unit': unit,
       'recorded_at': recordedAt,
       'notes': notes,
+      'superseded_by_reading_id': supersededByReadingId,
+      'correction_reason': correctionReason,
       'created_at': createdAt,
       'updated_at': updatedAt,
       'deleted_at': deletedAt,
@@ -50,6 +56,8 @@ class AssetReading {
       unit: map['unit'] as String,
       recordedAt: map['recorded_at'] as String,
       notes: map['notes'] as String?,
+      supersededByReadingId: map['superseded_by_reading_id'] as String?,
+      correctionReason: map['correction_reason'] as String?,
       createdAt: map['created_at'] as String,
       updatedAt: map['updated_at'] as String,
       deletedAt: map['deleted_at'] as String?,

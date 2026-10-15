@@ -70,27 +70,27 @@ class AppScaffoldShell extends StatelessWidget {
           destinations: const [
             NavigationDestination(
               icon: Icon(EneftyIcons.home_2_outline),
-              selectedIcon: Icon(EneftyIcons.home_2_bold, color: Color(0xFF1D4ED8)),
+              selectedIcon: Icon(EneftyIcons.home_2_bold,),
               label: 'داشبورد',
             ),
             NavigationDestination(
               icon: Icon(EneftyIcons.cpu_outline),
-              selectedIcon: Icon(EneftyIcons.cpu_bold, color: Color(0xFF1D4ED8)),
+              selectedIcon: Icon(EneftyIcons.cpu_bold,),
               label: 'تجهیزات',
             ),
             NavigationDestination(
               icon: Icon(EneftyIcons.document_text_outline),
-              selectedIcon: Icon(EneftyIcons.document_text_bold, color: Color(0xFF1D4ED8)),
+              selectedIcon: Icon(EneftyIcons.document_text_bold,),
               label: 'دستورات کار',
             ),
             NavigationDestination(
               icon: Icon(EneftyIcons.box_outline),
-              selectedIcon: Icon(EneftyIcons.box_bold, color: Color(0xFF1D4ED8)),
+              selectedIcon: Icon(EneftyIcons.box_bold,),
               label: 'انبار',
             ),
             NavigationDestination(
               icon: Icon(EneftyIcons.setting_2_outline),
-              selectedIcon: Icon(EneftyIcons.setting_2_bold, color: Color(0xFF1D4ED8)),
+              selectedIcon: Icon(EneftyIcons.setting_2_bold,),
               label: 'تنظیمات',
             ),
           ],

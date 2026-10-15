@@ -45,8 +45,8 @@ class DatabaseHelper {
     if (inMemory) {
       _database = await _openDatabase(inMemoryDatabasePath);
     } else {
-      var databasePath = await getDatabasesPath();
-      var path = join(databasePath, _databaseName);
+      final databasePath = await getDatabasesPath();
+      final path = join(databasePath, _databaseName);
       _database = await _openDatabase(path);
     }
     return _database!;
@@ -80,17 +80,12 @@ class DatabaseHelper {
         version: _databaseVersion,
         onCreate: _onCreate,
         onConfigure: _onConfigure,
-        onUpgrade: _onUpgrade,
       ),
     );
   }
 
   Future<void> _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
-  }
-
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // migration code
   }
 
   Future<void> _onCreate(Database db, int version) async {

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maintenance_app/core/enums/app_enums.dart';
 import 'package:maintenance_app/core/storage/database/database_helper.dart';
 import 'package:maintenance_app/core/utils/date_utils.dart';
+import 'package:maintenance_app/features/assets/repositories/asset_reading_repository.dart';
 import 'package:maintenance_app/features/assets/repositories/asset_repository.dart';
 import 'package:maintenance_app/features/facilities/repositories/facility_repository.dart';
 import 'package:maintenance_app/features/inventory/repositories/inventory_repository.dart';
@@ -236,6 +237,113 @@ void main() {
         (await repository.getWorkOrderById(order.id))!.status,
         WorkOrderStatus.open,
       );
+    });
+  });
+
+  group('Asset reading corrections', () {
+    test(
+      'correction preserves history and leaves generated condition task',
+      () async {
+        final db = await dbHelper.db;
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه اصلاح خوانش');
+        final asset = await AssetRepository(
+          dbHelper: dbHelper,
+        ).createAsset(facilityId: facility.id, name: 'پمپ', code: 'P-READING');
+        await MaintenancePlanRepository(dbHelper: dbHelper).createPlan(
+          assetId: asset.id,
+          title: 'کنترل دمای بالا',
+          scheduleType: ScheduleType.condition,
+          conditionConfigJson:
+              '{"metric":"temperature","operator":"gte","threshold":80,"unit":"°C"}',
+        );
+        final readings = AssetReadingRepository(dbHelper: dbHelper);
+        final original = await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'temperature',
+          value: 90,
+          unit: '°C',
+          recordedAt: '2026-10-15T10:00:00.000Z',
+        );
+        final correction = await readings.correctReading(
+          readingId: original.id,
+          value: 70,
+          unit: '°C',
+          recordedAt: '2026-10-15T10:00:00.000Z',
+          reason: 'اصلاح مقدار اشتباه',
+        );
+
+        expect(correction.generatedConditionTaskCount, 0);
+        expect(correction.previouslyTriggeredTaskCount, 1);
+        final history = await readings.getReadings(asset.id);
+        final correctedOriginal = history.singleWhere(
+          (reading) => reading.id == original.id,
+        );
+        expect(correctedOriginal.supersededByReadingId, correction.reading.id);
+        expect(correctedOriginal.correctionReason, 'اصلاح مقدار اشتباه');
+        expect(
+          (await readings.getLatestReading(asset.id, 'temperature'))?.id,
+          correction.reading.id,
+        );
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'temperature',
+          value: 91,
+          unit: '°C',
+        );
+        final tasks = await db.query(
+          'work_order_tasks',
+          where: 'maintenance_plan_id = ?',
+          whereArgs: [
+            (await MaintenancePlanRepository(
+              dbHelper: dbHelper,
+            ).getPlans(asset.id)).single.id,
+          ],
+        );
+        expect(tasks, hasLength(1));
+      },
+    );
+
+    test('corrected reading that meets condition generates one task', () async {
+      final db = await dbHelper.db;
+      final facility = await FacilityRepository(
+        dbHelper: dbHelper,
+      ).createFacility(name: 'کارگاه شرط اصلاحی');
+      final asset = await AssetRepository(
+        dbHelper: dbHelper,
+      ).createAsset(facilityId: facility.id, name: 'موتور', code: 'M-READING');
+      await MaintenancePlanRepository(dbHelper: dbHelper).createPlan(
+        assetId: asset.id,
+        title: 'کنترل دمای بالا',
+        scheduleType: ScheduleType.condition,
+        conditionConfigJson:
+            '{"metric":"temperature","operator":"gte","threshold":80,"unit":"°C"}',
+      );
+      final readings = AssetReadingRepository(dbHelper: dbHelper);
+      final original = await readings.recordReading(
+        assetId: asset.id,
+        metricName: 'temperature',
+        value: 70,
+        unit: '°C',
+      );
+
+      final correction = await readings.correctReading(
+        readingId: original.id,
+        value: 90,
+        unit: '°C',
+        recordedAt: original.recordedAt,
+        reason: 'اصلاح مقدار ثبت‌شده',
+      );
+
+      expect(correction.generatedConditionTaskCount, 1);
+      expect(correction.previouslyTriggeredTaskCount, 0);
+      final tasks = await db.query(
+        'work_order_tasks',
+        where: 'triggering_reading_id = ?',
+        whereArgs: [correction.reading.id],
+      );
+      expect(tasks, hasLength(1));
     });
   });
 

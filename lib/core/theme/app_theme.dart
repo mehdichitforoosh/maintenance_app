@@ -44,33 +44,6 @@ class AppTheme {
         backgroundColor: Colors.white,
         indicatorColor: const Color(0xFFDBEAFE),
         elevation: 8,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D4ED8),
-              fontFamily: 'VazirmatnFD',
-            );
-          }
-          return TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-            fontFamily: 'VazirmatnFD',
-          );
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(
-              size: 24,
-              color: Color(0xFF1D4ED8),
-            );
-          }
-          return IconThemeData(
-            size: 22,
-            color: Colors.grey.shade600,
-          );
-        }),
       ),
       bottomAppBarTheme: const BottomAppBarThemeData(
         color: Colors.white,
@@ -152,21 +125,6 @@ class AppTheme {
         backgroundColor: const Color(0xFF1E1E1E),
         indicatorColor: const Color(0xFF1E3A8A),
         elevation: 8,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              fontFamily: 'VazirmatnFD',
-            );
-          }
-          return TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade400,
-            fontFamily: 'VazirmatnFD',
-          );
-        }),
       ),
       bottomAppBarTheme: const BottomAppBarThemeData(
         color: Color(0xFF1E1E1E),
