@@ -57,12 +57,17 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
 
     return facilityAsync.when(
       data: (facility) {
-        if (facility == null) return const Scaffold(body: Center(child: Text('کارگاهی یافت نشد')));
+        if (facility == null) {
+          return const Scaffold(body: Center(child: Text('کارگاهی یافت نشد')));
+        }
         final locationsAsync = ref.watch(locationsProvider(facility.id));
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('موقعیت‌ها و سالن‌ها', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text(
+              'موقعیت‌ها و سالن‌ها',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             actions: [
               IconButton(
                 icon: const Icon(EneftyIcons.chart_2_outline),
@@ -78,7 +83,8 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                 hintText: 'جستجوی موقعیت با نام یا کد...',
                 onChanged: () => setState(() {}),
                 currentSortOrder: _sortOrder,
-                onSortOrderChanged: (newSort) => setState(() => _sortOrder = newSort),
+                onSortOrderChanged: (newSort) =>
+                    setState(() => _sortOrder = newSort),
               ),
 
               // Location List
@@ -89,10 +95,18 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
 
                     if (filtered.isEmpty) {
                       return AppEmptyState(
-                        title: allLocations.isEmpty ? 'موقعیتی ثبت نشده است' : 'نتیجه‌ای یافت نشد',
-                        message: allLocations.isEmpty ? 'برای دسته‌بندی تجهیزات، موقعیت جدید اضافه کنید.' : 'عبارت دیگری را جستجو کنید.',
-                        actionLabel: allLocations.isEmpty ? 'افزودن موقعیت' : null,
-                        onActionPressed: allLocations.isEmpty ? () => context.push('/locations/new') : null,
+                        title: allLocations.isEmpty
+                            ? 'موقعیتی ثبت نشده است'
+                            : 'نتیجه‌ای یافت نشد',
+                        message: allLocations.isEmpty
+                            ? 'برای دسته‌بندی تجهیزات، موقعیت جدید اضافه کنید.'
+                            : 'عبارت دیگری را جستجو کنید.',
+                        actionLabel: allLocations.isEmpty
+                            ? 'افزودن موقعیت'
+                            : null,
+                        onActionPressed: allLocations.isEmpty
+                            ? () => context.push('/locations/new')
+                            : null,
                       );
                     }
 
@@ -102,10 +116,12 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                       itemBuilder: (context, index) {
                         final loc = filtered[index];
                         final isActive = loc.isActive;
+                        final colorScheme = Theme.of(context).colorScheme;
 
                         return Card(
                           child: InkWell(
-                            onTap: () => context.push('/locations/${loc.id}/edit'),
+                            onTap: () =>
+                                context.push('/locations/${loc.id}/edit'),
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
                               padding: const EdgeInsets.all(12.0),
@@ -113,21 +129,63 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 22,
-                                    backgroundColor: const Color(0xFFE0F2FE),
-                                    child: const Icon(EneftyIcons.location_bold, color: Color(0xFF0284C7), size: 22),
+                                    backgroundColor:
+                                        colorScheme.secondaryContainer,
+                                    foregroundColor:
+                                        colorScheme.onSecondaryContainer,
+                                    child: const Icon(
+                                      EneftyIcons.location_bold,
+                                      size: 22,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(loc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                        Text(
+                                          loc.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
                                         const SizedBox(height: 4),
-                                        Text(loc.code != null ? 'کد موقعیت: ${loc.code}' : 'بدون کد', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                        Text(
+                                          loc.code != null
+                                              ? 'کد موقعیت: ${loc.code}'
+                                              : 'بدون کد',
+                                          style: TextStyle(
+                                            color: colorScheme.onSurfaceVariant,
+                                            fontSize: 13,
+                                          ),
+                                        ),
                                         const SizedBox(height: 8),
                                         Chip(
-                                          label: Text(isActive ? 'فعال' : 'غیرفعال', style: TextStyle(color: isActive ? Colors.green : Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
-                                          backgroundColor: (isActive ? Colors.green : Colors.grey).withValues(alpha: 0.1),
+                                          label: Text(
+                                            isActive ? 'فعال' : 'غیرفعال',
+                                            style: TextStyle(
+                                              color: isActive
+                                                  ? Colors.green
+                                                  : colorScheme
+                                                        .onSurfaceVariant,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                          backgroundColor: isActive
+                                              ? Colors.green.withValues(
+                                                  alpha:
+                                                      Theme.of(
+                                                            context,
+                                                          ).brightness ==
+                                                          Brightness.dark
+                                                      ? 0.22
+                                                      : 0.1,
+                                                )
+                                              : colorScheme
+                                                    .surfaceContainerHighest,
                                           side: BorderSide.none,
                                           padding: EdgeInsets.zero,
                                           visualDensity: VisualDensity.compact,

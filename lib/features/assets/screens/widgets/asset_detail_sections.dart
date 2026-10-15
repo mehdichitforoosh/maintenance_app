@@ -53,25 +53,27 @@ class AssetSpecificationsCard extends StatelessWidget {
               ],
             ),
             const Divider(height: 20),
-            _infoRow('کد تجهیز', asset.code),
-            _infoRow('نوع', asset.assetType.displayName),
+            _infoRow(context, 'کد تجهیز', asset.code),
+            _infoRow(context, 'نوع', asset.assetType.displayName),
             if (_hasText(asset.manufacturer))
-              _infoRow('سازنده', asset.manufacturer!),
-            if (_hasText(asset.model)) _infoRow('مدل', asset.model!),
+              _infoRow(context, 'سازنده', asset.manufacturer!),
+            if (_hasText(asset.model)) _infoRow(context, 'مدل', asset.model!),
             if (_hasText(asset.serialNumber))
-              _infoRow('شماره سریال', asset.serialNumber!),
+              _infoRow(context, 'شماره سریال', asset.serialNumber!),
             if (_hasText(asset.installationDate))
               _infoRow(
+                context,
                 'تاریخ نصب',
                 AppDateUtils.formatJalali(asset.installationDate),
               ),
             if (_hasText(asset.commissioningDate))
               _infoRow(
+                context,
                 'تاریخ بهره‌برداری',
                 AppDateUtils.formatJalali(asset.commissioningDate),
               ),
             if (_hasText(asset.description))
-              _infoRow('توضیحات', asset.description!),
+              _infoRow(context, 'توضیحات', asset.description!),
           ],
         ),
       ),
@@ -80,13 +82,18 @@ class AssetSpecificationsCard extends StatelessWidget {
 
   static bool _hasText(String? value) => value != null && value.isNotEmpty;
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -124,10 +131,14 @@ class AssetMaintenancePlansSection extends StatelessWidget {
             final color = AppColors.priorityColor(plan.priority);
             return Card(
               child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  child: Icon(EneftyIcons.calendar_2_outline),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer,
+                  child: const Icon(EneftyIcons.calendar_2_outline),
                 ),
                 title: Text(
                   plan.title,

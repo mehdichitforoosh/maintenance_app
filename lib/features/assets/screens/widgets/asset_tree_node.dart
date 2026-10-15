@@ -38,6 +38,7 @@ class _AssetTreeNodeState extends State<AssetTreeNode> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final children = widget.allAssets
         .where((asset) => asset.parentAssetId == widget.asset.id)
         .toList();
@@ -56,7 +57,7 @@ class _AssetTreeNodeState extends State<AssetTreeNode> {
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+                  bottom: BorderSide(color: colorScheme.outlineVariant),
                 ),
               ),
               child: Row(
@@ -83,8 +84,8 @@ class _AssetTreeNodeState extends State<AssetTreeNode> {
                         : EneftyIcons.setting_outline,
                     size: widget.depth == 0 ? 22 : 18,
                     color: widget.depth == 0
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.shade600,
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -103,7 +104,7 @@ class _AssetTreeNodeState extends State<AssetTreeNode> {
                         Text(
                           'کد: ${widget.asset.code} | نوع: ${widget.asset.assetType.displayName}',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),

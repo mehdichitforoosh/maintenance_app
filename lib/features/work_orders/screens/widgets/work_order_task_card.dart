@@ -101,7 +101,10 @@ class WorkOrderTaskCard extends ConsumerWidget {
               const SizedBox(height: 12),
               Text(
                 'یافته‌ها و گزارش: ${task.findings}',
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 13,
+                ),
               ),
             ],
             TaskMaterialsSection(taskId: task.id),

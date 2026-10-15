@@ -16,7 +16,8 @@ class WorkOrderListScreen extends ConsumerStatefulWidget {
   const WorkOrderListScreen({super.key});
 
   @override
-  ConsumerState<WorkOrderListScreen> createState() => _WorkOrderListScreenState();
+  ConsumerState<WorkOrderListScreen> createState() =>
+      _WorkOrderListScreenState();
 }
 
 class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
@@ -50,10 +51,12 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
   List<WorkOrder> _filterAndSortWorkOrders(List<WorkOrder> orders) {
     final query = _searchController.text.trim().toLowerCase();
     var filtered = orders.where((o) {
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           o.title.toLowerCase().contains(query) ||
           o.workOrderNumber.toLowerCase().contains(query);
-      final matchesStatus = _selectedStatus == null || o.status == _selectedStatus;
+      final matchesStatus =
+          _selectedStatus == null || o.status == _selectedStatus;
       return matchesQuery && matchesStatus;
     }).toList();
 
@@ -80,12 +83,17 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
 
     return facilityAsync.when(
       data: (facility) {
-        if (facility == null) return const Scaffold(body: Center(child: Text('کارگاهی یافت نشد')));
+        if (facility == null) {
+          return const Scaffold(body: Center(child: Text('کارگاهی یافت نشد')));
+        }
         final woAsync = ref.watch(workOrdersProvider(facility.id));
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('دستورکارهای تعمیراتی', style: TextStyle(fontWeight: FontWeight.bold)),
+            title: const Text(
+              'دستورکارهای تعمیراتی',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           body: Column(
             children: [
@@ -94,7 +102,8 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                 hintText: 'جستجوی دستورکار با عنوان یا شماره...',
                 onChanged: () => setState(() {}),
                 currentSortOrder: _sortOrder,
-                onSortOrderChanged: (newSort) => setState(() => _sortOrder = newSort),
+                onSortOrderChanged: (newSort) =>
+                    setState(() => _sortOrder = newSort),
                 filterChips: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -102,17 +111,22 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                       FilterChip(
                         label: const Text('همه وضعیت‌ها'),
                         selected: _selectedStatus == null,
-                        onSelected: (_) => setState(() => _selectedStatus = null),
+                        onSelected: (_) =>
+                            setState(() => _selectedStatus = null),
                       ),
                       const SizedBox(width: 8),
-                      ...WorkOrderStatus.values.map((s) => Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: FilterChip(
-                              label: Text(s.displayName),
-                              selected: _selectedStatus == s,
-                              onSelected: (selected) => setState(() => _selectedStatus = selected ? s : null),
+                      ...WorkOrderStatus.values.map(
+                        (s) => Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: FilterChip(
+                            label: Text(s.displayName),
+                            selected: _selectedStatus == s,
+                            onSelected: (selected) => setState(
+                              () => _selectedStatus = selected ? s : null,
                             ),
-                          )),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -126,10 +140,18 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
 
                     if (filtered.isEmpty) {
                       return AppEmptyState(
-                        title: allOrders.isEmpty ? 'دستورکاری ثبت نشده است' : 'نتیجه‌ای یافت نشد',
-                        message: allOrders.isEmpty ? 'برای شروع، دستورکار جدیدی ایجاد کنید.' : 'فیلترها را تغییر دهید.',
-                        actionLabel: allOrders.isEmpty ? 'ایجاد دستورکار' : null,
-                        onActionPressed: allOrders.isEmpty ? () => context.push('/work-orders/new') : null,
+                        title: allOrders.isEmpty
+                            ? 'دستورکاری ثبت نشده است'
+                            : 'نتیجه‌ای یافت نشد',
+                        message: allOrders.isEmpty
+                            ? 'برای شروع، دستورکار جدیدی ایجاد کنید.'
+                            : 'فیلترها را تغییر دهید.',
+                        actionLabel: allOrders.isEmpty
+                            ? 'ایجاد دستورکار'
+                            : null,
+                        onActionPressed: allOrders.isEmpty
+                            ? () => context.push('/work-orders/new')
+                            : null,
                       );
                     }
 
@@ -139,7 +161,9 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                       itemBuilder: (context, index) {
                         final wo = filtered[index];
                         final statusColor = _getStatusColor(wo.status);
-                        final priorityColor = AppColors.priorityColor(wo.priority);
+                        final priorityColor = AppColors.priorityColor(
+                          wo.priority,
+                        );
 
                         return Card(
                           child: InkWell(
@@ -151,35 +175,76 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 22,
-                                    backgroundColor: const Color(0xFFDBEAFE),
-                                    child: const Icon(EneftyIcons.document_text_bold, color: Color(0xFF2563EB), size: 22),
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
+                                    foregroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                    child: const Icon(
+                                      EneftyIcons.document_text_bold,
+                                      size: 22,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text('${wo.workOrderNumber}: ${wo.title}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                        Text(
+                                          '${wo.workOrderNumber}: ${wo.title}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
                                         const SizedBox(height: 4),
-                                        Text('نوع: ${wo.workOrderType.displayName}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                                        Text(
+                                          'نوع: ${wo.workOrderType.displayName}',
+                                          style: TextStyle(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                            fontSize: 13,
+                                          ),
+                                        ),
                                         const SizedBox(height: 8),
                                         Wrap(
                                           spacing: 6,
                                           runSpacing: 4,
                                           children: [
                                             Chip(
-                                              label: Text(wo.status.displayName, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11)),
-                                              backgroundColor: statusColor.withValues(alpha: 0.1),
+                                              label: Text(
+                                                wo.status.displayName,
+                                                style: TextStyle(
+                                                  color: statusColor,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                              backgroundColor: statusColor
+                                                  .withValues(alpha: 0.1),
                                               side: BorderSide.none,
                                               padding: EdgeInsets.zero,
-                                              visualDensity: VisualDensity.compact,
+                                              visualDensity:
+                                                  VisualDensity.compact,
                                             ),
                                             Chip(
-                                              label: Text('اولویت: ${wo.priority.displayName}', style: TextStyle(color: priorityColor, fontWeight: FontWeight.bold, fontSize: 11)),
-                                              backgroundColor: priorityColor.withValues(alpha: 0.1),
+                                              label: Text(
+                                                'اولویت: ${wo.priority.displayName}',
+                                                style: TextStyle(
+                                                  color: priorityColor,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                              backgroundColor: priorityColor
+                                                  .withValues(alpha: 0.1),
                                               side: BorderSide.none,
                                               padding: EdgeInsets.zero,
-                                              visualDensity: VisualDensity.compact,
+                                              visualDensity:
+                                                  VisualDensity.compact,
                                             ),
                                           ],
                                         ),

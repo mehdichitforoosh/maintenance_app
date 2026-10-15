@@ -1,12 +1,7 @@
 import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 
-enum SortOrder {
-  nameAsc,
-  nameDesc,
-  dateNewest,
-  dateOldest,
-}
+enum SortOrder { nameAsc, nameDesc, dateNewest, dateOldest }
 
 extension SortOrderExtension on SortOrder {
   String get displayName {
@@ -59,7 +54,9 @@ class AppSearchFilterBar extends StatelessWidget {
                 children: [
                   Text(
                     'مرتب‌سازی و فیلترها',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -75,10 +72,12 @@ class AppSearchFilterBar extends StatelessWidget {
                       (sort) => ListTile(
                         title: Text(sort.displayName),
                         leading: Icon(
-                          sort == currentSortOrder ? Icons.check_circle : Icons.radio_button_unchecked,
+                          sort == currentSortOrder
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
                           color: sort == currentSortOrder
                               ? Theme.of(context).colorScheme.primary
-                              : Colors.grey,
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         onTap: () {
                           onSortOrderChanged(sort);
@@ -97,8 +96,9 @@ class AppSearchFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      color: Theme.of(context).cardColor,
+      color: colorScheme.surface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
@@ -118,8 +118,14 @@ class AppSearchFilterBar extends StatelessWidget {
                   onChanged: (_) => onChanged(),
                   decoration: InputDecoration(
                     hintText: hintText,
-                    hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                    suffixIcon: const Icon(EneftyIcons.search_normal_outline, size: 20),
+                    hintStyle: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                    suffixIcon: const Icon(
+                      EneftyIcons.search_normal_outline,
+                      size: 20,
+                    ),
                     prefixIcon: searchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 18),
@@ -130,8 +136,11 @@ class AppSearchFilterBar extends StatelessWidget {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.grey.shade100,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10,
+                      horizontal: 16,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
@@ -141,10 +150,7 @@ class AppSearchFilterBar extends StatelessWidget {
               ),
             ],
           ),
-          if (filterChips != null) ...[
-            const SizedBox(height: 8),
-            filterChips!,
-          ],
+          if (filterChips != null) ...[const SizedBox(height: 8), filterChips!],
         ],
       ),
     );

@@ -29,6 +29,7 @@ class _LocationTreeNodeState extends State<LocationTreeNode> {
         .toList();
     final hasChildren = children.isNotEmpty;
     final isActive = widget.location.isActive;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +43,7 @@ class _LocationTreeNodeState extends State<LocationTreeNode> {
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               decoration: BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+                  bottom: BorderSide(color: colorScheme.outlineVariant),
                 ),
               ),
               child: Row(
@@ -69,8 +70,8 @@ class _LocationTreeNodeState extends State<LocationTreeNode> {
                         : EneftyIcons.location_outline,
                     size: widget.depth == 0 ? 22 : 18,
                     color: widget.depth == 0
-                        ? const Color(0xFF0284C7)
-                        : Colors.grey.shade600,
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -90,7 +91,7 @@ class _LocationTreeNodeState extends State<LocationTreeNode> {
                           Text(
                             'کد: ${widget.location.code}',
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color: colorScheme.onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -103,15 +104,19 @@ class _LocationTreeNodeState extends State<LocationTreeNode> {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: (isActive ? Colors.green : Colors.grey).withValues(
-                        alpha: 0.1,
-                      ),
+                      color:
+                          (isActive
+                                  ? colorScheme.tertiary
+                                  : colorScheme.surfaceContainerHighest)
+                              .withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       isActive ? 'فعال' : 'غیرفعال',
                       style: TextStyle(
-                        color: isActive ? Colors.green : Colors.grey,
+                        color: isActive
+                            ? colorScheme.tertiary
+                            : colorScheme.onSurfaceVariant,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),

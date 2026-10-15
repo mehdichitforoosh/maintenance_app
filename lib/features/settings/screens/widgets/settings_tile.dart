@@ -36,7 +36,10 @@ class SettingsTile extends StatelessWidget {
         padding: const EdgeInsets.only(top: 4),
         child: Text(
           subtitle,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
       ),
       onTap: onTap,

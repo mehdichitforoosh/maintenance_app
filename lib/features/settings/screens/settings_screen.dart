@@ -2,6 +2,7 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../facilities/providers/facility_providers.dart';
@@ -13,6 +14,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final facilityAsync = ref.watch(primaryFacilityProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -26,6 +28,63 @@ class SettingsScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              const SectionHeader(title: 'نمایش'),
+              Card(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
+                    foregroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer,
+                    child: Icon(
+                      Theme.of(context).brightness == Brightness.dark
+                          ? Icons.dark_mode_outlined
+                          : Icons.light_mode_outlined,
+                    ),
+                  ),
+                  title: const Text(
+                    'حالت نمایش',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('انتخاب پوسته روشن یا تیره برنامه'),
+                  trailing: SegmentedButton<ThemeMode>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text('روشن'),
+                        icon: Icon(Icons.light_mode_outlined),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text('تیره'),
+                        icon: Icon(Icons.dark_mode_outlined),
+                      ),
+                    ],
+                    selected: {
+                      themeMode == ThemeMode.dark ||
+                              (themeMode == ThemeMode.system &&
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark)
+                          ? ThemeMode.dark
+                          : ThemeMode.light,
+                    },
+                    onSelectionChanged: (selection) {
+                      ref
+                          .read(themeModeProvider.notifier)
+                          .setThemeMode(selection.first);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
               // Facility Hero Card
               const SectionHeader(title: 'اطلاعات کارگاه و کارخانه'),
               Card(
@@ -36,16 +95,16 @@ class SettingsScreen extends ConsumerWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.05),
-                        Colors.white,
-                      ],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    ),
+                    // gradient: LinearGradient(
+                    //   colors: [
+                    //     Theme.of(
+                    //       context,
+                    //     ).colorScheme.primary.withValues(alpha: 0.05),
+                    //     Theme.of(context).colorScheme.surface,
+                    //   ],
+                    //   begin: Alignment.topRight,
+                    //   end: Alignment.bottomLeft,
+                    // ),
                   ),
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -80,7 +139,9 @@ class SettingsScreen extends ConsumerWidget {
                                 Text(
                                   facility?.address ?? 'آدرس ثبت نشده است',
                                   style: TextStyle(
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -105,17 +166,21 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               EneftyIcons.document_text_outline,
                               size: 16,
-                              color: Colors.grey,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 facility.description!,
                                 style: TextStyle(
-                                  color: Colors.grey.shade700,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                   fontSize: 13,
                                 ),
                               ),
@@ -195,13 +260,15 @@ class SettingsScreen extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const ListTile(
+                child: ListTile(
                   contentPadding: EdgeInsets.all(16),
                   leading: CircleAvatar(
-                    backgroundColor: Color(0xFFF1F5F9),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.secondaryContainer,
                     child: Icon(
                       EneftyIcons.data_bold,
-                      color: Color(0xFF475569),
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
                     ),
                   ),
                   title: Text(

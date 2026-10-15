@@ -20,10 +20,11 @@ class AppTheme {
       brightness: Brightness.light,
       fontFamily: GoogleFonts.vazirmatn().fontFamily,
       scaffoldBackgroundColor: AppColors.backgroundLight,
-      cardColor: Colors.white,
+      cardColor: colorScheme.surface,
       colorScheme: colorScheme,
       textTheme: AppTextTheme.lightTextTheme,
       inputDecorationTheme: AppTextTheme.lightInputDecorationTheme,
+      dividerColor: colorScheme.outlineVariant,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: Color(0xFF0F172A),
@@ -41,23 +42,32 @@ class AppTheme {
         margin: EdgeInsets.symmetric(vertical: 6, horizontal: 0),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDBEAFE),
+        backgroundColor: colorScheme.surface,
+        indicatorColor: colorScheme.primaryContainer,
+        elevation: 0,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          return TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.bold
+                : FontWeight.normal,
+            color: states.contains(WidgetState.selected)
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+            fontFamily: 'VazirmatnFD',
+          );
+        }),
+      ),
+      bottomAppBarTheme: BottomAppBarThemeData(
+        color: colorScheme.surface,
         elevation: 8,
       ),
-      bottomAppBarTheme: const BottomAppBarThemeData(
-        color: Colors.white,
-        elevation: 8,
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: colorScheme.surface,
+        yearStyle: TextStyle(fontFamily: 'VazirmatnFD', fontSize: 16.0),
       ),
-      datePickerTheme: const DatePickerThemeData(
-        backgroundColor: Colors.white,
-        yearStyle: TextStyle(
-          fontFamily: 'VazirmatnFD',
-          fontSize: 16.0,
-        ),
-      ),
-      timePickerTheme: const TimePickerThemeData(
-        backgroundColor: Colors.white,
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: colorScheme.surface,
         hourMinuteTextStyle: TextStyle(
           fontFamily: 'VazirmatnFD',
           fontSize: 48.0,
@@ -73,10 +83,7 @@ class AppTheme {
           fontSize: 16.0,
           fontWeight: FontWeight.bold,
         ),
-        helpTextStyle: TextStyle(
-          fontFamily: 'VazirmatnFD',
-          fontSize: 14.0,
-        ),
+        helpTextStyle: TextStyle(fontFamily: 'VazirmatnFD', fontSize: 14.0),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -100,11 +107,12 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       fontFamily: GoogleFonts.vazirmatn().fontFamily,
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      cardColor: const Color(0xFF1E1E1E),
+      scaffoldBackgroundColor: AppColors.backgroundDark,
+      cardColor: colorScheme.surface,
       colorScheme: colorScheme,
       textTheme: AppTextTheme.darkTextTheme,
       inputDecorationTheme: AppTextTheme.darkInputDecorationTheme,
+      dividerColor: colorScheme.outlineVariant,
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF1E1E1E),
         foregroundColor: Color(0xFFE0E0E0),
@@ -122,23 +130,32 @@ class AppTheme {
         margin: EdgeInsets.symmetric(vertical: 6, horizontal: 0),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: const Color(0xFF1E1E1E),
-        indicatorColor: const Color(0xFF1E3A8A),
+        backgroundColor: colorScheme.surface,
+        indicatorColor: colorScheme.primaryContainer,
+        elevation: 0,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          return TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.bold
+                : FontWeight.normal,
+            color: states.contains(WidgetState.selected)
+                ? colorScheme.onPrimaryContainer
+                : colorScheme.onSurfaceVariant,
+            fontFamily: 'VazirmatnFD',
+          );
+        }),
+      ),
+      bottomAppBarTheme: BottomAppBarThemeData(
+        color: colorScheme.surface,
         elevation: 8,
       ),
-      bottomAppBarTheme: const BottomAppBarThemeData(
-        color: Color(0xFF1E1E1E),
-        elevation: 8,
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: colorScheme.surface,
+        yearStyle: TextStyle(fontFamily: 'VazirmatnFD', fontSize: 16.0),
       ),
-      datePickerTheme: const DatePickerThemeData(
-        backgroundColor: Color(0xFF1E1E1E),
-        yearStyle: TextStyle(
-          fontFamily: 'VazirmatnFD',
-          fontSize: 16.0,
-        ),
-      ),
-      timePickerTheme: const TimePickerThemeData(
-        backgroundColor: Color(0xFF1E1E1E),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: colorScheme.surface,
         hourMinuteTextStyle: TextStyle(
           fontFamily: 'VazirmatnFD',
           fontSize: 48.0,
@@ -154,10 +171,7 @@ class AppTheme {
           fontSize: 16.0,
           fontWeight: FontWeight.bold,
         ),
-        helpTextStyle: TextStyle(
-          fontFamily: 'VazirmatnFD',
-          fontSize: 14.0,
-        ),
+        helpTextStyle: TextStyle(fontFamily: 'VazirmatnFD', fontSize: 14.0),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

@@ -121,7 +121,7 @@ class DashboardContent extends ConsumerWidget {
                     Text(
                       'توزيع وضعیت دستورکارها در کارگاه',
                       style: TextStyle(
-                        color: Colors.grey.shade700,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -349,7 +349,11 @@ class DashboardContent extends ConsumerWidget {
                               ),
                               Text(
                                 '${(item['quantity'] as num).toStringAsFixed((item['quantity'] as num) % 1 == 0 ? 0 : 1)} ${item['unit']}',
-                                style: TextStyle(color: Colors.grey.shade700),
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ],
                           ),
@@ -551,7 +555,10 @@ class _TrendCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 10),
             SizedBox(

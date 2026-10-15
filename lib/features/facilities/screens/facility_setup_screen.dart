@@ -11,7 +11,8 @@ class FacilitySetupScreen extends ConsumerStatefulWidget {
   const FacilitySetupScreen({super.key});
 
   @override
-  ConsumerState<FacilitySetupScreen> createState() => _FacilitySetupScreenState();
+  ConsumerState<FacilitySetupScreen> createState() =>
+      _FacilitySetupScreenState();
 }
 
 class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
@@ -56,15 +57,23 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
       if (_existingFacility != null) {
         final updated = _existingFacility!.copyWith(
           name: _nameController.text.trim(),
-          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          description: _descController.text.trim().isEmpty
+              ? null
+              : _descController.text.trim(),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
         );
         await repo.updateFacility(updated);
       } else {
         await repo.createFacility(
           name: _nameController.text.trim(),
-          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          description: _descController.text.trim().isEmpty
+              ? null
+              : _descController.text.trim(),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
         );
       }
 
@@ -96,7 +105,10 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'ویرایش مشخصات کارگاه' : 'راه‌اندازی کارگاه / کارخانه', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isEditing ? 'ویرایش مشخصات کارگاه' : 'راه‌اندازی کارگاه / کارخانه',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -106,21 +118,34 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 44,
-                  backgroundColor: Color(0xFFDBEAFE),
-                  child: Icon(EneftyIcons.building_bold, size: 48, color: Color(0xFF2563EB)),
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onPrimaryContainer,
+                  child: Icon(EneftyIcons.building_bold, size: 48),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  isEditing ? 'ویرایش اطلاعات عمومی کارگاه' : 'خوش آمدید به سیستم نگهداری و تعمیرات (CMMS)',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  isEditing
+                      ? 'ویرایش اطلاعات عمومی کارگاه'
+                      : 'خوش آمدید به سیستم نگهداری و تعمیرات (CMMS)',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isEditing ? 'می‌توانید نام، آدرس و توضیحات کارگاه خود را تغییر دهید.' : 'لطفاً مشخصات کارگاه یا کارخانه خود را جهت شروع کار ثبت کنید.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
+                  isEditing
+                      ? 'می‌توانید نام، آدرس و توضیحات کارگاه خود را تغییر دهید.'
+                      : 'لطفاً مشخصات کارگاه یا کارخانه خود را جهت شروع کار ثبت کنید.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -131,7 +156,8 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(EneftyIcons.building_bold),
                   ),
-                  validator: (v) => AppValidators.required(v, fieldName: 'نام کارگاه'),
+                  validator: (v) =>
+                      AppValidators.required(v, fieldName: 'نام کارگاه'),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -155,11 +181,32 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                 ),
                 const SizedBox(height: 32),
                 FilledButton.icon(
-                  icon: _isLoading ? const SizedBox.shrink() : Icon(isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.tick_circle_bold),
+                  icon: _isLoading
+                      ? const SizedBox.shrink()
+                      : Icon(
+                          isEditing
+                              ? EneftyIcons.edit_2_bold
+                              : EneftyIcons.tick_circle_bold,
+                        ),
                   onPressed: _isLoading ? null : _submit,
                   label: _isLoading
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(isEditing ? 'بروزرسانی کارگاه' : 'ذخیره و ورود به سیستم', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          isEditing
+                              ? 'بروزرسانی کارگاه'
+                              : 'ذخیره و ورود به سیستم',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ],
             ),
