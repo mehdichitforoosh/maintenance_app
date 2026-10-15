@@ -33,26 +33,26 @@ import '../widgets/app_scaffold_shell.dart';
 GoRouter createAppRouter({required String initialLocation}) => GoRouter(
   initialLocation: initialLocation,
   routes: [
-    GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+    GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
     GoRoute(
       path: '/setup/facility',
-      builder: (_, __) => const FacilitySetupScreen(),
+      builder: (_, _) => const FacilitySetupScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) {
         return AppScaffoldShell(location: state.uri.path, child: child);
       },
       routes: [
-        GoRoute(path: '/', builder: (_, __) => const DashboardScreen()),
+        GoRoute(path: '/', builder: (_, _) => const DashboardScreen()),
         // Assets
-        GoRoute(path: '/assets', builder: (_, __) => const AssetListScreen()),
+        GoRoute(path: '/assets', builder: (_, _) => const AssetListScreen()),
         GoRoute(
           path: '/assets/new',
-          builder: (_, __) => const AssetFormScreen(),
+          builder: (_, _) => const AssetFormScreen(),
         ),
         GoRoute(
           path: '/assets/tree',
-          builder: (_, __) => const AssetTreeScreen(),
+          builder: (_, _) => const AssetTreeScreen(),
         ),
         GoRoute(
           path: '/assets/:id',
@@ -72,15 +72,15 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         // Locations
         GoRoute(
           path: '/locations',
-          builder: (_, __) => const LocationListScreen(),
+          builder: (_, _) => const LocationListScreen(),
         ),
         GoRoute(
           path: '/locations/new',
-          builder: (_, __) => const LocationFormScreen(),
+          builder: (_, _) => const LocationFormScreen(),
         ),
         GoRoute(
           path: '/locations/tree',
-          builder: (_, __) => const LocationTreeScreen(),
+          builder: (_, _) => const LocationTreeScreen(),
         ),
         GoRoute(
           path: '/locations/:id/edit',
@@ -90,7 +90,7 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         // Maintenance Plans
         GoRoute(
           path: '/maintenance-plans',
-          builder: (_, __) => const MaintenancePlanListScreen(),
+          builder: (_, _) => const MaintenancePlanListScreen(),
         ),
         GoRoute(
           path: '/maintenance-plans/new',
@@ -112,11 +112,11 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         // Work Orders
         GoRoute(
           path: '/work-orders',
-          builder: (_, __) => const WorkOrderListScreen(),
+          builder: (_, _) => const WorkOrderListScreen(),
         ),
         GoRoute(
           path: '/work-orders/new',
-          builder: (_, __) => const WorkOrderFormScreen(),
+          builder: (_, _) => const WorkOrderFormScreen(),
         ),
         GoRoute(
           path: '/work-orders/:id',
@@ -149,15 +149,15 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         // Inventory
         GoRoute(
           path: '/inventory',
-          builder: (_, __) => const InventoryListScreen(),
+          builder: (_, _) => const InventoryListScreen(),
         ),
         GoRoute(
           path: '/inventory/new',
-          builder: (_, __) => const InventoryItemFormScreen(),
+          builder: (_, _) => const InventoryItemFormScreen(),
         ),
         GoRoute(
           path: '/inventory/adjustment',
-          builder: (_, __) => const StockAdjustmentScreen(),
+          builder: (_, _) => const StockAdjustmentScreen(),
         ),
         GoRoute(
           path: '/inventory/:id',
@@ -172,11 +172,11 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         // Purchases
         GoRoute(
           path: '/purchases',
-          builder: (_, __) => const PurchaseOrderListScreen(),
+          builder: (_, _) => const PurchaseOrderListScreen(),
         ),
         GoRoute(
           path: '/purchases/new',
-          builder: (_, __) => const PurchaseOrderFormScreen(),
+          builder: (_, _) => const PurchaseOrderFormScreen(),
         ),
         GoRoute(
           path: '/purchases/:id',
@@ -197,8 +197,8 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
           ),
         ),
         // Alerts & Settings
-        GoRoute(path: '/alerts', builder: (_, __) => const AlertsScreen()),
-        GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+        GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
+        GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       ],
     ),
   ],

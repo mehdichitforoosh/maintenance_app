@@ -175,7 +175,7 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                   );
                 },
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
 
               TextFormField(

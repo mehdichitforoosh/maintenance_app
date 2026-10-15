@@ -210,11 +210,11 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                             );
                           },
                           loading: () => const LinearProgressIndicator(),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                         );
                       },
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 16),
 
@@ -241,11 +241,11 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                             );
                           },
                           loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                         );
                       },
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 16),
 

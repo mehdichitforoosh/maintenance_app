@@ -7,6 +7,8 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/validators.dart';
 import '../../assets/providers/asset_providers.dart';
 import '../../facilities/providers/facility_providers.dart';
+import '../../maintenance/models/maintenance_plan.dart';
+import '../../maintenance/providers/maintenance_providers.dart';
 import '../providers/work_order_providers.dart';
 
 class WorkOrderTaskFormScreen extends ConsumerStatefulWidget {
@@ -15,22 +17,27 @@ class WorkOrderTaskFormScreen extends ConsumerStatefulWidget {
   const WorkOrderTaskFormScreen({super.key, required this.workOrderId});
 
   @override
-  ConsumerState<WorkOrderTaskFormScreen> createState() => _WorkOrderTaskFormScreenState();
+  ConsumerState<WorkOrderTaskFormScreen> createState() =>
+      _WorkOrderTaskFormScreenState();
 }
 
-class _WorkOrderTaskFormScreenState extends ConsumerState<WorkOrderTaskFormScreen> {
+class _WorkOrderTaskFormScreenState
+    extends ConsumerState<WorkOrderTaskFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _titleFocusNode = FocusNode();
   final _descController = TextEditingController();
   final _dueDateController = TextEditingController();
 
   String? _selectedAssetId;
+  String? _selectedMaintenancePlanId;
   ActivityType _activityType = ActivityType.inspection;
   bool _isLoading = false;
 
   @override
   void dispose() {
     _titleController.dispose();
+    _titleFocusNode.dispose();
     _descController.dispose();
     _dueDateController.dispose();
     super.dispose();
@@ -44,7 +51,8 @@ class _WorkOrderTaskFormScreenState extends ConsumerState<WorkOrderTaskFormScree
       lastDate: Jalali(1450, 12),
     );
     if (picked != null) {
-      final formatted = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      final formatted =
+          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
       setState(() => _dueDateController.text = formatted);
     }
   }
@@ -52,7 +60,11 @@ class _WorkOrderTaskFormScreenState extends ConsumerState<WorkOrderTaskFormScree
   Future<void> _save() async {
     if (!_formKey.currentState!.validate() || _selectedAssetId == null) {
       if (_selectedAssetId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لطفاً تجهیز مرتبط با وظیفه را انتخاب کنید.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لطفاً تجهیز مرتبط با وظیفه را انتخاب کنید.'),
+          ),
+        );
       }
       return;
     }
@@ -63,17 +75,24 @@ class _WorkOrderTaskFormScreenState extends ConsumerState<WorkOrderTaskFormScree
       await repo.addTaskToWorkOrder(
         workOrderId: widget.workOrderId,
         assetId: _selectedAssetId!,
+        maintenancePlanId: _selectedMaintenancePlanId,
         title: _titleController.text.trim(),
-        description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+        description: _descController.text.trim().isEmpty
+            ? null
+            : _descController.text.trim(),
         activityType: _activityType,
-        plannedDueAt: _dueDateController.text.trim().isEmpty ? null : _dueDateController.text.trim(),
+        plannedDueAt: _dueDateController.text.trim().isEmpty
+            ? null
+            : _dueDateController.text.trim(),
       );
 
       ref.invalidate(workOrderTasksProvider(widget.workOrderId));
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -86,92 +105,244 @@ class _WorkOrderTaskFormScreenState extends ConsumerState<WorkOrderTaskFormScree
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('افزودن وظیفه جدید به دستورکار', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'افزودن وظیفه جدید به دستورکار',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              // Asset Selection
-              facilityAsync.when(
-                data: (facility) {
-                  if (facility == null) return const SizedBox.shrink();
-                  final assetsAsync = ref.watch(assetsProvider(facility.id));
-                  return assetsAsync.when(
-                    data: (assets) {
-                      if (assets.isEmpty) return const Text('ابتدا باید تجهیزی در سیستم ثبت کنید.');
-                      _selectedAssetId ??= assets.first.id;
-                      return Padding(
+      body: facilityAsync.when(
+        data: (facility) {
+          if (facility == null) {
+            return const Center(
+              child: Text('ابتدا اطلاعات کارگاه را ثبت کنید.'),
+            );
+          }
+          final assetsAsync = ref.watch(assetsProvider(facility.id));
+          final plansAsync = ref.watch(allFacilityPlansProvider(facility.id));
+          return assetsAsync.when(
+            data: (assets) {
+              if (assets.isEmpty) {
+                return const Center(
+                  child: Text('ابتدا باید تجهیزی در سیستم ثبت کنید.'),
+                );
+              }
+              _selectedAssetId ??= assets.first.id;
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    children: [
+                      Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: DropdownButtonFormField<String>(
                           initialValue: _selectedAssetId,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'تجهیز هدف *',
                             prefixIcon: Icon(EneftyIcons.cpu_bold),
                             border: OutlineInputBorder(),
                           ),
-                          items: assets.map((a) => DropdownMenuItem(value: a.id, child: Text('${a.name} (${a.code})'))).toList(),
-                          onChanged: (v) => setState(() => _selectedAssetId = v),
+                          items: assets
+                              .map(
+                                (a) => DropdownMenuItem(
+                                  value: a.id,
+                                  child: Text('${a.name} (${a.code})'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedAssetId = value;
+                              _selectedMaintenancePlanId = null;
+                              _titleController.clear();
+                            });
+                          },
                         ),
-                      );
-                    },
-                    loading: () => const LinearProgressIndicator(),
-                    error: (e, _) => Text('خطا: $e'),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
+                      ),
+                      plansAsync.when(
+                        data: (plans) => _buildTitleAutocomplete(plans),
+                        loading: () =>
+                            _buildTitleAutocomplete(const [], isLoading: true),
+                        error: (_, _) => _buildTitleAutocomplete(
+                          const [],
+                          failedToLoad: true,
+                          onRetry: () {
+                            ref.invalidate(
+                              allFacilityPlansProvider(facility.id),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<ActivityType>(
+                        initialValue: _activityType,
+                        decoration: const InputDecoration(
+                          labelText: 'نوع فعالیت',
+                          prefixIcon: Icon(EneftyIcons.setting_bold),
+                          border: OutlineInputBorder(),
+                        ),
+                        items: ActivityType.values
+                            .map(
+                              (a) => DropdownMenuItem(
+                                value: a,
+                                child: Text(a.displayName),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(
+                          () => _activityType = v ?? ActivityType.inspection,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _dueDateController,
+                        readOnly: true,
+                        onTap: _selectDueDate,
+                        decoration: const InputDecoration(
+                          labelText: 'تاریخ سررسید برنامه (شمسی)',
+                          prefixIcon: Icon(EneftyIcons.calendar_2_bold),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descController,
+                        decoration: const InputDecoration(
+                          labelText: 'توضیحات و دستورالعمل وظیفه',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        icon: const Icon(EneftyIcons.add_bold),
+                        onPressed: _isLoading ? null : _save,
+                        label: const Text('افزودن وظیفه به دستورکار'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+            loading: () => const LinearProgressIndicator(),
+            error: (error, _) =>
+                Center(child: Text('بارگذاری تجهیزات ناموفق بود: $error')),
+          );
+        },
+        loading: () => const LinearProgressIndicator(),
+        error: (error, _) =>
+            Center(child: Text('بارگذاری اطلاعات کارگاه ناموفق بود: $error')),
+      ),
+    );
+  }
 
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'عنوان وظیفه *',
-                  prefixIcon: Icon(EneftyIcons.task_bold),
-                  border: OutlineInputBorder(),
+  Widget _buildTitleAutocomplete(
+    List<MaintenancePlan> plans, {
+    bool isLoading = false,
+    bool failedToLoad = false,
+    VoidCallback? onRetry,
+  }) {
+    final assetPlans = plans
+        .where((plan) => plan.assetId == _selectedAssetId)
+        .toList();
+    return Autocomplete<MaintenancePlan>(
+      textEditingController: _titleController,
+      focusNode: _titleFocusNode,
+      displayStringForOption: (plan) => plan.title,
+      optionsBuilder: (textEditingValue) {
+        final query = textEditingValue.text.trim().toLowerCase();
+        return assetPlans.where(
+          (plan) => query.isEmpty || plan.title.toLowerCase().contains(query),
+        );
+      },
+      onSelected: (plan) {
+        setState(() {
+          _selectedMaintenancePlanId = plan.id;
+          _selectedAssetId = plan.assetId;
+          _activityType = plan.activityType;
+          _titleController.text = plan.title;
+        });
+      },
+      fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              controller: textController,
+              focusNode: focusNode,
+              onChanged: (value) {
+                final selectedPlan = assetPlans
+                    .where((plan) => plan.id == _selectedMaintenancePlanId)
+                    .firstOrNull;
+                if (selectedPlan != null && selectedPlan.title != value) {
+                  setState(() => _selectedMaintenancePlanId = null);
+                }
+              },
+              decoration: InputDecoration(
+                labelText: 'عنوان وظیفه *',
+                helperText: failedToLoad
+                    ? 'برنامه‌ها بارگذاری نشدند؛ عنوان را می‌توانید دستی وارد کنید.'
+                    : assetPlans.isEmpty
+                    ? 'برای این تجهیز برنامه‌ای نیست؛ عنوان را دستی وارد کنید.'
+                    : 'عنوان برنامه را جست‌وجو و انتخاب کنید تا وظیفه به آن پیوند بخورد.',
+                prefixIcon: const Icon(EneftyIcons.task_bold),
+                border: const OutlineInputBorder(),
+                suffixIcon: isLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : null,
+              ),
+              validator: (value) =>
+                  AppValidators.required(value, fieldName: 'عنوان وظیفه'),
+              onFieldSubmitted: (_) => onFieldSubmitted(),
+            ),
+            if (onRetry != null)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text(
+                    'بارگذاری برنامه‌ها ناموفق بود؛ تلاش دوباره',
+                  ),
                 ),
-                validator: (v) => AppValidators.required(v, fieldName: 'عنوان وظیفه'),
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<ActivityType>(
-                initialValue: _activityType,
-                decoration: const InputDecoration(
-                  labelText: 'نوع فعالیت',
-                  prefixIcon: Icon(EneftyIcons.setting_bold),
-                  border: OutlineInputBorder(),
-                ),
-                items: ActivityType.values.map((a) => DropdownMenuItem(value: a, child: Text(a.displayName))).toList(),
-                onChanged: (v) => setState(() => _activityType = v ?? ActivityType.inspection),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _dueDateController,
-                readOnly: true,
-                onTap: _selectDueDate,
-                decoration: const InputDecoration(
-                  labelText: 'تاریخ سررسید برنامه (شمسی)',
-                  prefixIcon: Icon(EneftyIcons.calendar_2_bold),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descController,
-                decoration: const InputDecoration(
-                  labelText: 'توضیحات و دستورالعمل وظیفه',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                icon: const Icon(EneftyIcons.add_bold),
-                onPressed: _isLoading ? null : _save,
-                label: const Text('افزودن وظیفه به دستورکار'),
-              ),
-            ],
+          ],
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) => Align(
+        alignment: AlignmentDirectional.topStart,
+        child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(12),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 240),
+            child: ListView(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              children: options
+                  .map(
+                    (plan) => ListTile(
+                      dense: true,
+                      leading: const Icon(EneftyIcons.task_bold),
+                      title: Text(
+                        plan.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(plan.activityType.displayName),
+                      onTap: () => onSelected(plan),
+                    ),
+                  )
+                  .toList(),
+            ),
           ),
         ),
       ),

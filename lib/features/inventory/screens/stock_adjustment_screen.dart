@@ -71,14 +71,14 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
               child: ListView(
                 children: [
                   DropdownButtonFormField<String>(
-                    value: _selectedItemId,
+                    initialValue: _selectedItemId,
                     decoration: const InputDecoration(labelText: 'انتخاب کالا *', border: OutlineInputBorder()),
                     items: items.map((i) => DropdownMenuItem(value: i.id, child: Text('${i.name} (${i.code})'))).toList(),
                     onChanged: (v) => setState(() => _selectedItemId = v),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<TransactionType>(
-                    value: _type,
+                    initialValue: _type,
                     decoration: const InputDecoration(labelText: 'نوع تعدیل *', border: OutlineInputBorder()),
                     items: const [
                       DropdownMenuItem(value: TransactionType.adjustmentIn, child: Text('تعدیل افزایش (ورود به انبار)')),
