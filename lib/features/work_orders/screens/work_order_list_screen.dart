@@ -2,6 +2,7 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
@@ -27,19 +28,6 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Color _getPriorityColor(Priority priority) {
-    switch (priority) {
-      case Priority.critical:
-        return const Color(0xFFDC2626);
-      case Priority.high:
-        return const Color(0xFFD97706);
-      case Priority.medium:
-        return const Color(0xFF2563EB);
-      case Priority.low:
-        return const Color(0xFF6B7280);
-    }
   }
 
   Color _getStatusColor(WorkOrderStatus status) {
@@ -151,7 +139,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                       itemBuilder: (context, index) {
                         final wo = filtered[index];
                         final statusColor = _getStatusColor(wo.status);
-                        final priorityColor = _getPriorityColor(wo.priority);
+                        final priorityColor = AppColors.priorityColor(wo.priority);
 
                         return Card(
                           child: InkWell(

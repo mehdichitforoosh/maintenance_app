@@ -2,6 +2,8 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/extensions/jalali_extensions.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/section_header.dart';
@@ -22,6 +24,14 @@ class AssetDetailScreen extends ConsumerWidget {
     return assetAsync.when(
       data: (asset) {
         if (asset == null) return const Scaffold(body: Center(child: Text('تجهیز یافت نشد')));
+
+        final statusColor = switch (asset.status.name) {
+          'active' || 'ACTIVE' => Colors.green,
+          'underMaintenance' || 'UNDER_MAINTENANCE' => Colors.orange,
+          'inactive' || 'INACTIVE' => Colors.grey,
+          'retired' || 'RETIRED' => Colors.red,
+          _ => Theme.of(context).colorScheme.primary,
+        };
 
         return Scaffold(
           appBar: AppBar(
@@ -50,10 +60,10 @@ class AssetDetailScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                              color: statusColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(asset.status.displayName, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+                            child: Text(asset.status.displayName, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                         ],
                       ),
@@ -63,6 +73,8 @@ class AssetDetailScreen extends ConsumerWidget {
                       if (asset.manufacturer != null && asset.manufacturer!.isNotEmpty) _infoRow('سازنده', asset.manufacturer!),
                       if (asset.model != null && asset.model!.isNotEmpty) _infoRow('مدل', asset.model!),
                       if (asset.serialNumber != null && asset.serialNumber!.isNotEmpty) _infoRow('شماره سریال', asset.serialNumber!),
+                      if (asset.installationDate != null && asset.installationDate!.isNotEmpty) _infoRow('تاریخ نصب', _formatPersianDate(asset.installationDate!)),
+                      if (asset.commissioningDate != null && asset.commissioningDate!.isNotEmpty) _infoRow('تاریخ بهره‌برداری', _formatPersianDate(asset.commissioningDate!)),
                       if (asset.description != null && asset.description!.isNotEmpty) _infoRow('توضیحات', asset.description!),
                     ],
                   ),
@@ -72,9 +84,9 @@ class AssetDetailScreen extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: FilledButton.icon(
                       onPressed: () => context.push('/assets/$assetId/readings'),
-                      icon: const Icon(EneftyIcons.graph_bold, size: 18),
+                      icon: const Icon(EneftyIcons.speedometer_outline, size: 18),
                       label: const Text('خوانش‌های تجهیز'),
                     ),
                   ),
@@ -82,7 +94,7 @@ class AssetDetailScreen extends ConsumerWidget {
                   Expanded(
                     child: FilledButton.icon(
                       onPressed: () => context.push('/maintenance-plans/new?assetId=$assetId'),
-                      icon: const Icon(EneftyIcons.add_bold, size: 18),
+                      icon: const Icon(EneftyIcons.add_square_outline, size: 18),
                       label: const Text('برنامه PM جدید'),
                     ),
                   ),
@@ -94,15 +106,24 @@ class AssetDetailScreen extends ConsumerWidget {
                 data: (plans) {
                   if (plans.isEmpty) return const Text('برنامه نگهداری ثبت نشده است.');
                   return Column(
-                    children: plans.map((p) => Card(
-                      child: ListTile(
-                        leading: const Icon(EneftyIcons.calendar_2_bold, color: Colors.blue),
-                        title: Text(p.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('نوع زمان‌بندی: ${p.scheduleType.displayName} | اولویت: ${p.priority.displayName}'),
-                        trailing: const Icon(EneftyIcons.arrow_left_3_outline, size: 18),
-                        onTap: () => context.push('/maintenance-plans/${p.id}/edit'),
-                      ),
-                    )).toList(),
+                    children: plans.map((p) {
+                      final priorityColor = AppColors.priorityColor(p.priority);
+
+                      return Card(
+                        child: ListTile(
+                          leading: const Icon(EneftyIcons.calendar_2_outline, color: Colors.blue),
+                          title: Text(p.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('نوع زمان‌بندی: ${p.scheduleType.displayName}'),
+                          trailing: Chip(
+                            label: Text('اولویت: ${p.priority.displayName}', style: TextStyle(color: priorityColor, fontWeight: FontWeight.bold, fontSize: 11)),
+                            backgroundColor: priorityColor.withValues(alpha: 0.12),
+                            side: BorderSide(color: priorityColor.withValues(alpha: 0.35)),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onTap: () => context.push('/maintenance-plans/${p.id}/edit'),
+                        ),
+                      );
+                    }).toList(),
                   );
                 },
                 loading: () => const AppLoading(),
@@ -116,15 +137,15 @@ class AssetDetailScreen extends ConsumerWidget {
                   return Column(
                     children: readings.take(5).map((r) => Card(
                       child: ListTile(
-                        leading: const Icon(EneftyIcons.graph_bold, color: Colors.teal),
+                        leading: const Icon(EneftyIcons.speedometer_bold, color: Colors.teal),
                         title: Text('${r.metricName}: ${r.value} ${r.unit}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('تاریخ: ${r.recordedAt}'),
+                        subtitle: Text('تاریخ: ${_formatPersianDate(r.recordedAt)}'),
                       ),
                     )).toList(),
                   );
                 },
                 loading: () => const AppLoading(),
-                error: (e, _) => Text('خطa: $e'),
+                error: (e, _) => Text('خطا: $e'),
               ),
             ],
           ),
@@ -135,6 +156,15 @@ class AssetDetailScreen extends ConsumerWidget {
     );
   }
 
+
+  String _formatPersianDate(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
+      return value;
+    }
+    return parsed.toShamsiDate();
+  }
+
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -142,7 +172,13 @@ class AssetDetailScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.left,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );

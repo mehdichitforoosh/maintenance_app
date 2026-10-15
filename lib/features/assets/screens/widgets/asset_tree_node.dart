@@ -79,8 +79,8 @@ class _AssetTreeNodeState extends State<AssetTreeNode> {
                     const SizedBox(width: 26),
                   Icon(
                     widget.depth == 0
-                        ? EneftyIcons.cpu_bold
-                        : EneftyIcons.setting_bold,
+                        ? EneftyIcons.cpu_outline
+                        : EneftyIcons.setting_outline,
                     size: widget.depth == 0 ? 22 : 18,
                     color: widget.depth == 0
                         ? Theme.of(context).colorScheme.primary

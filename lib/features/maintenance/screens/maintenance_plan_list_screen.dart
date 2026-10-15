@@ -2,6 +2,7 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
@@ -27,19 +28,6 @@ class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListS
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Color _getPriorityColor(Priority priority) {
-    switch (priority) {
-      case Priority.critical:
-        return const Color(0xFFDC2626);
-      case Priority.high:
-        return const Color(0xFFD97706);
-      case Priority.medium:
-        return const Color(0xFF2563EB);
-      case Priority.low:
-        return const Color(0xFF6B7280);
-    }
   }
 
   List<MaintenancePlan> _filterAndSortPlans(List<MaintenancePlan> plans) {
@@ -131,7 +119,7 @@ class _MaintenancePlanListScreenState extends ConsumerState<MaintenancePlanListS
                       itemCount: filtered.length,
                       itemBuilder: (context, index) {
                         final plan = filtered[index];
-                        final priorityColor = _getPriorityColor(plan.priority);
+                        final priorityColor = AppColors.priorityColor(plan.priority);
 
                         return Card(
                           child: InkWell(

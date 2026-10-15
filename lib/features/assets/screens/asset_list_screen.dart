@@ -83,7 +83,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
             title: const Text('تجهیزات و ماشین‌آلات', style: TextStyle(fontWeight: FontWeight.bold)),
             actions: [
               IconButton(
-                icon: const Icon(EneftyIcons.chart_2_outline),
+                icon: const Icon(EneftyIcons.hierarchy_square_2_outline),
                 tooltip: 'نمایش درختی',
                 onPressed: () => context.push('/assets/tree'),
               ),
@@ -143,6 +143,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                         final statusColor = _getStatusColor(asset.status);
 
                         return Card(
+                          elevation: 0,
                           child: InkWell(
                             onTap: () => context.push('/assets/${asset.id}'),
                             borderRadius: BorderRadius.circular(12),
@@ -152,8 +153,8 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 22,
-                                    backgroundColor: const Color(0xFFDBEAFE),
-                                    child: const Icon(EneftyIcons.cpu_bold, color: Color(0xFF2563EB), size: 22),
+                                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                                    child: Icon(EneftyIcons.cpu_outline, color: Theme.of(context).colorScheme.primary, size: 22),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -203,7 +204,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/assets/new'),
-            child: const Icon(EneftyIcons.add_bold),
+            child: const Icon(EneftyIcons.add_outline),
           ),
         );
       },

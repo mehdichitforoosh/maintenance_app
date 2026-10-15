@@ -34,6 +34,7 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
   AssetType _assetType = AssetType.machine;
   AssetStatus _status = AssetStatus.active;
   bool _isLoading = false;
+  bool _isSubmitting = false;
   Asset? _existingAsset;
 
   @override
@@ -96,8 +97,9 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       final facility = await ref.read(primaryFacilityProvider.future);
@@ -146,7 +148,7 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -161,18 +163,19 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
       ),
       body: _isLoading && isEditing && _existingAsset == null
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
                         labelText: 'نام تجهیز *',
-                        prefixIcon: Icon(EneftyIcons.cpu_bold),
-                        border: OutlineInputBorder(),
+                        hintText: 'مثلاً کمپرسور اصلی یا دستگاه برش',
+                        prefixIcon: Icon(EneftyIcons.cpu_outline),
                       ),
                       validator: (v) => AppValidators.required(v, fieldName: 'نام تجهیز'),
                     ),
@@ -181,8 +184,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       controller: _codeController,
                       decoration: const InputDecoration(
                         labelText: 'کد تجهیز (یکتا) *',
-                        prefixIcon: Icon(EneftyIcons.code_bold),
-                        border: OutlineInputBorder(),
+                        hintText: 'مثلاً EQ-001 یا CMP-07',
+                        prefixIcon: Icon(EneftyIcons.code_outline),
                       ),
                       validator: AppValidators.code,
                     ),
@@ -199,8 +202,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                               initialValue: _selectedLocationId,
                               decoration: const InputDecoration(
                                 labelText: 'موقعیت استقرار در کارگاه',
-                                prefixIcon: Icon(EneftyIcons.location_bold),
-                                border: OutlineInputBorder(),
+                                hintText: 'محل نصب تجهیز را انتخاب کنید',
+                                prefixIcon: Icon(EneftyIcons.location_outline),
                               ),
                               items: [
                                 const DropdownMenuItem<String?>(value: null, child: Text('بدون موقعیت مشخص')),
@@ -230,8 +233,7 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                               initialValue: _selectedParentAssetId,
                               decoration: const InputDecoration(
                                 labelText: 'تجهیز والد (در صورت وجود)',
-                                prefixIcon: Icon(EneftyIcons.chart_2_bold),
-                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(EneftyIcons.hierarchy_square_2_outline),
                               ),
                               items: [
                                 const DropdownMenuItem<String?>(value: null, child: Text('اصلی (بدون والد)')),
@@ -253,8 +255,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       initialValue: _assetType,
                       decoration: const InputDecoration(
                         labelText: 'نوع تجهیز',
-                        prefixIcon: Icon(EneftyIcons.setting_bold),
-                        border: OutlineInputBorder(),
+                        hintText: 'نوع تجهیز را تعیین کنید',
+                        prefixIcon: Icon(EneftyIcons.setting_outline),
                       ),
                       items: AssetType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.displayName))).toList(),
                       onChanged: (v) => setState(() => _assetType = v ?? AssetType.machine),
@@ -264,8 +266,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       initialValue: _status,
                       decoration: const InputDecoration(
                         labelText: 'وضعیت',
-                        prefixIcon: Icon(EneftyIcons.info_circle_bold),
-                        border: OutlineInputBorder(),
+                        hintText: 'وضعیت فعلی تجهیز را انتخاب کنید',
+                        prefixIcon: Icon(EneftyIcons.info_circle_outline),
                       ),
                       items: AssetStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.displayName))).toList(),
                       onChanged: (v) => setState(() => _status = v ?? AssetStatus.active),
@@ -275,8 +277,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       controller: _mfrController,
                       decoration: const InputDecoration(
                         labelText: 'سازنده / برند',
-                        prefixIcon: Icon(EneftyIcons.building_bold),
-                        border: OutlineInputBorder(),
+                        hintText: 'مثلاً ایران‌موتور یا کاترپیلار',
+                        prefixIcon: Icon(EneftyIcons.building_outline),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -284,8 +286,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       controller: _modelController,
                       decoration: const InputDecoration(
                         labelText: 'مدل',
-                        prefixIcon: Icon(EneftyIcons.box_bold),
-                        border: OutlineInputBorder(),
+                        hintText: 'مثلاً ۳۰۰۰- M یا X12',
+                        prefixIcon: Icon(EneftyIcons.box_outline),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -293,8 +295,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       controller: _serialController,
                       decoration: const InputDecoration(
                         labelText: 'شماره سریال',
-                        prefixIcon: Icon(EneftyIcons.document_text_bold),
-                        border: OutlineInputBorder(),
+                        hintText: 'شماره سریال یا شناسه کارخانه',
+                        prefixIcon: Icon(EneftyIcons.document_text_outline),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -309,8 +311,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                             onTap: () => _selectPersianDate(_installDateController),
                             decoration: const InputDecoration(
                               labelText: 'تاریخ نصب (شمسی)',
-                              prefixIcon: Icon(EneftyIcons.calendar_2_bold),
-                              border: OutlineInputBorder(),
+                              hintText: 'انتخاب تاریخ نصب',
+                              prefixIcon: Icon(EneftyIcons.calendar_2_outline),
                             ),
                           ),
                         ),
@@ -321,9 +323,9 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                             readOnly: true,
                             onTap: () => _selectPersianDate(_commDateController),
                             decoration: const InputDecoration(
-                              labelText: 'تاریخ راه اندازی (شمسی)',
-                              prefixIcon: Icon(EneftyIcons.calendar_bold),
-                              border: OutlineInputBorder(),
+                              labelText: 'تاریخ راه‌اندازی (شمسی)',
+                              hintText: 'انتخاب تاریخ راه‌اندازی',
+                              prefixIcon: Icon(EneftyIcons.calendar_outline),
                             ),
                           ),
                         ),
@@ -335,17 +337,26 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       controller: _descController,
                       decoration: const InputDecoration(
                         labelText: 'توضیحات',
-                        border: OutlineInputBorder(),
+                        hintText: 'توضیح کوتاه درباره تجهیز، مشکل یا ویژگی خاص',
                       ),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 24),
-                    FilledButton.icon(
-                      icon: Icon(isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold),
-                      onPressed: _isLoading ? null : _save,
-                      label: Text(isEditing ? 'بروزرسانی تجهیز' : 'ذخیره تجهیز'),
-                    ),
-                  ],
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50.0,
+                        child: FilledButton(
+                          onPressed: _isSubmitting ? null : _save,
+                          child: _isSubmitting
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : Text(
+                            isEditing ? 'بروزرسانی تجهیز' : 'ذخیره تجهیز',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
