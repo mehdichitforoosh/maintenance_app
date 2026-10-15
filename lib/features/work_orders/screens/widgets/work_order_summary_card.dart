@@ -48,7 +48,7 @@ class WorkOrderSummaryCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Divider(height: 20),
+            const SizedBox(height: 12),
             _WorkOrderInfoRow(
               'نوع دستورکار',
               workOrder.workOrderType.displayName,

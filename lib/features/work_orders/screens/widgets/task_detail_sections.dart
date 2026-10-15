@@ -92,7 +92,10 @@ class TaskHistorySection extends ConsumerWidget {
             final itemNames = {for (final item in items) item.id: item.name};
             return ExpansionTile(
               tilePadding: EdgeInsets.zero,
+              shape: const RoundedRectangleBorder(),
+              collapsedShape: const RoundedRectangleBorder(),
               title: const Text('تاریخچه تکمیل و اصلاح'),
+              childrenPadding: const EdgeInsetsDirectional.only(start: 12),
               children: events.map((event) {
                 final eventType = event['event_type'] as String? ?? '';
                 final label = switch (eventType) {
@@ -191,7 +194,7 @@ class TaskMaterialsSection extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Divider(height: 16),
+                  const SizedBox(height: 8),
                   Text(
                     'قطعات و متریال',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(

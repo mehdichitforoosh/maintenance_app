@@ -66,7 +66,7 @@ class WorkOrderTaskCard extends ConsumerWidget {
                 alignment: AlignmentDirectional.centerEnd,
                 child: Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: FilledButton.tonalIcon(
+                  child: FilledButton.icon(
                     icon: const Icon(EneftyIcons.tick_square_bold, size: 16),
                     label: const Text('تکمیل وظیفه'),
                     onPressed: () => context.push(
@@ -82,14 +82,14 @@ class WorkOrderTaskCard extends ConsumerWidget {
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    OutlinedButton.icon(
+                    FilledButton.tonalIcon(
                       icon: const Icon(EneftyIcons.edit_2_outline, size: 16),
                       label: const Text('اصلاح اطلاعات تکمیل'),
                       onPressed: () => context.push(
                         '/work-orders/$workOrderId/tasks/${task.id}/correct',
                       ),
                     ),
-                    OutlinedButton.icon(
+                    TextButton.icon(
                       icon: const Icon(EneftyIcons.refresh_outline, size: 16),
                       label: const Text('بازگشایی وظیفه'),
                       onPressed: () => _reopenTask(context, ref),
@@ -98,7 +98,7 @@ class WorkOrderTaskCard extends ConsumerWidget {
                 ),
               ),
             if (task.findings?.isNotEmpty == true) ...[
-              const Divider(height: 12),
+              const SizedBox(height: 12),
               Text(
                 'یافته‌ها و گزارش: ${task.findings}',
                 style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
