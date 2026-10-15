@@ -9,6 +9,7 @@ import '../providers/asset_providers.dart';
 import '../repositories/asset_reading_repository.dart';
 import 'widgets/asset_reading_form.dart';
 import 'widgets/asset_reading_tile.dart';
+import 'widgets/asset_reading_trend_chart.dart';
 
 class AssetReadingsScreen extends ConsumerStatefulWidget {
   final String assetId;
@@ -212,25 +213,29 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
             ),
             const SizedBox(height: 8),
             readingsAsync.when(
-              data: (readings) => readings.isEmpty
-                  ? const AppEmptyState(
-                      title: 'خوانشی ثبت نشده است',
-                      message:
-                          'پس از ثبت اولین خوانش، تاریخچه آن در این بخش نمایش داده می‌شود.',
-                      icon: Icons.speed_outlined,
-                    )
-                  : Column(
-                      children: readings
-                          .map(
-                            (reading) => AssetReadingTile(
-                              reading: reading,
-                              onEdit: _isSaving
-                                  ? null
-                                  : () => _startCorrection(reading),
-                            ),
-                          )
-                          .toList(),
+              data: (readings) {
+                if (readings.isEmpty) {
+                  return const AppEmptyState(
+                    title: 'خوانشی ثبت نشده است',
+                    message:
+                        'پس از ثبت اولین خوانش، تاریخچه آن در این بخش نمایش داده می‌شود.',
+                    icon: Icons.speed_outlined,
+                  );
+                }
+                return Column(
+                  children: [
+                    AssetReadingTrendChart(readings: readings),
+                    ...readings.map(
+                      (reading) => AssetReadingTile(
+                        reading: reading,
+                        onEdit: _isSaving
+                            ? null
+                            : () => _startCorrection(reading),
+                      ),
                     ),
+                  ],
+                );
+              },
               loading: () => const AppLoading(),
               error: (error, _) => AppErrorState(message: error.toString()),
             ),
