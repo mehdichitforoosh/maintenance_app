@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../maintenance/providers/maintenance_providers.dart';
+import '../../work_orders/providers/work_order_providers.dart';
 import '../providers/asset_providers.dart';
 import 'widgets/asset_detail_sections.dart';
+import 'widgets/asset_work_order_charts.dart';
 
 class AssetDetailScreen extends ConsumerWidget {
   final String assetId;
@@ -18,6 +20,7 @@ class AssetDetailScreen extends ConsumerWidget {
     final assetAsync = ref.watch(assetDetailProvider(assetId));
     final readingsAsync = ref.watch(assetReadingsProvider(assetId));
     final plansAsync = ref.watch(maintenancePlansProvider(assetId));
+    final taskHistoryAsync = ref.watch(assetWorkOrderTasksProvider(assetId));
 
     return assetAsync.when(
       data: (asset) {
@@ -71,6 +74,11 @@ class AssetDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+              taskHistoryAsync.when(
+                data: (tasks) => AssetWorkOrderCharts(tasks: tasks),
+                loading: () => const AppLoading(),
+                error: (error, _) => AppErrorState(message: error.toString()),
               ),
               const SizedBox(height: 24),
               plansAsync.when(

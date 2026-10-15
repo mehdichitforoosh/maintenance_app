@@ -443,6 +443,25 @@ class WorkOrderRepository {
     return results.map((m) => WorkOrderTask.fromMap(m)).toList();
   }
 
+  Future<List<WorkOrderTask>> getTasksForAsset(String assetId) async {
+    final db = await _dbHelper.db;
+    final results = await db.rawQuery(
+      '''
+        SELECT task.*
+        FROM ${WorkOrderTaskTable.tableName} AS task
+        INNER JOIN ${WorkOrderTable.tableName} AS work_order
+          ON work_order.${WorkOrderTable.id} = task.${WorkOrderTaskTable.workOrderId}
+        WHERE task.${WorkOrderTaskTable.assetId} = ?
+          AND task.${WorkOrderTaskTable.deletedAt} IS NULL
+          AND work_order.${WorkOrderTable.deletedAt} IS NULL
+        ORDER BY task.${WorkOrderTaskTable.completedAt} DESC,
+          task.${WorkOrderTaskTable.createdAt} DESC
+      ''',
+      [assetId],
+    );
+    return results.map((row) => WorkOrderTask.fromMap(row)).toList();
+  }
+
   Future<List<WorkOrderMaterial>> getMaterialsForTask(String taskId) async {
     final db = await _dbHelper.db;
     final results = await db.query(

@@ -139,6 +139,67 @@ void main() {
 
   group('Work-order and stock transactions', () {
     test(
+      'asset task history is scoped to the asset and active work orders',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه گزارش تجهیز');
+        final assets = AssetRepository(dbHelper: dbHelper);
+        final firstAsset = await assets.createAsset(
+          facilityId: facility.id,
+          name: 'پمپ اول',
+          code: 'P-CHART-1',
+        );
+        final secondAsset = await assets.createAsset(
+          facilityId: facility.id,
+          name: 'پمپ دوم',
+          code: 'P-CHART-2',
+        );
+        final workOrders = WorkOrderRepository(dbHelper: dbHelper);
+        final order = await workOrders.createWorkOrder(
+          facilityId: facility.id,
+          title: 'بررسی پمپ‌ها',
+          workOrderType: WorkOrderType.preventive,
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: order.id,
+          assetId: firstAsset.id,
+          title: 'بازرسی اول',
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: order.id,
+          assetId: secondAsset.id,
+          title: 'بازرسی دوم',
+        );
+        final deletedOrder = await workOrders.createWorkOrder(
+          facilityId: facility.id,
+          title: 'دستورکار حذف‌شده',
+          workOrderType: WorkOrderType.preventive,
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: deletedOrder.id,
+          assetId: firstAsset.id,
+          title: 'وظیفه حذف‌شده',
+        );
+        final db = await dbHelper.db;
+        await db.update(
+          'work_orders',
+          {'deleted_at': AppDateUtils.nowUtcIso()},
+          where: 'id = ?',
+          whereArgs: [deletedOrder.id],
+        );
+
+        expect(
+          (await workOrders.getTasksForAsset(
+            firstAsset.id,
+          )).map((task) => task.title),
+          ['بازرسی اول'],
+        );
+        expect(await workOrders.getTasksForAsset('missing-asset'), isEmpty);
+      },
+    );
+
+    test(
       'failed material completion rolls back stock, materials, and task state',
       () async {
         final facility = await FacilityRepository(

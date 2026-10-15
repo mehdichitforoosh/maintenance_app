@@ -34,6 +34,12 @@ final workOrderTasksProvider =
       return repo.getTasksForWorkOrder(workOrderId);
     });
 
+final assetWorkOrderTasksProvider =
+    FutureProvider.family<List<WorkOrderTask>, String>((ref, assetId) async {
+      final repo = ref.watch(workOrderRepositoryProvider);
+      return repo.getTasksForAsset(assetId);
+    });
+
 final workOrderMaterialsProvider =
     FutureProvider.family<List<WorkOrderMaterial>, String>((ref, taskId) async {
       final repo = ref.watch(workOrderRepositoryProvider);
