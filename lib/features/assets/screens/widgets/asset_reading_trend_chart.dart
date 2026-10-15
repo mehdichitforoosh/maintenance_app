@@ -3,28 +3,28 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../models/asset_reading.dart';
 
-class AssetReadingTrendChart extends StatefulWidget {
+class AssetReadingTrendChart extends StatelessWidget {
   final List<AssetReading> readings;
 
   const AssetReadingTrendChart({super.key, required this.readings});
 
   @override
-  State<AssetReadingTrendChart> createState() => _AssetReadingTrendChartState();
-}
-
-class _AssetReadingTrendChartState extends State<AssetReadingTrendChart> {
-  String? _selectedSeriesKey;
-
-  @override
   Widget build(BuildContext context) {
-    final series = _buildSeries();
-    if (series.isEmpty) return const SizedBox.shrink();
+    final points =
+        readings
+            .where(
+              (reading) =>
+                  reading.supersededByReadingId == null &&
+                  DateTime.tryParse(reading.recordedAt) != null,
+            )
+            .map((reading) => _ReadingPoint(reading))
+            .toList()
+          ..sort(
+            (a, b) => a.reading.recordedAt.compareTo(b.reading.recordedAt),
+          );
+    if (points.isEmpty) return const SizedBox.shrink();
 
-    final selectedKey = series.any((item) => item.key == _selectedSeriesKey)
-        ? _selectedSeriesKey!
-        : series.first.key;
-    final selectedSeries = series.firstWhere((item) => item.key == selectedKey);
-
+    final first = points.first.reading;
     return Card(
       elevation: 0,
       child: Padding(
@@ -33,79 +33,29 @@ class _AssetReadingTrendChartState extends State<AssetReadingTrendChart> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'روند خوانش‌ها',
+              'روند ${_metricName(first.metricName)} (${first.unit})',
               style: Theme.of(
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: selectedKey,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'شاخص و واحد',
-                isDense: true,
+            const SizedBox(height: 4),
+            Text(
+              points.length == 1
+                  ? 'برای مشاهده تغییرات، خوانش دیگری از همین شاخص ثبت کنید.'
+                  : 'برای دیدن تاریخ و مقدار، نقطه‌ای از نمودار را لمس کنید.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              items: series
-                  .map(
-                    (item) => DropdownMenuItem(
-                      value: item.key,
-                      child: Text(
-                        '${_metricName(item.metricName)} (${item.unit})',
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) setState(() => _selectedSeriesKey = value);
-              },
             ),
             const SizedBox(height: 12),
-            if (selectedSeries.points.length == 1)
-              _SingleReadingSummary(point: selectedSeries.points.single)
-            else
-              SizedBox(
-                height: 220,
-                child: _ReadingLineChart(series: selectedSeries),
-              ),
+            SizedBox(height: 250, child: _ReadingLineChart(points: points)),
           ],
         ),
       ),
     );
   }
 
-  List<_ReadingSeries> _buildSeries() {
-    final activeReadings = widget.readings.where(
-      (reading) => reading.supersededByReadingId == null,
-    );
-    final grouped = <String, List<AssetReading>>{};
-
-    for (final reading in activeReadings) {
-      final key = '${reading.metricName}\u0000${reading.unit}';
-      grouped.putIfAbsent(key, () => []).add(reading);
-    }
-
-    return grouped.entries
-        .map((entry) {
-          final readings = entry.value
-            ..sort((a, b) => a.recordedAt.compareTo(b.recordedAt));
-          final validReadings = readings
-              .where((reading) => DateTime.tryParse(reading.recordedAt) != null)
-              .toList();
-          return _ReadingSeries(
-            key: entry.key,
-            metricName: validReadings.firstOrNull?.metricName ?? '',
-            unit: validReadings.firstOrNull?.unit ?? '',
-            points: validReadings
-                .map((reading) => _ReadingPoint(reading: reading))
-                .toList(),
-          );
-        })
-        .where((series) => series.points.isNotEmpty)
-        .toList();
-  }
-
-  String _metricName(String metric) {
+  static String _metricName(String metric) {
     return switch (metric) {
       'operating_hours' => 'ساعت کارکرد',
       'temperature' => 'دما',
@@ -117,21 +67,21 @@ class _AssetReadingTrendChartState extends State<AssetReadingTrendChart> {
 }
 
 class _ReadingLineChart extends StatelessWidget {
-  final _ReadingSeries series;
+  final List<_ReadingPoint> points;
 
-  const _ReadingLineChart({required this.series});
+  const _ReadingLineChart({required this.points});
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final values = series.points.map((point) => point.reading.value);
-    final minValue = values.reduce((a, b) => a < b ? a : b);
-    final maxValue = values.reduce((a, b) => a > b ? a : b);
+    final readings = points.map((point) => point.reading.value).toList();
+    final minValue = readings.reduce((a, b) => a < b ? a : b);
+    final maxValue = readings.reduce((a, b) => a > b ? a : b);
     final range = maxValue - minValue;
     final padding = range == 0
         ? (maxValue.abs() * 0.1).clamp(1.0, 10.0)
         : range * 0.15;
-    final spots = series.points
+    final spots = points
         .asMap()
         .entries
         .map((entry) => FlSpot(entry.key.toDouble(), entry.value.reading.value))
@@ -140,7 +90,7 @@ class _ReadingLineChart extends StatelessWidget {
     return LineChart(
       LineChartData(
         minX: -0.5,
-        maxX: series.points.length - 0.5,
+        maxX: points.length - 0.5,
         minY: minValue - padding,
         maxY: maxValue + padding,
         gridData: FlGridData(
@@ -155,11 +105,10 @@ class _ReadingLineChart extends StatelessWidget {
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipItems: (spots) => spots.map((spot) {
-              if (spot.spotIndex < 0 ||
-                  spot.spotIndex >= series.points.length) {
+              if (spot.spotIndex < 0 || spot.spotIndex >= points.length) {
                 return null;
               }
-              final reading = series.points[spot.spotIndex].reading;
+              final reading = points[spot.spotIndex].reading;
               return LineTooltipItem(
                 '${AppDateUtils.formatDisplay(reading.recordedAt)}\n'
                 '${_formatValue(reading.value)} ${reading.unit}',
@@ -180,7 +129,7 @@ class _ReadingLineChart extends StatelessWidget {
             barWidth: 3,
             dotData: FlDotData(show: true),
             belowBarData: BarAreaData(
-              show: true,
+              show: points.length > 1,
               color: colors.primary.withValues(alpha: 0.12),
             ),
           ),
@@ -191,7 +140,7 @@ class _ReadingLineChart extends StatelessWidget {
 
   FlTitlesData _titles(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final interval = ((series.points.length - 1) / 3).ceilToDouble();
+    final interval = ((points.length - 1) / 3).ceilToDouble();
     final labelInterval = interval < 1 ? 1 : interval.toInt();
     return FlTitlesData(
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -206,9 +155,8 @@ class _ReadingLineChart extends StatelessWidget {
             final index = value.round();
             if ((value - index).abs() > 0.01 ||
                 index < 0 ||
-                index >= series.points.length ||
-                (index % labelInterval != 0 &&
-                    index != series.points.length - 1)) {
+                index >= points.length ||
+                (index % labelInterval != 0 && index != points.length - 1)) {
               return const SizedBox.shrink();
             }
             return SideTitleWidget(
@@ -222,7 +170,7 @@ class _ReadingLineChart extends StatelessWidget {
                 width: 42,
                 child: Text(
                   AppDateUtils.formatJalaliShort(
-                    series.points[index].reading.recordedAt,
+                    points[index].reading.recordedAt,
                   ),
                   maxLines: 1,
                   textAlign: TextAlign.center,
@@ -240,55 +188,8 @@ class _ReadingLineChart extends StatelessWidget {
       value == value.roundToDouble() ? value.toInt().toString() : '$value';
 }
 
-class _SingleReadingSummary extends StatelessWidget {
-  final _ReadingPoint point;
-
-  const _SingleReadingSummary({required this.point});
-
-  @override
-  Widget build(BuildContext context) {
-    final reading = point.reading;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Icon(
-            Icons.monitor_heart_outlined,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '${reading.value} ${reading.unit}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-          Text(
-            AppDateUtils.formatDisplay(reading.recordedAt),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReadingSeries {
-  final String key;
-  final String metricName;
-  final String unit;
-  final List<_ReadingPoint> points;
-
-  const _ReadingSeries({
-    required this.key,
-    required this.metricName,
-    required this.unit,
-    required this.points,
-  });
-}
-
 class _ReadingPoint {
   final AssetReading reading;
 
-  const _ReadingPoint({required this.reading});
+  const _ReadingPoint(this.reading);
 }

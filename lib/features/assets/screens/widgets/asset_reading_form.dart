@@ -11,6 +11,7 @@ class AssetReadingForm extends StatelessWidget {
   final TextEditingController correctionReasonController;
   final FocusNode metricFocusNode;
   final List<String> metricSuggestions;
+  final Map<String, String> metricUnits;
   final DateTime recordedAt;
   final bool isEditing;
   final bool isSaving;
@@ -29,6 +30,7 @@ class AssetReadingForm extends StatelessWidget {
     required this.correctionReasonController,
     required this.metricFocusNode,
     required this.metricSuggestions,
+    required this.metricUnits,
     required this.recordedAt,
     required this.isEditing,
     required this.isSaving,
@@ -57,6 +59,13 @@ class AssetReadingForm extends StatelessWidget {
     'pressure',
     'vibration',
   ];
+
+  static const _defaultUnits = {
+    'operating_hours': 'ساعت',
+    'temperature': '°C',
+    'pressure': 'bar',
+    'vibration': 'mm/s',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +103,10 @@ class AssetReadingForm extends StatelessWidget {
                 (metric) =>
                     query.isEmpty || metric.toLowerCase().contains(query),
               );
+            },
+            onSelected: (metric) {
+              final unit = metricUnits[metric] ?? _defaultUnits[metric];
+              if (unit != null) onUnitChanged(unit);
             },
             fieldViewBuilder:
                 (context, controller, focusNode, onFieldSubmitted) {

@@ -1,5 +1,6 @@
 import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -7,7 +8,6 @@ import '../../../../core/widgets/section_header.dart';
 import '../../../maintenance/models/maintenance_plan.dart';
 import '../../models/asset.dart';
 import '../../models/asset_reading.dart';
-import 'asset_reading_tile.dart';
 
 class AssetSpecificationsCard extends StatelessWidget {
   final Asset asset;
@@ -165,24 +165,107 @@ class AssetMaintenancePlansSection extends StatelessWidget {
   }
 }
 
-class AssetRecentReadingsSection extends StatelessWidget {
+class AssetMetersSection extends StatelessWidget {
+  final String assetId;
   final List<AssetReading> readings;
 
-  const AssetRecentReadingsSection({super.key, required this.readings});
+  const AssetMetersSection({
+    super.key,
+    required this.assetId,
+    required this.readings,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final latestReadings = <String, AssetReading>{};
+    for (final reading in readings) {
+      if (reading.supersededByReadingId != null) continue;
+      final key = '${reading.metricName}\u0000${reading.unit}';
+      final current = latestReadings[key];
+      final recordedAt = DateTime.tryParse(reading.recordedAt);
+      final currentRecordedAt = current == null
+          ? null
+          : DateTime.tryParse(current.recordedAt);
+      if (current == null ||
+          (recordedAt != null &&
+              (currentRecordedAt == null ||
+                  recordedAt.isAfter(currentRecordedAt)))) {
+        latestReadings[key] = reading;
+      }
+    }
+    final meters = latestReadings.values.toList()
+      ..sort((a, b) => a.metricName.compareTo(b.metricName));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader(title: 'آخرین خوانش‌های تجهیز'),
-        if (readings.isEmpty)
-          const Text('خوانشی ثبت نشده است.')
+        const SectionHeader(title: 'شاخص‌ها و کنتورها'),
+        if (meters.isEmpty)
+          const Text('هنوز شاخص یا کنتوری ثبت نشده است.')
         else
-          ...readings
-              .take(5)
-              .map((reading) => AssetReadingTile(reading: reading)),
+          ...meters.map(
+            (reading) => _AssetMeterTile(assetId: assetId, reading: reading),
+          ),
       ],
     );
   }
+}
+
+class _AssetMeterTile extends StatelessWidget {
+  final String assetId;
+  final AssetReading reading;
+
+  const _AssetMeterTile({required this.assetId, required this.reading});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: theme.colorScheme.primaryContainer,
+          foregroundColor: theme.colorScheme.onPrimaryContainer,
+          child: const Icon(Icons.speed_outlined),
+        ),
+        title: Text(
+          _metricName(reading.metricName),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          '${_formatValue(reading.value)} ${reading.unit}\n'
+          '${AppDateUtils.formatDisplay(reading.recordedAt)}',
+        ),
+        isThreeLine: true,
+        trailing: Icon(
+          EneftyIcons.chart_2_outline,
+          color: theme.colorScheme.primary,
+          semanticLabel: 'نمایش روند',
+        ),
+        onTap: () {
+          final uri = Uri(
+            path: '/assets/$assetId/meter-trend',
+            queryParameters: {
+              'metric': reading.metricName,
+              'unit': reading.unit,
+            },
+          );
+          context.push(uri.toString());
+        },
+      ),
+    );
+  }
+
+  String _metricName(String metric) {
+    return switch (metric) {
+      'operating_hours' => 'ساعت کارکرد',
+      'temperature' => 'دما',
+      'pressure' => 'فشار',
+      'vibration' => 'لرزش',
+      _ => metric.replaceAll('_', ' '),
+    };
+  }
+
+  String _formatValue(double value) =>
+      value == value.roundToDouble() ? value.toInt().toString() : '$value';
 }

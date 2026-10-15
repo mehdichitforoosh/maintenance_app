@@ -92,8 +92,11 @@ class AssetDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               readingsAsync.when(
-                data: (readings) =>
-                    AssetRecentReadingsSection(readings: readings),
+                data: (readings) => Column(
+                  children: [
+                    AssetMetersSection(assetId: assetId, readings: readings),
+                  ],
+                ),
                 loading: () => const AppLoading(),
                 error: (error, _) => AppErrorState(message: error.toString()),
               ),

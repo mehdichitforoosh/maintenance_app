@@ -9,7 +9,6 @@ import '../providers/asset_providers.dart';
 import '../repositories/asset_reading_repository.dart';
 import 'widgets/asset_reading_form.dart';
 import 'widgets/asset_reading_tile.dart';
-import 'widgets/asset_reading_trend_chart.dart';
 
 class AssetReadingsScreen extends ConsumerStatefulWidget {
   final String assetId;
@@ -23,10 +22,10 @@ class AssetReadingsScreen extends ConsumerStatefulWidget {
 
 class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _metricController = TextEditingController(text: 'operating_hours');
+  final _metricController = TextEditingController();
   final _metricFocusNode = FocusNode();
   final _valueController = TextEditingController();
-  final _unitController = TextEditingController(text: 'ساعت');
+  final _unitController = TextEditingController();
   final _notesController = TextEditingController();
   final _reasonController = TextEditingController();
   DateTime _recordedAt = DateTime.now();
@@ -157,9 +156,9 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
   void _resetForm() {
     setState(() {
       _editingReadingId = null;
-      _metricController.text = 'operating_hours';
+      _metricController.clear();
       _valueController.clear();
-      _unitController.text = 'ساعت';
+      _unitController.clear();
       _notesController.clear();
       _reasonController.clear();
       _recordedAt = DateTime.now();
@@ -191,6 +190,9 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
                       .toSet()
                       .toList() ??
                   const [],
+              metricUnits: _latestMetricUnits(
+                readingsAsync.asData?.value ?? const [],
+              ),
               valueController: _valueController,
               unitController: _unitController,
               notesController: _notesController,
@@ -223,17 +225,16 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
                   );
                 }
                 return Column(
-                  children: [
-                    AssetReadingTrendChart(readings: readings),
-                    ...readings.map(
-                      (reading) => AssetReadingTile(
-                        reading: reading,
-                        onEdit: _isSaving
-                            ? null
-                            : () => _startCorrection(reading),
-                      ),
-                    ),
-                  ],
+                  children: readings
+                      .map(
+                        (reading) => AssetReadingTile(
+                          reading: reading,
+                          onEdit: _isSaving
+                              ? null
+                              : () => _startCorrection(reading),
+                        ),
+                      )
+                      .toList(),
                 );
               },
               loading: () => const AppLoading(),
@@ -247,4 +248,25 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
 
   String _formatValue(double value) =>
       value == value.roundToDouble() ? value.toInt().toString() : '$value';
+
+  Map<String, String> _latestMetricUnits(List<AssetReading> readings) {
+    final latestByMetric = <String, AssetReading>{};
+    for (final reading in readings) {
+      if (reading.supersededByReadingId != null) continue;
+      final current = latestByMetric[reading.metricName];
+      final recordedAt = DateTime.tryParse(reading.recordedAt);
+      final currentRecordedAt = current == null
+          ? null
+          : DateTime.tryParse(current.recordedAt);
+      if (current == null ||
+          (recordedAt != null &&
+              (currentRecordedAt == null ||
+                  recordedAt.isAfter(currentRecordedAt)))) {
+        latestByMetric[reading.metricName] = reading;
+      }
+    }
+    return latestByMetric.map(
+      (metric, reading) => MapEntry(metric, reading.unit),
+    );
+  }
 }

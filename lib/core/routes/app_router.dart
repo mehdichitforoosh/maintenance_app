@@ -3,6 +3,7 @@ import '../../features/alerts/screens/alerts_screen.dart';
 import '../../features/assets/screens/asset_detail_screen.dart';
 import '../../features/assets/screens/asset_form_screen.dart';
 import '../../features/assets/screens/asset_list_screen.dart';
+import '../../features/assets/screens/asset_meter_trend_screen.dart';
 import '../../features/assets/screens/asset_readings_screen.dart';
 import '../../features/assets/screens/asset_tree_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
@@ -64,6 +65,14 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
           path: '/assets/:id/edit',
           builder: (_, state) =>
               AssetFormScreen(assetId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/assets/:id/meter-trend',
+          builder: (_, state) => AssetMeterTrendScreen(
+            assetId: state.pathParameters['id']!,
+            metricName: state.uri.queryParameters['metric'] ?? '',
+            unit: state.uri.queryParameters['unit'] ?? '',
+          ),
         ),
         GoRoute(
           path: '/assets/:id/readings',
