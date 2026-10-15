@@ -1,6 +1,16 @@
 import 'package:shamsi_date/shamsi_date.dart';
 
 class AppDateUtils {
+  static String _toPersianDigits(String input) {
+    const englishDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    String result = input;
+    for (var i = 0; i < englishDigits.length; i++) {
+      result = result.replaceAll(englishDigits[i], persianDigits[i]);
+    }
+    return result;
+  }
+
   /// Returns current UTC timestamp as ISO-8601 string.
   static String nowUtcIso() {
     return DateTime.now().toUtc().toIso8601String();
@@ -24,21 +34,12 @@ class AppDateUtils {
     return DateTime.tryParse(isoString);
   }
 
-  /// Formats ISO string to local human-readable date and time.
+  /// Formats ISO string to local human-readable date and time in Persian/Jalali style.
   static String formatDisplay(String? isoString, {bool includeTime = true}) {
-    final dt = parseIso(isoString);
-    if (dt == null) return '-';
-    final local = dt.toLocal();
-    final y = local.year;
-    final m = local.month.toString().padLeft(2, '0');
-    final d = local.day.toString().padLeft(2, '0');
-    if (!includeTime) return '$y/$m/$d';
-    final h = local.hour.toString().padLeft(2, '0');
-    final min = local.minute.toString().padLeft(2, '0');
-    return '$y/$m/$d $h:$min';
+    return formatJalali(isoString, includeTime: includeTime);
   }
 
-  /// Formats ISO string to Jalali (Persian) date string.
+  /// Formats ISO string to Jalali (Persian) date string with Persian digits.
   static String formatJalali(String? isoString, {bool includeTime = false}) {
     final dt = parseIso(isoString);
     if (dt == null) return '-';
@@ -46,11 +47,11 @@ class AppDateUtils {
     final jDate = Jalali.fromDateTime(local);
     final f = jDate.formatter;
     if (!includeTime) {
-      return '${f.yyyy}/${f.mm}/${f.dd}';
+      return _toPersianDigits('${f.yyyy}/${f.mm}/${f.dd}');
     }
     final h = local.hour.toString().padLeft(2, '0');
     final min = local.minute.toString().padLeft(2, '0');
-    return '${f.yyyy}/${f.mm}/${f.dd} $h:$min';
+    return _toPersianDigits('${f.yyyy}/${f.mm}/${f.dd} $h:$min');
   }
 
   /// Calendar interval addition helper respecting month length and leap years.

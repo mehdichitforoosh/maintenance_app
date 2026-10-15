@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/section_header.dart';
@@ -138,7 +139,7 @@ class WorkOrderDetailScreen extends ConsumerWidget {
                       _infoRow('نوع دستورکار', wo.workOrderType.displayName),
                       _infoRow('اولویت', wo.priority.displayName),
                       if (wo.scheduledAt != null)
-                        _infoRow('زمان‌بندی', wo.scheduledAt!),
+                        _infoRow('زمان‌بندی', AppDateUtils.formatJalali(wo.scheduledAt!, includeTime: true)),
                       if (wo.description != null && wo.description!.isNotEmpty)
                         _infoRow('توضیحات', wo.description!),
                       if (wo.notes != null && wo.notes!.isNotEmpty)
@@ -495,48 +496,57 @@ class _TaskHistorySection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final eventsAsync = ref.watch(workOrderTaskEventsProvider(taskId));
+    final itemsAsync = ref.watch(inventoryItemsProvider);
     return eventsAsync.when(
       data: (events) {
         if (events.isEmpty) return const SizedBox.shrink();
-        return ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          title: const Text('تاریخچه تکمیل و اصلاح'),
-          children: events.map((event) {
-            final eventType = event['event_type'] as String? ?? '';
-            final label = switch (eventType) {
-              'COMPLETED' => 'تکمیل وظیفه',
-              'REOPENED' => 'بازگشایی وظیفه',
-              'COMPLETION_CORRECTED' => 'اصلاح اطلاعات تکمیل',
-              _ => 'رویداد وظیفه',
-            };
-            final reason = event['reason'] as String?;
-            return ListTile(
-              dense: true,
-              title: Text(label),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    [
-                      if (event['created_at'] != null)
-                        event['created_at'] as String,
-                      if (reason != null && reason.isNotEmpty) 'دلیل: $reason',
-                    ].join(' · '),
+        return itemsAsync.when(
+          data: (items) {
+            final itemNames = {for (final item in items) item.id: item.name};
+            return ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: const Text('تاریخچه تکمیل و اصلاح'),
+              children: events.map((event) {
+                final eventType = event['event_type'] as String? ?? '';
+                final label = switch (eventType) {
+                  'COMPLETED' => 'تکمیل وظیفه',
+                  'REOPENED' => 'بازگشایی وظیفه',
+                  'COMPLETION_CORRECTED' => 'اصلاح اطلاعات تکمیل',
+                  _ => 'رویداد وظیفه',
+                };
+                final reason = event['reason'] as String?;
+                final createdAt = event['created_at'] as String?;
+                return ListTile(
+                  dense: true,
+                  title: Text(label),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        [
+                          if (createdAt != null)
+                            AppDateUtils.formatJalali(createdAt, includeTime: true),
+                          if (reason != null && reason.isNotEmpty) 'دلیل: $reason',
+                        ].join(' · '),
+                      ),
+                      if (eventType == 'COMPLETION_CORRECTED') ...[
+                        if (event['before_json'] is String)
+                          Text(
+                            'پیش از اصلاح: ${_taskSnapshotSummary(event['before_json'] as String, itemNames)}',
+                          ),
+                        if (event['after_json'] is String)
+                          Text(
+                            'پس از اصلاح: ${_taskSnapshotSummary(event['after_json'] as String, itemNames)}',
+                          ),
+                      ],
+                    ],
                   ),
-                  if (eventType == 'COMPLETION_CORRECTED') ...[
-                    if (event['before_json'] is String)
-                      Text(
-                        'پیش از اصلاح: ${_taskSnapshotSummary(event['before_json'] as String)}',
-                      ),
-                    if (event['after_json'] is String)
-                      Text(
-                        'پس از اصلاح: ${_taskSnapshotSummary(event['after_json'] as String)}',
-                      ),
-                  ],
-                ],
-              ),
+                );
+              }).toList(),
             );
-          }).toList(),
+          },
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) => Text('بارگذاری اطلاعات کالاها ناموفق بود: $error'),
         );
       },
       loading: () => const LinearProgressIndicator(),
@@ -545,7 +555,7 @@ class _TaskHistorySection extends ConsumerWidget {
   }
 }
 
-String _taskSnapshotSummary(String json) {
+String _taskSnapshotSummary(String json, Map<String, String> itemNames) {
   final decoded = jsonDecode(json) as Map<String, dynamic>;
   final task = decoded['task'] as Map<String, dynamic>?;
   if (task == null) return 'اطلاعات ثبت نشده';
@@ -553,7 +563,9 @@ String _taskSnapshotSummary(String json) {
   final materialSummary = materials
       .map((entry) {
         final material = entry as Map<String, dynamic>;
-        return '${material['item_id']}: ${material['actual_quantity'] ?? 0}';
+        final itemId = material['item_id'] as String? ?? '';
+        final itemName = itemNames[itemId] ?? 'ماده';
+        return '$itemName: ${material['actual_quantity'] ?? 0}';
       })
       .join('، ');
   return [

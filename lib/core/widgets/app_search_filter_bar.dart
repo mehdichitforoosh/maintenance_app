@@ -69,23 +69,25 @@ class AppSearchFilterBar extends StatelessWidget {
               ),
               const Divider(),
               const SizedBox(height: 8),
-              ...SortOrder.values.map((sort) => ListTile(
-                    title: Text(sort.displayName),
-                    leading: Radio<SortOrder>(
-                      value: sort,
-                      groupValue: currentSortOrder,
-                      onChanged: (selected) {
-                        if (selected != null) {
-                          onSortOrderChanged(selected);
+              Column(
+                children: SortOrder.values
+                    .map(
+                      (sort) => ListTile(
+                        title: Text(sort.displayName),
+                        leading: Icon(
+                          sort == currentSortOrder ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: sort == currentSortOrder
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.grey,
+                        ),
+                        onTap: () {
+                          onSortOrderChanged(sort);
                           Navigator.pop(context);
-                        }
-                      },
-                    ),
-                    onTap: () {
-                      onSortOrderChanged(sort);
-                      Navigator.pop(context);
-                    },
-                  )),
+                        },
+                      ),
+                    )
+                    .toList(),
+              ),
             ],
           ),
         );
