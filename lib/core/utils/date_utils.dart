@@ -54,6 +54,14 @@ class AppDateUtils {
     return _toPersianDigits('${f.yyyy}/${f.mm}/${f.dd} $h:$min');
   }
 
+  /// Formats an ISO timestamp as a compact Jalali month/day label.
+  static String formatJalaliShort(String? isoString) {
+    final dt = parseIso(isoString);
+    if (dt == null) return '-';
+    final formatter = Jalali.fromDateTime(dt.toLocal()).formatter;
+    return _toPersianDigits('${formatter.mm}/${formatter.dd}');
+  }
+
   /// Calendar interval addition helper respecting month length and leap years.
   static DateTime addCalendarInterval(DateTime base, int value, String unit) {
     switch (unit) {
@@ -77,7 +85,14 @@ class AppDateUtils {
         if (targetDay > maxDay) {
           targetDay = maxDay;
         }
-        return DateTime(targetYear, targetMonth, targetDay, base.hour, base.minute, base.second);
+        return DateTime(
+          targetYear,
+          targetMonth,
+          targetDay,
+          base.hour,
+          base.minute,
+          base.second,
+        );
       case 'YEAR':
         int targetYear = base.year + value;
         int targetMonth = base.month;
@@ -85,7 +100,14 @@ class AppDateUtils {
         if (base.month == 2 && base.day == 29 && !_isLeapYear(targetYear)) {
           targetDay = 28;
         }
-        return DateTime(targetYear, targetMonth, targetDay, base.hour, base.minute, base.second);
+        return DateTime(
+          targetYear,
+          targetMonth,
+          targetDay,
+          base.hour,
+          base.minute,
+          base.second,
+        );
       default:
         return base.add(Duration(days: value));
     }

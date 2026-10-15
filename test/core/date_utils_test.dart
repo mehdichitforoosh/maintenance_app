@@ -66,6 +66,7 @@ void main() {
       () {
         expect(AppDateUtils.formatJalali('not-a-date'), '-');
         expect(AppDateUtils.formatJalali('2024-03-20T12:30:00Z'), '۱۴۰۳/۰۱/۰۱');
+        expect(AppDateUtils.formatJalaliShort('2024-03-20T12:30:00Z'), '۰۱/۰۱');
         expect(
           AppDateUtils.formatJalali('2024-03-20T12:30:00Z', includeTime: true),
           matches(RegExp(r'^۱۴۰۳/۰۱/۰۱ [۰-۹]{2}:[۰-۹]{2}$')),

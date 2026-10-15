@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
-import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_loading.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_providers.dart';
+import 'widgets/inventory_item_form_fields.dart';
 
 class InventoryItemFormScreen extends ConsumerStatefulWidget {
   final String? itemId;
@@ -31,19 +32,6 @@ class _InventoryItemFormScreenState
   bool _isActive = true;
   bool _isLoading = false;
   InventoryItem? _existingItem;
-
-  static const List<String> _presetUnits = [
-    'کیلوگرم',
-    'عدد',
-    'میلی‌لیتر',
-    'گرم',
-    'لیتر',
-    'بسته',
-    'متر',
-    'رول',
-    'دستگاه',
-    'سایر...',
-  ];
 
   @override
   void initState() {
@@ -126,6 +114,7 @@ class _InventoryItemFormScreenState
       }
 
       ref.invalidate(inventoryItemsProvider);
+      ref.invalidate(allInventoryItemsProvider);
       ref.invalidate(lowStockItemsProvider);
       if (mounted) context.pop();
     } catch (e) {
@@ -151,161 +140,68 @@ class _InventoryItemFormScreenState
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'نام کالا / قطعه *',
-                  prefixIcon: Icon(EneftyIcons.box_bold),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    AppValidators.required(v, fieldName: 'نام کالا'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _codeController,
-                decoration: const InputDecoration(
-                  labelText: 'کد کالا (یکتا) *',
-                  prefixIcon: Icon(EneftyIcons.code_bold),
-                  border: OutlineInputBorder(),
-                ),
-                validator: AppValidators.code,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<ItemType>(
-                initialValue: _itemType,
-                decoration: const InputDecoration(
-                  labelText: 'نوع کالا',
-                  prefixIcon: Icon(EneftyIcons.category_bold),
-                  border: OutlineInputBorder(),
-                ),
-                items: ItemType.values
-                    .map(
-                      (i) => DropdownMenuItem(
-                        value: i,
-                        child: Text(i.displayName),
+        padding: const EdgeInsets.all(16),
+        child: _isLoading && isEditing && _existingItem == null
+            ? const AppLoading()
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  children: [
+                    InventoryItemIdentityFields(
+                      nameController: _nameController,
+                      codeController: _codeController,
+                      itemType: _itemType,
+                      onItemTypeChanged: (type) =>
+                          setState(() => _itemType = type),
+                    ),
+                    const SizedBox(height: 16),
+                    InventoryUnitField(
+                      controller: _unitController,
+                      onChanged: () => setState(() {}),
+                    ),
+                    const SizedBox(height: 16),
+                    InventoryItemStockFields(
+                      minimumStockController: _minStockController,
+                      unitCostController: _costController,
+                    ),
+                    const SizedBox(height: 16),
+                    InventoryItemActiveTile(
+                      isActive: _isActive,
+                      onChanged: (active) => setState(() => _isActive = active),
+                    ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _descController,
+                      decoration: const InputDecoration(labelText: 'توضیحات'),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      icon: Icon(
+                        isEditing
+                            ? EneftyIcons.edit_2_bold
+                            : EneftyIcons.add_bold,
                       ),
-                    )
-                    .toList(),
-                onChanged: (v) =>
-                    setState(() => _itemType = v ?? ItemType.consumable),
-              ),
-              const SizedBox(height: 16),
-
-              // Unit Input & Visual Preset Unit Chips (Matching attached image)
-              TextFormField(
-                controller: _unitController,
-                decoration: const InputDecoration(
-                  labelText: 'واحد اندازه‌گیری *',
-                  prefixIcon: Icon(EneftyIcons.ruler_bold),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    AppValidators.required(v, fieldName: 'واحد اندازه‌گیری'),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _presetUnits.map((u) {
-                  final isSelected =
-                      u != 'سایر...' && _unitController.text == u;
-                  return ChoiceChip(
-                    label: Text(u),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      if (u == 'سایر...') {
-                        _unitController.clear();
-                      } else {
-                        _unitController.text = u;
-                      }
-                      setState(() {});
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _minStockController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'حداقل موجودی (نقطه سفارش)',
-                  prefixIcon: Icon(EneftyIcons.danger_bold),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) => AppValidators.nonNegativeNumber(
-                  v,
-                  fieldName: 'حداقل موجودی',
+                      onPressed: _isLoading ? null : _save,
+                      label: _isLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              isEditing
+                                  ? 'بروزرسانی قلم انبار'
+                                  : 'ذخیره قلم انبار',
+                            ),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _costController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'قیمت واحد پیش‌فرض (تومان)',
-                  prefixIcon: Icon(EneftyIcons.money_bold),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Active / Inactive Switch
-              Card(
-                margin: EdgeInsets.zero,
-                child: SwitchListTile(
-                  value: _isActive,
-                  onChanged: (v) => setState(() => _isActive = v),
-                  title: const Text(
-                    'وضعیت فعال بودن کالا',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    _isActive
-                        ? 'کالا فعال و آماده بهره‌برداری در سیستم است'
-                        : 'کالا غیرفعال شده است',
-                  ),
-                  secondary: Icon(
-                    _isActive
-                        ? EneftyIcons.tick_circle_bold
-                        : EneftyIcons.close_circle_bold,
-                    color: _isActive ? Colors.green : Colors.grey,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _descController,
-                decoration: const InputDecoration(
-                  labelText: 'توضیحات',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                icon: Icon(
-                  isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-                ),
-                onPressed: _isLoading ? null : _save,
-                label: Text(
-                  isEditing ? 'بروزرسانی قلم انبار' : 'ذخیره قلم انبار',
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/section_header.dart';
 import '../providers/inventory_providers.dart';
+import 'widgets/inventory_current_stock_gauge.dart';
+import 'widgets/inventory_item_detail_sections.dart';
+import 'widgets/inventory_movement_chart.dart';
+import 'widgets/inventory_stock_history_chart.dart';
 
 class InventoryItemDetailScreen extends ConsumerWidget {
   final String itemId;
@@ -13,7 +18,7 @@ class InventoryItemDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemsAsync = ref.watch(inventoryItemsProvider);
+    final itemsAsync = ref.watch(allInventoryItemsProvider);
     final txsAsync = ref.watch(stockTransactionsProvider(itemId));
     final repo = ref.watch(inventoryRepositoryProvider);
 
@@ -41,105 +46,67 @@ class InventoryItemDetailScreen extends ConsumerWidget {
           body: FutureBuilder<double>(
             future: repo.getCurrentStock(itemId),
             builder: (context, snapshot) {
-              final stock = snapshot.data ?? 0.0;
-              final isLow = stock <= item.minimumStock;
+              if (snapshot.hasError) {
+                return AppErrorState(message: snapshot.error.toString());
+              }
+              if (!snapshot.hasData) {
+                return const AppLoading();
+              }
 
+              final stock = snapshot.data!;
+              final isLow = stock <= item.minimumStock;
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'اطلاعات کالا',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: (isLow ? Colors.red : Colors.green)
-                                      .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  isLow ? 'کمبود موجودی' : 'موجودی کافی',
-                                  style: TextStyle(
-                                    color: isLow ? Colors.red : Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(height: 20),
-                          _row(context, 'کد کالا', item.code),
-                          _row(context, 'نوع', item.itemType.displayName),
-                          _row(context, 'موجودی فعلی', '$stock ${item.unit}'),
-                          _row(
-                            context,
-                            'حداقل موجودی',
-                            '${item.minimumStock} ${item.unit}',
-                          ),
-                          if (item.defaultUnitCost != null)
-                            _row(
-                              context,
-                              'قیمت واحد پیش‌فرض',
-                              '${item.defaultUnitCost} تومان',
-                            ),
-                        ],
-                      ),
-                    ),
+                  InventoryItemSpecificationsCard(
+                    item: item,
+                    isLowStock: isLow,
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'تاریخچه گردش انبار (Ledger)',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  InventoryCurrentStockGauge(
+                    stock: stock,
+                    minimumStock: item.minimumStock,
+                    unit: item.unit,
                   ),
-                  const SizedBox(height: 8),
+                  txsAsync.when(
+                    data: (transactions) => Column(
+                      children: [
+                        InventoryStockHistoryChart(
+                          transactions: transactions,
+                          minimumStock: item.minimumStock,
+                          unit: item.unit,
+                        ),
+                        InventoryMovementChart(
+                          transactions: transactions,
+                          unit: item.unit,
+                        ),
+                      ],
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 16),
+                  SectionHeader(title: 'تاریخچه گردش انبار'),
                   txsAsync.when(
                     data: (txs) {
                       if (txs.isEmpty) {
-                        return const Text('تراکنشی ثبت نشده است.');
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text('تراکنشی ثبت نشده است.'),
+                        );
                       }
                       return Column(
                         children: txs
                             .map(
-                              (tx) => Card(
-                                child: ListTile(
-                                  leading: const Icon(
-                                    EneftyIcons.box_bold,
-                                    color: Color(0xFF2563EB),
-                                  ),
-                                  title: Text(
-                                    '${tx.transactionType.displayName}: ${tx.quantity} ${item.unit}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    'تاریخ: ${tx.transactionDate}${tx.notes != null ? ' | ${tx.notes}' : ''}',
-                                  ),
-                                ),
+                              (transaction) => StockTransactionTile(
+                                transaction: transaction,
+                                unit: item.unit,
                               ),
                             )
                             .toList(),
                       );
                     },
                     loading: () => const AppLoading(),
-                    error: (e, _) => Text('خطا: $e'),
+                    error: (e, _) => AppErrorState(message: e.toString()),
                   ),
                 ],
               );
@@ -149,24 +116,6 @@ class InventoryItemDetailScreen extends ConsumerWidget {
       },
       loading: () => const Scaffold(body: AppLoading()),
       error: (e, _) => Scaffold(body: AppErrorState(message: e.toString())),
-    );
-  }
-
-  Widget _row(BuildContext context, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
-      ),
     );
   }
 }

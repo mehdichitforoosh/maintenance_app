@@ -9,6 +9,8 @@ import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/app_search_filter_bar.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_providers.dart';
+import 'widgets/inventory_filter_chips.dart';
+import 'widgets/inventory_item_card.dart';
 
 class InventoryListScreen extends ConsumerStatefulWidget {
   const InventoryListScreen({super.key});
@@ -21,6 +23,7 @@ class InventoryListScreen extends ConsumerStatefulWidget {
 class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
   final _searchController = TextEditingController();
   ItemType? _selectedType;
+  bool? _selectedActive;
   SortOrder _sortOrder = SortOrder.nameAsc;
 
   @override
@@ -37,7 +40,9 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
           i.name.toLowerCase().contains(query) ||
           i.code.toLowerCase().contains(query);
       final matchesType = _selectedType == null || i.itemType == _selectedType;
-      return matchesQuery && matchesType;
+      final matchesActive =
+          _selectedActive == null || i.isActive == _selectedActive;
+      return matchesQuery && matchesType && matchesActive;
     }).toList();
 
     switch (_sortOrder) {
@@ -59,7 +64,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final itemsAsync = ref.watch(inventoryItemsProvider);
+    final itemsAsync = ref.watch(allInventoryItemsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -84,29 +89,12 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
             currentSortOrder: _sortOrder,
             onSortOrderChanged: (newSort) =>
                 setState(() => _sortOrder = newSort),
-            filterChips: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  FilterChip(
-                    label: const Text('همه انواع'),
-                    selected: _selectedType == null,
-                    onSelected: (_) => setState(() => _selectedType = null),
-                  ),
-                  const SizedBox(width: 8),
-                  ...ItemType.values.map(
-                    (t) => Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: FilterChip(
-                        label: Text(t.displayName),
-                        selected: _selectedType == t,
-                        onSelected: (selected) =>
-                            setState(() => _selectedType = selected ? t : null),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            filterChips: InventoryFilterChips(
+              selectedType: _selectedType,
+              selectedActive: _selectedActive,
+              onTypeChanged: (type) => setState(() => _selectedType = type),
+              onActiveChanged: (active) =>
+                  setState(() => _selectedActive = active),
             ),
           ),
 
@@ -136,90 +124,9 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final item = filtered[index];
-                    final colorScheme = Theme.of(context).colorScheme;
-
-                    return Card(
-                      child: InkWell(
-                        onTap: () => context.push('/inventory/${item.id}'),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 22,
-                                backgroundColor: colorScheme.primaryContainer,
-                                foregroundColor: colorScheme.onPrimaryContainer,
-                                child: const Icon(
-                                  EneftyIcons.box_bold,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.name,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'کد: ${item.code} | واحد: ${item.unit}',
-                                      style: TextStyle(
-                                        color: colorScheme.onSurfaceVariant,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 4,
-                                      children: [
-                                        Chip(
-                                          label: Text(
-                                            item.itemType.displayName,
-                                            style: TextStyle(
-                                              color: colorScheme
-                                                  .onPrimaryContainer,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                          backgroundColor:
-                                              colorScheme.primaryContainer,
-                                          side: BorderSide.none,
-                                          padding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                        Chip(
-                                          label: Text(
-                                            'نقطه سفارش: ${item.minimumStock} ${item.unit}',
-                                            style: TextStyle(
-                                              color: colorScheme
-                                                  .onSecondaryContainer,
-                                              fontSize: 11,
-                                            ),
-                                          ),
-                                          backgroundColor:
-                                              colorScheme.secondaryContainer,
-                                          side: BorderSide.none,
-                                          padding: EdgeInsets.zero,
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    return InventoryItemCard(
+                      item: item,
+                      onTap: () => context.push('/inventory/${item.id}'),
                     );
                   },
                 );
@@ -232,7 +139,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/inventory/new'),
-        child: const Icon(EneftyIcons.add_bold),
+        child: const Icon(EneftyIcons.add_outline),
       ),
     );
   }
