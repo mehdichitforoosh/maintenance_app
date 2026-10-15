@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:sqflite/sqflite.dart';
+
 import '../../../core/enums/app_enums.dart';
 import '../../../core/storage/database/database_helper.dart';
 import '../../../core/storage/database/tables/inventory_item_table.dart';
@@ -5,6 +9,7 @@ import '../../../core/storage/database/tables/maintenance_plan_table.dart';
 import '../../../core/storage/database/tables/stock_transaction_table.dart';
 import '../../../core/storage/database/tables/work_order_material_table.dart';
 import '../../../core/storage/database/tables/work_order_table.dart';
+import '../../../core/storage/database/tables/work_order_task_event_table.dart';
 import '../../../core/storage/database/tables/work_order_task_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
@@ -19,6 +24,373 @@ class WorkOrderRepository {
 
   WorkOrderRepository({DatabaseHelper? dbHelper})
     : _dbHelper = dbHelper ?? DatabaseHelper.instance;
+
+  Future<List<Map<String, dynamic>>> getTaskEvents(String taskId) async {
+    final db = await _dbHelper.db;
+    return db.query(
+      WorkOrderTaskEventTable.tableName,
+      where: '${WorkOrderTaskEventTable.workOrderTaskId} = ?',
+      whereArgs: [taskId],
+      orderBy: '${WorkOrderTaskEventTable.createdAt} DESC, rowid DESC',
+    );
+  }
+
+  Future<Map<String, dynamic>> _taskSnapshot(
+    Transaction txn,
+    String taskId,
+  ) async {
+    final tasks = await txn.query(
+      WorkOrderTaskTable.tableName,
+      where: '${WorkOrderTaskTable.id} = ?',
+      whereArgs: [taskId],
+      limit: 1,
+    );
+    final materials = await txn.query(
+      WorkOrderMaterialTable.tableName,
+      where:
+          '${WorkOrderMaterialTable.workOrderTaskId} = ? AND ${WorkOrderMaterialTable.deletedAt} IS NULL',
+      whereArgs: [taskId],
+      orderBy: WorkOrderMaterialTable.itemId,
+    );
+    final task = tasks.isEmpty ? null : tasks.first;
+    final workOrders = task == null
+        ? const <Map<String, Object?>>[]
+        : await txn.query(
+            WorkOrderTable.tableName,
+            where: '${WorkOrderTable.id} = ?',
+            whereArgs: [task[WorkOrderTaskTable.workOrderId]],
+            limit: 1,
+          );
+    return {
+      'task': task,
+      'work_order': workOrders.isEmpty ? null : workOrders.first,
+      'materials': materials,
+    };
+  }
+
+  Future<void> _insertTaskEvent(
+    Transaction txn, {
+    required String taskId,
+    required String eventType,
+    required String now,
+    String? reason,
+    Map<String, dynamic>? before,
+    Map<String, dynamic>? after,
+  }) async {
+    await txn.insert(WorkOrderTaskEventTable.tableName, {
+      WorkOrderTaskEventTable.id: IdGenerator.generate(),
+      WorkOrderTaskEventTable.workOrderTaskId: taskId,
+      WorkOrderTaskEventTable.eventType: eventType,
+      WorkOrderTaskEventTable.reason: reason,
+      WorkOrderTaskEventTable.beforeJson: before == null
+          ? null
+          : jsonEncode(before),
+      WorkOrderTaskEventTable.afterJson: after == null
+          ? null
+          : jsonEncode(after),
+      WorkOrderTaskEventTable.createdAt: now,
+    });
+  }
+
+  Future<void> _reconcileMaterialStock(
+    Transaction txn, {
+    required Map<String, dynamic> material,
+    required double targetQuantity,
+    required String now,
+  }) async {
+    final itemId = material[WorkOrderMaterialTable.itemId] as String;
+    final materialId = material[WorkOrderMaterialTable.id] as String;
+    final cost = (material[WorkOrderMaterialTable.unitCostAtUse] as num?)
+        ?.toDouble();
+    final postedRows = await txn.rawQuery(
+      '''
+        SELECT COALESCE(SUM(
+          CASE
+            WHEN ${StockTransactionTable.transactionType} = 'MAINTENANCE_CONSUMPTION' THEN ${StockTransactionTable.quantity}
+            WHEN ${StockTransactionTable.transactionType} = 'RETURN' THEN -${StockTransactionTable.quantity}
+            ELSE 0
+          END
+        ), 0) AS posted_quantity
+        FROM ${StockTransactionTable.tableName}
+        WHERE ${StockTransactionTable.workOrderMaterialId} = ?
+          AND ${StockTransactionTable.deletedAt} IS NULL
+      ''',
+      [materialId],
+    );
+    final postedQuantity = (postedRows.first['posted_quantity'] as num)
+        .toDouble();
+    final difference = targetQuantity - postedQuantity;
+    if (difference.abs() < 0.000001) return;
+
+    final isConsumption = difference > 0;
+    if (isConsumption) {
+      final stockRows = await txn.rawQuery(
+        '''
+          SELECT COALESCE(SUM(
+            CASE
+              WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
+              WHEN ${StockTransactionTable.transactionType} IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -${StockTransactionTable.quantity}
+              ELSE 0
+            END
+          ), 0) AS current_stock
+          FROM ${StockTransactionTable.tableName}
+          WHERE ${StockTransactionTable.itemId} = ?
+            AND ${StockTransactionTable.deletedAt} IS NULL
+        ''',
+        [itemId],
+      );
+      final stock = (stockRows.first['current_stock'] as num).toDouble();
+      if (stock < difference) {
+        throw StateError(
+          'موجودی کالا کافی نیست. موجودی فعلی: $stock، مقدار درخواستی: $difference',
+        );
+      }
+    }
+
+    await txn.insert(StockTransactionTable.tableName, {
+      StockTransactionTable.id: IdGenerator.generate(),
+      StockTransactionTable.itemId: itemId,
+      StockTransactionTable.transactionType: isConsumption
+          ? 'MAINTENANCE_CONSUMPTION'
+          : 'RETURN',
+      StockTransactionTable.quantity: difference.abs(),
+      StockTransactionTable.unitCost: cost,
+      StockTransactionTable.transactionDate: now,
+      StockTransactionTable.workOrderMaterialId: materialId,
+      StockTransactionTable.createdAt: now,
+      StockTransactionTable.updatedAt: now,
+      StockTransactionTable.syncStatus: 'pending',
+    });
+  }
+
+  Future<void> reopenCompletedTask({
+    required String taskId,
+    required String reason,
+  }) async {
+    final normalizedReason = reason.trim();
+    if (normalizedReason.isEmpty) {
+      throw ArgumentError('دلیل بازگشایی وظیفه را وارد کنید.');
+    }
+    final db = await _dbHelper.db;
+    final now = AppDateUtils.nowUtcIso();
+
+    await db.transaction((txn) async {
+      final tasks = await txn.query(
+        WorkOrderTaskTable.tableName,
+        where:
+            '${WorkOrderTaskTable.id} = ? AND ${WorkOrderTaskTable.deletedAt} IS NULL',
+        whereArgs: [taskId],
+        limit: 1,
+      );
+      if (tasks.isEmpty) throw ArgumentError('وظیفه یافت نشد.');
+      final task = WorkOrderTask.fromMap(tasks.first);
+      if (task.status != TaskStatus.completed) {
+        throw StateError('فقط وظیفه تکمیل‌شده را می‌توان بازگشایی کرد.');
+      }
+
+      final before = await _taskSnapshot(txn, taskId);
+      await txn.update(
+        WorkOrderTaskTable.tableName,
+        {
+          WorkOrderTaskTable.status: 'IN_PROGRESS',
+          WorkOrderTaskTable.result: null,
+          WorkOrderTaskTable.completedAt: null,
+          WorkOrderTaskTable.findings: null,
+          WorkOrderTaskTable.failureDescription: null,
+          WorkOrderTaskTable.followUpRequired: 0,
+          WorkOrderTaskTable.laborMinutes: null,
+          WorkOrderTaskTable.downtimeMinutes: null,
+          WorkOrderTaskTable.completionMeterValue: null,
+          WorkOrderTaskTable.completionMeterName: null,
+          WorkOrderTaskTable.completionMeterUnit: null,
+          WorkOrderTaskTable.updatedAt: now,
+          WorkOrderTaskTable.syncStatus: 'pending',
+        },
+        where: '${WorkOrderTaskTable.id} = ?',
+        whereArgs: [taskId],
+      );
+      await txn.update(
+        WorkOrderTable.tableName,
+        {
+          WorkOrderTable.status: 'IN_PROGRESS',
+          WorkOrderTable.completedAt: null,
+          WorkOrderTable.closedAt: null,
+          WorkOrderTable.updatedAt: now,
+          WorkOrderTable.syncStatus: 'pending',
+        },
+        where: '${WorkOrderTable.id} = ?',
+        whereArgs: [task.workOrderId],
+      );
+      final after = await _taskSnapshot(txn, taskId);
+      await _insertTaskEvent(
+        txn,
+        taskId: taskId,
+        eventType: 'REOPENED',
+        reason: normalizedReason,
+        before: before,
+        after: after,
+        now: now,
+      );
+    });
+  }
+
+  Future<void> correctCompletedTask({
+    required String taskId,
+    required String reason,
+    required TaskResult result,
+    required String? findings,
+    required int laborMinutes,
+    required int downtimeMinutes,
+    required List<Map<String, dynamic>> actualMaterials,
+  }) async {
+    final normalizedReason = reason.trim();
+    if (normalizedReason.isEmpty) {
+      throw ArgumentError('دلیل اصلاح اطلاعات را وارد کنید.');
+    }
+    if (laborMinutes < 0 || downtimeMinutes < 0) {
+      throw ArgumentError('زمان کار و توقف نمی‌توانند منفی باشند.');
+    }
+    final db = await _dbHelper.db;
+    final now = AppDateUtils.nowUtcIso();
+
+    await db.transaction((txn) async {
+      final tasks = await txn.query(
+        WorkOrderTaskTable.tableName,
+        where:
+            '${WorkOrderTaskTable.id} = ? AND ${WorkOrderTaskTable.deletedAt} IS NULL',
+        whereArgs: [taskId],
+        limit: 1,
+      );
+      if (tasks.isEmpty) throw ArgumentError('وظیفه یافت نشد.');
+      if (tasks.first[WorkOrderTaskTable.status] != 'COMPLETED') {
+        throw StateError('اصلاح اطلاعات فقط برای وظیفه تکمیل‌شده مجاز است.');
+      }
+
+      final requestedByItem = <String, double>{};
+      for (final entry in actualMaterials) {
+        final itemId = entry['item_id'];
+        final quantity = entry['quantity'];
+        if (itemId is! String ||
+            quantity is! num ||
+            !quantity.toDouble().isFinite ||
+            quantity < 0 ||
+            requestedByItem.containsKey(itemId)) {
+          throw ArgumentError('اطلاعات مقدار متریال نامعتبر یا تکراری است.');
+        }
+        requestedByItem[itemId] = quantity.toDouble();
+      }
+
+      final before = await _taskSnapshot(txn, taskId);
+      final existingRows = await txn.query(
+        WorkOrderMaterialTable.tableName,
+        where:
+            '${WorkOrderMaterialTable.workOrderTaskId} = ? AND ${WorkOrderMaterialTable.deletedAt} IS NULL',
+        whereArgs: [taskId],
+      );
+      final materialByItem = {
+        for (final row in existingRows)
+          row[WorkOrderMaterialTable.itemId] as String: row,
+      };
+
+      for (final entry in requestedByItem.entries) {
+        final itemId = entry.key;
+        final existing = materialByItem[itemId];
+        if (existing == null) {
+          final itemRows = await txn.query(
+            InventoryItemTable.tableName,
+            columns: [InventoryItemTable.defaultUnitCost],
+            where:
+                '${InventoryItemTable.id} = ? AND ${InventoryItemTable.deletedAt} IS NULL AND ${InventoryItemTable.isActive} = 1',
+            whereArgs: [itemId],
+            limit: 1,
+          );
+          if (itemRows.isEmpty) {
+            throw ArgumentError('کالای جدید باید در انبار فعال باشد.');
+          }
+          final materialId = IdGenerator.generate();
+          final cost =
+              (itemRows.first[InventoryItemTable.defaultUnitCost] as num?)
+                  ?.toDouble();
+          await txn.insert(WorkOrderMaterialTable.tableName, {
+            WorkOrderMaterialTable.id: materialId,
+            WorkOrderMaterialTable.workOrderTaskId: taskId,
+            WorkOrderMaterialTable.itemId: itemId,
+            WorkOrderMaterialTable.actualQuantity: entry.value,
+            WorkOrderMaterialTable.unitCostAtUse: cost,
+            WorkOrderMaterialTable.createdAt: now,
+            WorkOrderMaterialTable.updatedAt: now,
+            WorkOrderMaterialTable.syncStatus: 'pending',
+          });
+          materialByItem[itemId] = {
+            WorkOrderMaterialTable.id: materialId,
+            WorkOrderMaterialTable.itemId: itemId,
+            WorkOrderMaterialTable.actualQuantity: entry.value,
+            WorkOrderMaterialTable.unitCostAtUse: cost,
+          };
+        } else {
+          await txn.update(
+            WorkOrderMaterialTable.tableName,
+            {
+              WorkOrderMaterialTable.actualQuantity: entry.value,
+              WorkOrderMaterialTable.updatedAt: now,
+              WorkOrderMaterialTable.syncStatus: 'pending',
+            },
+            where: '${WorkOrderMaterialTable.id} = ?',
+            whereArgs: [existing[WorkOrderMaterialTable.id]],
+          );
+          materialByItem[itemId] = {
+            ...existing,
+            WorkOrderMaterialTable.actualQuantity: entry.value,
+          };
+        }
+      }
+
+      for (final entry in materialByItem.entries) {
+        final target = requestedByItem[entry.key] ?? 0;
+        final material = entry.value;
+        await txn.update(
+          WorkOrderMaterialTable.tableName,
+          {
+            WorkOrderMaterialTable.actualQuantity: target,
+            WorkOrderMaterialTable.updatedAt: now,
+            WorkOrderMaterialTable.syncStatus: 'pending',
+          },
+          where: '${WorkOrderMaterialTable.id} = ?',
+          whereArgs: [material[WorkOrderMaterialTable.id]],
+        );
+        await _reconcileMaterialStock(
+          txn,
+          material: material,
+          targetQuantity: target,
+          now: now,
+        );
+      }
+
+      await txn.update(
+        WorkOrderTaskTable.tableName,
+        {
+          WorkOrderTaskTable.result: result.toDbString(),
+          WorkOrderTaskTable.findings: findings,
+          WorkOrderTaskTable.laborMinutes: laborMinutes,
+          WorkOrderTaskTable.downtimeMinutes: downtimeMinutes,
+          WorkOrderTaskTable.updatedAt: now,
+          WorkOrderTaskTable.syncStatus: 'pending',
+        },
+        where: '${WorkOrderTaskTable.id} = ?',
+        whereArgs: [taskId],
+      );
+      final after = await _taskSnapshot(txn, taskId);
+      await _insertTaskEvent(
+        txn,
+        taskId: taskId,
+        eventType: 'COMPLETION_CORRECTED',
+        reason: normalizedReason,
+        before: before,
+        after: after,
+        now: now,
+      );
+    });
+  }
 
   Future<List<WorkOrder>> getWorkOrders(
     String facilityId, {
@@ -321,6 +693,18 @@ class WorkOrderRepository {
           task.status != TaskStatus.inProgress) {
         throw StateError('این وظیفه قبلاً تکمیل یا لغو شده است.');
       }
+      final before = await _taskSnapshot(txn, taskId);
+      final latestEvents = await txn.query(
+        WorkOrderTaskEventTable.tableName,
+        columns: [WorkOrderTaskEventTable.eventType],
+        where: '${WorkOrderTaskEventTable.workOrderTaskId} = ?',
+        whereArgs: [taskId],
+        orderBy: '${WorkOrderTaskEventTable.createdAt} DESC, rowid DESC',
+        limit: 1,
+      );
+      final isReopened =
+          latestEvents.isNotEmpty &&
+          latestEvents.first[WorkOrderTaskEventTable.eventType] == 'REOPENED';
 
       // 2. Save additional actual quantities, then post all usage atomically.
       final incomingByItem = <String, Map<String, dynamic>>{};
@@ -345,7 +729,7 @@ class WorkOrderRepository {
       for (final entry in incomingByItem.entries) {
         final itemId = entry.key;
         final material = entry.value;
-        final qty = (material['quantity'] as num).toDouble();
+        var qty = (material['quantity'] as num).toDouble();
         final itemRows = await txn.query(
           InventoryItemTable.tableName,
           columns: [InventoryItemTable.defaultUnitCost],
@@ -369,12 +753,22 @@ class WorkOrderRepository {
 
         final existingRows = await txn.query(
           WorkOrderMaterialTable.tableName,
-          columns: [WorkOrderMaterialTable.id],
+          columns: [
+            WorkOrderMaterialTable.id,
+            WorkOrderMaterialTable.actualQuantity,
+          ],
           where:
               '${WorkOrderMaterialTable.workOrderTaskId} = ? AND ${WorkOrderMaterialTable.itemId} = ? AND ${WorkOrderMaterialTable.deletedAt} IS NULL',
           whereArgs: [taskId, itemId],
           limit: 1,
         );
+        if (isReopened && existingRows.isNotEmpty) {
+          qty +=
+              (existingRows.first[WorkOrderMaterialTable.actualQuantity]
+                      as num?)
+                  ?.toDouble() ??
+              0;
+        }
         if (existingRows.isEmpty) {
           await txn.insert(WorkOrderMaterialTable.tableName, {
             WorkOrderMaterialTable.id: IdGenerator.generate(),
@@ -408,48 +802,14 @@ class WorkOrderRepository {
         whereArgs: [taskId],
       );
       for (final material in actualMaterials) {
-        final itemId = material[WorkOrderMaterialTable.itemId] as String;
         final qty = (material[WorkOrderMaterialTable.actualQuantity] as num)
             .toDouble();
-        final cost = (material[WorkOrderMaterialTable.unitCostAtUse] as num?)
-            ?.toDouble();
-
-        final stockRes = await txn.rawQuery(
-          '''
-            SELECT COALESCE(SUM(
-              CASE
-                WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
-                WHEN ${StockTransactionTable.transactionType} IN ('MAINTENANCE_CONSUMPTION', 'ADJUSTMENT_OUT') THEN -${StockTransactionTable.quantity}
-                ELSE 0
-              END
-            ), 0) as current_stock
-            FROM ${StockTransactionTable.tableName}
-            WHERE ${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL
-          ''',
-          [itemId],
+        await _reconcileMaterialStock(
+          txn,
+          material: material,
+          targetQuantity: qty,
+          now: nowIso,
         );
-
-        final currentStock = (stockRes.first['current_stock'] as num)
-            .toDouble();
-        if (currentStock < qty) {
-          throw StateError(
-            'موجودی کالا کافی نیست. موجودی فعلی: $currentStock، مقدار درخواستی: $qty',
-          );
-        }
-
-        await txn.insert(StockTransactionTable.tableName, {
-          StockTransactionTable.id: IdGenerator.generate(),
-          StockTransactionTable.itemId: itemId,
-          StockTransactionTable.transactionType: 'MAINTENANCE_CONSUMPTION',
-          StockTransactionTable.quantity: qty,
-          StockTransactionTable.unitCost: cost,
-          StockTransactionTable.transactionDate: nowIso,
-          StockTransactionTable.workOrderMaterialId:
-              material[WorkOrderMaterialTable.id],
-          StockTransactionTable.createdAt: nowIso,
-          StockTransactionTable.updatedAt: nowIso,
-          StockTransactionTable.syncStatus: 'pending',
-        });
       }
 
       // 3. Update task status
@@ -466,6 +826,15 @@ class WorkOrderRepository {
         },
         where: '${WorkOrderTaskTable.id} = ?',
         whereArgs: [taskId],
+      );
+      final after = await _taskSnapshot(txn, taskId);
+      await _insertTaskEvent(
+        txn,
+        taskId: taskId,
+        eventType: 'COMPLETED',
+        before: before,
+        after: after,
+        now: nowIso,
       );
 
       // 4. If task came from maintenance plan, update plan schedule

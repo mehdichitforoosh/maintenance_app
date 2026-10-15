@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../dashboard/providers/dashboard_providers.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../providers/work_order_providers.dart';
 
@@ -258,6 +261,110 @@ class WorkOrderDetailScreen extends ConsumerWidget {
                                         ),
                                       ),
                                     ),
+                                  if (t.status == TaskStatus.completed)
+                                    Align(
+                                      alignment: AlignmentDirectional.centerEnd,
+                                      child: Wrap(
+                                        spacing: 8,
+                                        runSpacing: 4,
+                                        children: [
+                                          OutlinedButton.icon(
+                                            icon: const Icon(
+                                              EneftyIcons.edit_2_outline,
+                                              size: 16,
+                                            ),
+                                            label: const Text(
+                                              'اصلاح اطلاعات تکمیل',
+                                            ),
+                                            onPressed: () => context.push(
+                                              '/work-orders/$workOrderId/tasks/${t.id}/correct',
+                                            ),
+                                          ),
+                                          OutlinedButton.icon(
+                                            icon: const Icon(
+                                              EneftyIcons.refresh_outline,
+                                              size: 16,
+                                            ),
+                                            label: const Text('بازگشایی وظیفه'),
+                                            onPressed: () async {
+                                              final reason =
+                                                  await _askForTaskReason(
+                                                    context,
+                                                    title: 'بازگشایی وظیفه',
+                                                    actionLabel: 'بازگشایی',
+                                                  );
+                                              if (reason == null ||
+                                                  !context.mounted) {
+                                                return;
+                                              }
+                                              try {
+                                                await ref
+                                                    .read(
+                                                      workOrderRepositoryProvider,
+                                                    )
+                                                    .reopenCompletedTask(
+                                                      taskId: t.id,
+                                                      reason: reason,
+                                                    );
+                                                ref.invalidate(
+                                                  workOrderDetailProvider(
+                                                    workOrderId,
+                                                  ),
+                                                );
+                                                ref.invalidate(
+                                                  workOrderTasksProvider(
+                                                    workOrderId,
+                                                  ),
+                                                );
+                                                ref.invalidate(
+                                                  workOrderTaskEventsProvider(
+                                                    t.id,
+                                                  ),
+                                                );
+                                                ref.invalidate(
+                                                  workOrdersProvider(
+                                                    wo.facilityId,
+                                                  ),
+                                                );
+                                                ref.invalidate(
+                                                  dashboardSummaryProvider(
+                                                    wo.facilityId,
+                                                  ),
+                                                );
+                                                ref.invalidate(
+                                                  dashboardCompletedTaskTrendProvider(
+                                                    wo.facilityId,
+                                                  ),
+                                                );
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'وظیفه بازگشایی شد؛ مصرف قبلی انبار حفظ شده است.',
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              } catch (error) {
+                                                if (context.mounted) {
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        'بازگشایی ناموفق بود: $error',
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   if (t.findings != null &&
                                       t.findings!.isNotEmpty) ...[
                                     const Divider(height: 12),
@@ -270,6 +377,7 @@ class WorkOrderDetailScreen extends ConsumerWidget {
                                     ),
                                   ],
                                   _TaskMaterialsSection(taskId: t.id),
+                                  _TaskHistorySection(taskId: t.id),
                                 ],
                               ),
                             ),
@@ -309,6 +417,153 @@ class WorkOrderDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<String?> _askForTaskReason(
+  BuildContext context, {
+  required String title,
+  required String actionLabel,
+}) async {
+  return showDialog<String>(
+    context: context,
+    builder: (_) => _TaskReasonDialog(title: title, actionLabel: actionLabel),
+  );
+}
+
+class _TaskReasonDialog extends StatefulWidget {
+  final String title;
+  final String actionLabel;
+
+  const _TaskReasonDialog({required this.title, required this.actionLabel});
+
+  @override
+  State<_TaskReasonDialog> createState() => _TaskReasonDialogState();
+}
+
+class _TaskReasonDialogState extends State<_TaskReasonDialog> {
+  final _controller = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'دلیل *',
+            border: OutlineInputBorder(),
+          ),
+          validator: (value) => value == null || value.trim().isEmpty
+              ? 'وارد کردن دلیل الزامی است.'
+              : null,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('انصراف'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.pop(context, _controller.text.trim());
+            }
+          },
+          child: Text(widget.actionLabel),
+        ),
+      ],
+    );
+  }
+}
+
+class _TaskHistorySection extends ConsumerWidget {
+  final String taskId;
+
+  const _TaskHistorySection({required this.taskId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final eventsAsync = ref.watch(workOrderTaskEventsProvider(taskId));
+    return eventsAsync.when(
+      data: (events) {
+        if (events.isEmpty) return const SizedBox.shrink();
+        return ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          title: const Text('تاریخچه تکمیل و اصلاح'),
+          children: events.map((event) {
+            final eventType = event['event_type'] as String? ?? '';
+            final label = switch (eventType) {
+              'COMPLETED' => 'تکمیل وظیفه',
+              'REOPENED' => 'بازگشایی وظیفه',
+              'COMPLETION_CORRECTED' => 'اصلاح اطلاعات تکمیل',
+              _ => 'رویداد وظیفه',
+            };
+            final reason = event['reason'] as String?;
+            return ListTile(
+              dense: true,
+              title: Text(label),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    [
+                      if (event['created_at'] != null)
+                        event['created_at'] as String,
+                      if (reason != null && reason.isNotEmpty) 'دلیل: $reason',
+                    ].join(' · '),
+                  ),
+                  if (eventType == 'COMPLETION_CORRECTED') ...[
+                    if (event['before_json'] is String)
+                      Text(
+                        'پیش از اصلاح: ${_taskSnapshotSummary(event['before_json'] as String)}',
+                      ),
+                    if (event['after_json'] is String)
+                      Text(
+                        'پس از اصلاح: ${_taskSnapshotSummary(event['after_json'] as String)}',
+                      ),
+                  ],
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+      loading: () => const LinearProgressIndicator(),
+      error: (error, _) => Text('بارگذاری تاریخچه ناموفق بود: $error'),
+    );
+  }
+}
+
+String _taskSnapshotSummary(String json) {
+  final decoded = jsonDecode(json) as Map<String, dynamic>;
+  final task = decoded['task'] as Map<String, dynamic>?;
+  if (task == null) return 'اطلاعات ثبت نشده';
+  final materials = decoded['materials'] as List<dynamic>? ?? const [];
+  final materialSummary = materials
+      .map((entry) {
+        final material = entry as Map<String, dynamic>;
+        return '${material['item_id']}: ${material['actual_quantity'] ?? 0}';
+      })
+      .join('، ');
+  return [
+    if (task['result'] != null) 'نتیجه ${task['result']}',
+    'کار ${task['labor_minutes'] ?? 0} دقیقه',
+    'توقف ${task['downtime_minutes'] ?? 0} دقیقه',
+    if (task['findings'] != null && (task['findings'] as String).isNotEmpty)
+      'یافته ${task['findings']}',
+    'مصرف [$materialSummary]',
+  ].join(' · ');
 }
 
 class _TaskMaterialsSection extends ConsumerWidget {

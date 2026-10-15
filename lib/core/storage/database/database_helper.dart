@@ -17,6 +17,7 @@ import 'tables/purchase_order_table.dart';
 import 'tables/stock_transaction_table.dart';
 import 'tables/work_order_material_table.dart';
 import 'tables/work_order_table.dart';
+import 'tables/work_order_task_event_table.dart';
 import 'tables/work_order_task_table.dart';
 
 class DatabaseHelper {
@@ -89,7 +90,7 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Additive migrations for future database versions
+    // migration code
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -120,19 +121,22 @@ class DatabaseHelper {
     // 9. Work Order Tasks
     await db.execute(WorkOrderTaskTable.createTable);
 
-    // 10. Work Order Materials
+    // 10. Work Order Task Events
+    await db.execute(WorkOrderTaskEventTable.createTable);
+
+    // 11. Work Order Materials
     await db.execute(WorkOrderMaterialTable.createTable);
 
-    // 11. Purchase Orders
+    // 12. Purchase Orders
     await db.execute(PurchaseOrderTable.createTable);
 
-    // 12. Purchase Order Items
+    // 13. Purchase Order Items
     await db.execute(PurchaseOrderItemTable.createTable);
 
-    // 13. Stock Transactions
+    // 14. Stock Transactions
     await db.execute(StockTransactionTable.createTable);
 
-    // 14. Alert Events
+    // 15. Alert Events
     await db.execute(AlertEventTable.createTable);
 
     // Indexes
@@ -167,6 +171,7 @@ class DatabaseHelper {
     await db.execute(WorkOrderTaskTable.createStatusIndex);
     await db.execute(WorkOrderTaskTable.createDueIndex);
     await db.execute(WorkOrderTaskTable.createUniqueOccurrenceIndex);
+    await db.execute(WorkOrderTaskEventTable.createTaskIndex);
 
     await db.execute(WorkOrderMaterialTable.createTaskIndex);
     await db.execute(WorkOrderMaterialTable.createItemIndex);

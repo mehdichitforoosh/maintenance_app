@@ -23,6 +23,7 @@ import '../../features/purchases/screens/purchase_order_list_screen.dart';
 import '../../features/purchases/screens/receive_purchase_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/work_orders/screens/complete_task_screen.dart';
+import '../../features/work_orders/screens/correct_task_completion_screen.dart';
 import '../../features/work_orders/screens/work_order_detail_screen.dart';
 import '../../features/work_orders/screens/work_order_form_screen.dart';
 import '../../features/work_orders/screens/work_order_list_screen.dart';
@@ -142,6 +143,13 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         GoRoute(
           path: '/work-orders/:id/tasks/:taskId/complete',
           builder: (_, state) => CompleteTaskScreen(
+            workOrderId: state.pathParameters['id']!,
+            taskId: state.pathParameters['taskId']!,
+          ),
+        ),
+        GoRoute(
+          path: '/work-orders/:id/tasks/:taskId/correct',
+          builder: (_, state) => CorrectTaskCompletionScreen(
             workOrderId: state.pathParameters['id']!,
             taskId: state.pathParameters['taskId']!,
           ),

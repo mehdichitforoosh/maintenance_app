@@ -9,22 +9,42 @@ final workOrderRepositoryProvider = Provider<WorkOrderRepository>((ref) {
   return WorkOrderRepository(dbHelper: ref.watch(databaseHelperProvider));
 });
 
-final workOrdersProvider = FutureProvider.family<List<WorkOrder>, String>((ref, facilityId) async {
+final workOrdersProvider = FutureProvider.family<List<WorkOrder>, String>((
+  ref,
+  facilityId,
+) async {
   final repo = ref.watch(workOrderRepositoryProvider);
   return repo.getWorkOrders(facilityId);
 });
 
-final workOrderDetailProvider = FutureProvider.family<WorkOrder?, String>((ref, workOrderId) async {
+final workOrderDetailProvider = FutureProvider.family<WorkOrder?, String>((
+  ref,
+  workOrderId,
+) async {
   final repo = ref.watch(workOrderRepositoryProvider);
   return repo.getWorkOrderById(workOrderId);
 });
 
-final workOrderTasksProvider = FutureProvider.family<List<WorkOrderTask>, String>((ref, workOrderId) async {
-  final repo = ref.watch(workOrderRepositoryProvider);
-  return repo.getTasksForWorkOrder(workOrderId);
-});
+final workOrderTasksProvider =
+    FutureProvider.family<List<WorkOrderTask>, String>((
+      ref,
+      workOrderId,
+    ) async {
+      final repo = ref.watch(workOrderRepositoryProvider);
+      return repo.getTasksForWorkOrder(workOrderId);
+    });
 
-final workOrderMaterialsProvider = FutureProvider.family<List<WorkOrderMaterial>, String>((ref, taskId) async {
-  final repo = ref.watch(workOrderRepositoryProvider);
-  return repo.getMaterialsForTask(taskId);
-});
+final workOrderMaterialsProvider =
+    FutureProvider.family<List<WorkOrderMaterial>, String>((ref, taskId) async {
+      final repo = ref.watch(workOrderRepositoryProvider);
+      return repo.getMaterialsForTask(taskId);
+    });
+
+final workOrderTaskEventsProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, String>((
+      ref,
+      taskId,
+    ) async {
+      final repo = ref.watch(workOrderRepositoryProvider);
+      return repo.getTaskEvents(taskId);
+    });

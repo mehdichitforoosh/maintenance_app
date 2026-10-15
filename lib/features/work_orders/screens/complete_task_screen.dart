@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/validators.dart';
+import '../../dashboard/providers/dashboard_providers.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../providers/work_order_providers.dart';
 
@@ -49,6 +50,7 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
 
     try {
       final repo = ref.read(workOrderRepositoryProvider);
+      final workOrder = await repo.getWorkOrderById(widget.workOrderId);
       await repo.completeTask(
         taskId: widget.taskId,
         result: _result,
@@ -65,8 +67,23 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
       ref.invalidate(workOrderDetailProvider(widget.workOrderId));
       ref.invalidate(workOrderTasksProvider(widget.workOrderId));
       ref.invalidate(workOrderMaterialsProvider(widget.taskId));
+      ref.invalidate(workOrderTaskEventsProvider(widget.taskId));
       ref.invalidate(inventoryItemsProvider);
       ref.invalidate(lowStockItemsProvider);
+      if (workOrder != null) {
+        ref.invalidate(dashboardSummaryProvider(workOrder.facilityId));
+        ref.invalidate(dashboardTodayTasksProvider(workOrder.facilityId));
+        ref.invalidate(dashboardWorkOrderStatusProvider(workOrder.facilityId));
+        ref.invalidate(
+          dashboardCompletedTaskTrendProvider(workOrder.facilityId),
+        );
+        ref.invalidate(
+          dashboardMaterialConsumptionTrendProvider(workOrder.facilityId),
+        );
+        ref.invalidate(
+          dashboardTopConsumedMaterialsProvider(workOrder.facilityId),
+        );
+      }
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
@@ -158,7 +175,7 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'اگر مقدار مصرف را در فرم متریال ثبت کرده‌اید، اینجا دوباره همان کالا را اضافه نکنید.',
+                'اگر مصرف قبلاً ثبت شده، در تکمیل اول آن را دوباره وارد نکنید. پس از بازگشایی، مقدار واردشده برای کالای قبلی به مصرف ثبت‌شده قبلی اضافه می‌شود.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
