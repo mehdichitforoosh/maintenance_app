@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
@@ -16,7 +17,9 @@ class AlertsScreen extends ConsumerWidget {
 
     return facilityAsync.when(
       data: (facility) {
-        if (facility == null) return const Scaffold(body: Center(child: Text('کارگاهی یافت نشد')));
+        if (facility == null) {
+          return const Scaffold(body: Center(child: Text('کارگاهی یافت نشد')));
+        }
         final alertsAsync = ref.watch(alertsProvider(facility.id));
 
         return Scaffold(
@@ -40,11 +43,19 @@ class AlertsScreen extends ConsumerWidget {
                     color: isCritical ? Colors.red[50] : null,
                     child: ListTile(
                       leading: Icon(
-                        isCritical ? Icons.error_outline : Icons.warning_amber_rounded,
+                        isCritical
+                            ? Icons.error_outline
+                            : Icons.warning_amber_rounded,
                         color: isCritical ? Colors.red : Colors.orange,
                       ),
-                      title: Text(alert.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('${alert.message ?? ''}\nتاریخ: ${alert.triggeredAt}'),
+                      title: Text(
+                        alert.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${alert.message ?? ''}\n'
+                        'تاریخ: ${AppDateUtils.formatDisplay(alert.triggeredAt)}',
+                      ),
                       isThreeLine: true,
                       trailing: PopupMenuButton<AlertStatus>(
                         onSelected: (status) async {
@@ -53,13 +64,24 @@ class AlertsScreen extends ConsumerWidget {
                           ref.invalidate(alertsProvider(facility.id));
                         },
                         itemBuilder: (context) => [
-                          const PopupMenuItem(value: AlertStatus.acknowledged, child: Text('تایید هشدار')),
-                          const PopupMenuItem(value: AlertStatus.resolved, child: Text('برطرف شده')),
-                          const PopupMenuItem(value: AlertStatus.dismissed, child: Text('رد کردن')),
+                          const PopupMenuItem(
+                            value: AlertStatus.acknowledged,
+                            child: Text('تایید هشدار'),
+                          ),
+                          const PopupMenuItem(
+                            value: AlertStatus.resolved,
+                            child: Text('برطرف شده'),
+                          ),
+                          const PopupMenuItem(
+                            value: AlertStatus.dismissed,
+                            child: Text('رد کردن'),
+                          ),
                         ],
                         child: Chip(
                           label: Text(alert.status.displayName),
-                          backgroundColor: alert.status == AlertStatus.active ? Colors.orange[100] : Colors.green[100],
+                          backgroundColor: alert.status == AlertStatus.active
+                              ? Colors.orange[100]
+                              : Colors.green[100],
                         ),
                       ),
                     ),

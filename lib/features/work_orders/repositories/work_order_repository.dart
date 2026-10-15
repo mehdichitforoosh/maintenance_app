@@ -13,6 +13,7 @@ import '../../../core/storage/database/tables/work_order_task_event_table.dart';
 import '../../../core/storage/database/tables/work_order_task_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../models/work_order.dart';
 import '../models/work_order_material.dart';
 import '../models/work_order_task.dart';
@@ -142,7 +143,7 @@ class WorkOrderRepository {
       final stock = (stockRows.first['current_stock'] as num).toDouble();
       if (stock < difference) {
         throw StateError(
-          'موجودی کالا کافی نیست. موجودی فعلی: $stock، مقدار درخواستی: $difference',
+          'موجودی کالا کافی نیست. موجودی فعلی: ${AppNumberFormat.decimal(stock)}، مقدار درخواستی: ${AppNumberFormat.decimal(difference)}',
         );
       }
     }

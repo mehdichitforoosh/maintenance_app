@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../inventory/providers/inventory_providers.dart';
@@ -298,7 +299,7 @@ class DashboardContent extends ConsumerWidget {
                     dataAsync: completedTaskTrendAsync,
                     valueKey: 'count',
                     color: const Color(0xFF10B981),
-                    formatter: (value) => value.toInt().toString(),
+                    formatter: (value) => AppNumberFormat.decimal(value),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -309,8 +310,7 @@ class DashboardContent extends ConsumerWidget {
                     dataAsync: materialTrendAsync,
                     valueKey: 'quantity',
                     color: const Color(0xFF8B5CF6),
-                    formatter: (value) =>
-                        value.toStringAsFixed(value % 1 == 0 ? 0 : 1),
+                    formatter: (value) => AppNumberFormat.decimal(value),
                   ),
                 ),
               ],
@@ -348,7 +348,7 @@ class DashboardContent extends ConsumerWidget {
                                 ),
                               ),
                               Text(
-                                '${(item['quantity'] as num).toStringAsFixed((item['quantity'] as num) % 1 == 0 ? 0 : 1)} ${item['unit']}',
+                                '${AppNumberFormat.decimal(item['quantity'] as num)} ${item['unit']}',
                                 style: TextStyle(
                                   color: Theme.of(
                                     context,
@@ -501,7 +501,7 @@ class DashboardContent extends ConsumerWidget {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          'موجودی: ${item['calculated_stock']} ${item['unit']} (حداقل: ${item['minimum_stock']})',
+                          'موجودی: ${AppNumberFormat.decimal(item['calculated_stock'] as num)} ${item['unit']} (حداقل: ${AppNumberFormat.decimal(item['minimum_stock'] as num)})',
                         ),
                         trailing: OutlinedButton.icon(
                           icon: const Icon(
@@ -655,7 +655,7 @@ class _SummaryCard extends StatelessWidget {
                     child: Icon(icon, color: color, size: 22),
                   ),
                   Text(
-                    count.toString(),
+                    AppNumberFormat.decimal(count),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: color,

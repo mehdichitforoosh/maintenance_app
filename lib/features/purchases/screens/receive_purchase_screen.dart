@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../providers/purchase_providers.dart';
 
@@ -12,7 +13,8 @@ class ReceivePurchaseScreen extends ConsumerStatefulWidget {
   const ReceivePurchaseScreen({super.key, required this.purchaseOrderId});
 
   @override
-  ConsumerState<ReceivePurchaseScreen> createState() => _ReceivePurchaseScreenState();
+  ConsumerState<ReceivePurchaseScreen> createState() =>
+      _ReceivePurchaseScreenState();
 }
 
 class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
@@ -62,7 +64,9 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -71,7 +75,9 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final itemsAsync = ref.watch(purchaseOrderItemsProvider(widget.purchaseOrderId));
+    final itemsAsync = ref.watch(
+      purchaseOrderItemsProvider(widget.purchaseOrderId),
+    );
     final inventoryItemsAsync = ref.watch(inventoryItemsProvider);
 
     return Scaffold(
@@ -79,7 +85,11 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
       body: itemsAsync.when(
         data: (orderItems) {
           for (final item in orderItems) {
-            _qtyControllers.putIfAbsent(item.id, () => TextEditingController(text: item.orderedQuantity.toString()));
+            _qtyControllers.putIfAbsent(
+              item.id,
+              () =>
+                  TextEditingController(text: item.orderedQuantity.toString()),
+            );
           }
 
           return inventoryItemsAsync.when(
@@ -90,24 +100,49 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
                   key: _formKey,
                   child: ListView(
                     children: [
-                      const Text('مقادیر دریافتی اقلام را وارد کنید:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text(
+                        'مقادیر دریافتی اقلام را وارد کنید:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       ...orderItems.map((item) {
-                        final invItem = invItems.where((i) => i.id == item.itemId).firstOrNull;
+                        final invItem = invItems
+                            .where((i) => i.id == item.itemId)
+                            .firstOrNull;
                         return Card(
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(invItem?.name ?? 'کالا', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                Text('مقدار سفارش‌داده شده: ${item.orderedQuantity} ${invItem?.unit ?? ''}'),
+                                Text(
+                                  invItem?.name ?? 'کالا',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'مقدار سفارش‌داده شده: ${AppNumberFormat.decimal(item.orderedQuantity)} ${invItem?.unit ?? ''}',
+                                ),
                                 const SizedBox(height: 12),
                                 TextFormField(
                                   controller: _qtyControllers[item.id],
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: const InputDecoration(labelText: 'مقدار دریافتی *', border: OutlineInputBorder()),
-                                  validator: (v) => AppValidators.nonNegativeNumber(v, fieldName: 'مقدار دریافتی'),
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  decoration: const InputDecoration(
+                                    labelText: 'مقدار دریافتی *',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  validator: (v) =>
+                                      AppValidators.nonNegativeNumber(
+                                        v,
+                                        fieldName: 'مقدار دریافتی',
+                                      ),
                                 ),
                               ],
                             ),
@@ -116,7 +151,9 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
                       }),
                       const SizedBox(height: 24),
                       FilledButton(
-                        onPressed: _isLoading ? null : () => _receive(orderItems),
+                        onPressed: _isLoading
+                            ? null
+                            : () => _receive(orderItems),
                         child: const Text('ثبت و به‌روزرسانی موجودی انبار'),
                       ),
                     ],

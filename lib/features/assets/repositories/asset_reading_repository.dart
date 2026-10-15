@@ -7,6 +7,7 @@ import '../../../core/storage/database/tables/maintenance_plan_table.dart';
 import '../../../core/storage/database/tables/work_order_table.dart';
 import '../../../core/storage/database/tables/work_order_task_table.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../maintenance/services/condition_evaluator.dart';
 import '../models/asset_reading.dart';
@@ -303,7 +304,7 @@ class AssetReadingRepository {
         WorkOrderTaskTable.title:
             'رفع شرط بحرانی: ${plan[MaintenancePlanTable.title]}',
         WorkOrderTaskTable.description:
-            'خوانش بحرانی با مقدار ${reading.value} ${reading.unit} ثبت شد.',
+            'خوانش بحرانی با مقدار ${AppNumberFormat.decimal(reading.value)} ${reading.unit} ثبت شد.',
         WorkOrderTaskTable.activityType:
             plan[MaintenancePlanTable.activityType],
         WorkOrderTaskTable.status: 'PENDING',

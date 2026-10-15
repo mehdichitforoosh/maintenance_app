@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/date_utils.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../inventory/providers/inventory_providers.dart';
@@ -86,7 +88,11 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 20),
                       _row(context, 'تأمین‌کننده', po.supplierName ?? '-'),
-                      _row(context, 'تاریخ سفارش', po.orderDate),
+                      _row(
+                        context,
+                        'تاریخ سفارش',
+                        AppDateUtils.formatJalali(po.orderDate),
+                      ),
                       if (po.notes != null && po.notes!.isNotEmpty)
                         _row(context, 'یادداشت', po.notes!),
                     ],
@@ -129,7 +135,7 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                                 ),
                               ),
                               subtitle: Text(
-                                'مقدار: ${line.orderedQuantity} ${invItem?.unit ?? ''} | قیمت واحد: ${line.unitPrice} تومان',
+                                'مقدار: ${AppNumberFormat.decimal(line.orderedQuantity)} ${invItem?.unit ?? ''} | قیمت واحد: ${AppNumberFormat.decimal(line.unitPrice)} تومان',
                               ),
                             ),
                           );

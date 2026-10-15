@@ -9,6 +9,7 @@ import 'package:maintenance_app/features/inventory/repositories/inventory_reposi
 import 'package:maintenance_app/features/maintenance/repositories/maintenance_plan_repository.dart';
 import 'package:maintenance_app/features/maintenance/services/maintenance_scheduler.dart';
 import 'package:maintenance_app/features/purchases/repositories/purchase_repository.dart';
+import 'package:maintenance_app/features/reports/repositories/report_repository.dart';
 import 'package:maintenance_app/features/work_orders/repositories/work_order_repository.dart';
 
 void main() {
@@ -138,6 +139,94 @@ void main() {
   });
 
   group('Work-order and stock transactions', () {
+    test(
+      'operational report summarizes real tasks, consumption, and receipts',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه گزارش');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'پمپ گزارش',
+          code: 'P-REPORT',
+        );
+        final inventory = InventoryRepository(dbHelper: dbHelper);
+        final item = await inventory.createItem(
+          name: 'فیلتر',
+          code: 'FILTER-REPORT',
+          unit: 'عدد',
+          defaultUnitCost: 12,
+        );
+        await inventory.adjustStock(
+          itemId: item.id,
+          type: TransactionType.adjustmentIn,
+          quantity: 5,
+          unitCost: 12,
+        );
+
+        final workOrders = WorkOrderRepository(dbHelper: dbHelper);
+        final order = await workOrders.createWorkOrder(
+          facilityId: facility.id,
+          title: 'سرویس پمپ',
+          workOrderType: WorkOrderType.corrective,
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: order.id,
+          assetId: asset.id,
+          title: 'تعویض فیلتر',
+        );
+        final task = (await workOrders.getTasksForWorkOrder(order.id)).single;
+        await workOrders.completeTask(
+          taskId: task.id,
+          result: TaskResult.success,
+          findings: null,
+          laborMinutes: 45,
+          downtimeMinutes: 20,
+          consumedMaterials: [
+            {'item_id': item.id, 'quantity': 2},
+          ],
+        );
+
+        final purchases = PurchaseRepository(dbHelper: dbHelper);
+        final purchaseOrder = await purchases.createPurchaseOrder(
+          facilityId: facility.id,
+          supplierName: 'تأمین‌کننده گزارش',
+          orderDate: DateTime.now().toIso8601String(),
+          items: [
+            {'item_id': item.id, 'ordered_quantity': 3, 'unit_price': 15},
+          ],
+        );
+        final orderItem = (await purchases.getOrderItems(
+          purchaseOrder.id,
+        )).single;
+        await purchases.receiveItems(
+          purchaseOrderId: purchaseOrder.id,
+          receivedLines: [
+            {'purchase_order_item_id': orderItem.id, 'received_quantity': 3},
+          ],
+        );
+
+        final today = DateTime.now();
+        final start = DateTime(today.year, today.month, today.day);
+        final report = await ReportRepository(dbHelper: dbHelper)
+            .getOperationalReport(
+              facilityId: facility.id,
+              start: start,
+              endExclusive: start.add(const Duration(days: 1)),
+            );
+
+        expect(report.completedTasks, 1);
+        expect(report.laborMinutes, 45);
+        expect(report.downtimeMinutes, 20);
+        expect(report.consumedTransactionCount, 1);
+        expect(report.consumedCost, 24);
+        expect(report.materialUsage.single.quantity, 2);
+        expect(report.receiptCount, 1);
+        expect(report.receivedCost, 45);
+        expect(report.receipts.single.itemName, 'فیلتر');
+      },
+    );
+
     test(
       'asset task history is scoped to the asset and active work orders',
       () async {

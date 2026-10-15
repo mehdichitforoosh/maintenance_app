@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/enums/app_enums.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../../work_orders/models/work_order_task.dart';
 
 class AssetWorkOrderCharts extends StatelessWidget {
@@ -112,7 +113,7 @@ class _TaskStatusChartState extends State<_TaskStatusChart> {
                     child: Center(
                       child: selectedStatus == null
                           ? Text(
-                              '${widget.tasks.length}\nوظیفه',
+                              '${AppNumberFormat.decimal(widget.tasks.length)}\nوظیفه',
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
@@ -129,7 +130,7 @@ class _TaskStatusChartState extends State<_TaskStatusChart> {
                                       ),
                                 ),
                                 Text(
-                                  '${counts[selectedStatus]} وظیفه',
+                                  '${AppNumberFormat.decimal(counts[selectedStatus]!)} وظیفه',
                                   style: Theme.of(context).textTheme.titleSmall
                                       ?.copyWith(fontWeight: FontWeight.bold),
                                 ),
@@ -289,9 +290,10 @@ class _TaskTimeChart extends StatelessWidget {
   String _formatDuration(int minutes) {
     final hours = minutes ~/ 60;
     final remainingMinutes = minutes % 60;
-    if (hours == 0) return '$remainingMinutes دقیقه';
-    if (remainingMinutes == 0) return '$hours ساعت';
-    return '$hours ساعت و $remainingMinutes دقیقه';
+    if (hours == 0) return '${AppNumberFormat.decimal(remainingMinutes)} دقیقه';
+    if (remainingMinutes == 0) return '${AppNumberFormat.decimal(hours)} ساعت';
+    return '${AppNumberFormat.decimal(hours)} ساعت و '
+        '${AppNumberFormat.decimal(remainingMinutes)} دقیقه';
   }
 }
 

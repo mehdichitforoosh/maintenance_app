@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../models/inventory_item.dart';
 import '../../models/stock_transaction.dart';
 
@@ -49,12 +50,14 @@ class InventoryItemSpecificationsCard extends StatelessWidget {
             _InfoRow(label: 'واحد', value: item.unit),
             _InfoRow(
               label: 'حداقل موجودی',
-              value: '${item.minimumStock} ${item.unit}',
+              value:
+                  '${AppNumberFormat.decimal(item.minimumStock)} ${item.unit}',
             ),
             if (item.defaultUnitCost != null)
               _InfoRow(
                 label: 'قیمت واحد پیش‌فرض',
-                value: '${item.defaultUnitCost} تومان',
+                value:
+                    '${AppNumberFormat.decimal(item.defaultUnitCost!)} تومان',
               ),
             if (item.description?.trim().isNotEmpty ?? false)
               _InfoRow(label: 'توضیحات', value: item.description!),
@@ -97,7 +100,7 @@ class StockTransactionTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${transaction.quantity} $unit',
+                '${AppNumberFormat.decimal(transaction.quantity)} $unit',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colors.onSurfaceVariant,
                   fontWeight: FontWeight.w500,

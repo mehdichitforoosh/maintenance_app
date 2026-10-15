@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../maintenance/models/maintenance_plan.dart';
 import '../../models/asset.dart';
@@ -233,7 +234,7 @@ class _AssetMeterTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          '${_formatValue(reading.value)} ${reading.unit}\n'
+          '${AppNumberFormat.decimal(reading.value)} ${reading.unit}\n'
           '${AppDateUtils.formatDisplay(reading.recordedAt)}',
         ),
         isThreeLine: true,
@@ -265,7 +266,4 @@ class _AssetMeterTile extends StatelessWidget {
       _ => metric.replaceAll('_', ' '),
     };
   }
-
-  String _formatValue(double value) =>
-      value == value.roundToDouble() ? value.toInt().toString() : '$value';
 }

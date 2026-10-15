@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../../../core/utils/validators.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../../inventory/providers/inventory_providers.dart';
@@ -300,7 +301,9 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
                           mat['item_name'] as String,
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('مقدار مصرفی: ${mat['quantity']}'),
+                        subtitle: Text(
+                          'مقدار مصرفی: ${AppNumberFormat.decimal(mat['quantity'] as num)}',
+                        ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => setState(

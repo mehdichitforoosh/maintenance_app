@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/enums/app_enums.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../models/stock_transaction.dart';
 
 class InventoryMovementChart extends StatefulWidget {
@@ -111,7 +112,7 @@ class _InventoryMovementChartState extends State<InventoryMovementChart> {
                                       ),
                                 ),
                                 Text(
-                                  '${values[selected]} ${widget.unit}',
+                                  '${AppNumberFormat.decimal(values[selected])} ${widget.unit}',
                                   textAlign: TextAlign.center,
                                   style: Theme.of(context).textTheme.titleSmall
                                       ?.copyWith(fontWeight: FontWeight.bold),
@@ -179,7 +180,7 @@ class _MovementLegend extends StatelessWidget {
       children: [
         CircleAvatar(radius: 5, backgroundColor: color),
         const SizedBox(width: 6),
-        Text('$label: $amount $unit'),
+        Text('$label: ${AppNumberFormat.decimal(amount)} $unit'),
       ],
     );
   }

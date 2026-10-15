@@ -1,5 +1,6 @@
 import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../models/inventory_item.dart';
 
 class InventoryItemCard extends StatelessWidget {
@@ -72,7 +73,7 @@ class InventoryItemCard extends StatelessWidget {
                         ),
                         _ItemChip(
                           label:
-                              'نقطه سفارش: ${item.minimumStock} ${item.unit}',
+                              'نقطه سفارش: ${AppNumberFormat.decimal(item.minimumStock)} ${item.unit}',
                           foreground: colors.onSecondaryContainer,
                           background: colors.secondaryContainer,
                         ),

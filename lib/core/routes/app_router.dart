@@ -22,6 +22,7 @@ import '../../features/purchases/screens/purchase_order_detail_screen.dart';
 import '../../features/purchases/screens/purchase_order_form_screen.dart';
 import '../../features/purchases/screens/purchase_order_list_screen.dart';
 import '../../features/purchases/screens/receive_purchase_screen.dart';
+import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/work_orders/screens/complete_task_screen.dart';
 import '../../features/work_orders/screens/correct_task_completion_screen.dart';
@@ -215,6 +216,7 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         ),
         // Alerts & Settings
         GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
+        GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
         GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       ],
     ),

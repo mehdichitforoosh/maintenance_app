@@ -4,6 +4,7 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../../inventory/providers/inventory_providers.dart';
 import '../../providers/work_order_providers.dart';
 
@@ -160,13 +161,13 @@ String _taskSnapshotSummary(String json, Map<String, String> itemNames) {
         final material = entry as Map<String, dynamic>;
         final itemId = material['item_id'] as String? ?? '';
         final itemName = itemNames[itemId] ?? 'ماده';
-        return '$itemName: ${material['actual_quantity'] ?? 0}';
+        return '$itemName: ${AppNumberFormat.decimal((material['actual_quantity'] as num?) ?? 0)}';
       })
       .join('، ');
   return [
     if (task['result'] != null) 'نتیجه ${task['result']}',
-    'کار ${task['labor_minutes'] ?? 0} دقیقه',
-    'توقف ${task['downtime_minutes'] ?? 0} دقیقه',
+    'کار ${AppNumberFormat.decimal((task['labor_minutes'] as num?) ?? 0)} دقیقه',
+    'توقف ${AppNumberFormat.decimal((task['downtime_minutes'] as num?) ?? 0)} دقیقه',
     if (task['findings'] != null && (task['findings'] as String).isNotEmpty)
       'یافته ${task['findings']}',
     'مصرف [$materialSummary]',
@@ -258,7 +259,5 @@ class TaskMaterialsSection extends ConsumerWidget {
 
 String _formatQuantity(double? quantity) {
   if (quantity == null) return '—';
-  return quantity == quantity.roundToDouble()
-      ? quantity.toStringAsFixed(0)
-      : quantity.toString();
+  return AppNumberFormat.decimal(quantity);
 }

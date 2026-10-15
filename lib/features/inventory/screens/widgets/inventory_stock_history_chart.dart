@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../models/stock_transaction.dart';
@@ -77,7 +78,7 @@ class InventoryStockHistoryChart extends StatelessWidget {
                         final point = points[spot.spotIndex];
                         return LineTooltipItem(
                           '${AppDateUtils.formatJalali(point.transaction.transactionDate)}\n'
-                          '${point.balance} $unit',
+                          '${AppNumberFormat.decimal(point.balance)} $unit',
                           TextStyle(
                             color: colors.onInverseSurface,
                             fontWeight: FontWeight.w600,

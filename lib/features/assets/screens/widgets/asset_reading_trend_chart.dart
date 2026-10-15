@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../models/asset_reading.dart';
 
 class AssetReadingTrendChart extends StatelessWidget {
@@ -111,7 +112,7 @@ class _ReadingLineChart extends StatelessWidget {
               final reading = points[spot.spotIndex].reading;
               return LineTooltipItem(
                 '${AppDateUtils.formatDisplay(reading.recordedAt)}\n'
-                '${_formatValue(reading.value)} ${reading.unit}',
+                '${AppNumberFormat.decimal(reading.value)} ${reading.unit}',
                 TextStyle(
                   color: colors.onInverseSurface,
                   fontSize: 12,
@@ -183,9 +184,6 @@ class _ReadingLineChart extends StatelessWidget {
       ),
     );
   }
-
-  String _formatValue(double value) =>
-      value == value.roundToDouble() ? value.toInt().toString() : '$value';
 }
 
 class _ReadingPoint {

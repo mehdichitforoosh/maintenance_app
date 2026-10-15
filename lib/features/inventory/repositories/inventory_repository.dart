@@ -4,6 +4,7 @@ import '../../../core/storage/database/tables/inventory_item_table.dart';
 import '../../../core/storage/database/tables/stock_transaction_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
+import '../../../core/utils/number_format_utils.dart';
 import '../models/inventory_item.dart';
 import '../models/stock_transaction.dart';
 
@@ -11,9 +12,13 @@ class InventoryRepository {
   static const String _tableName = InventoryItemTable.tableName;
   final DatabaseHelper _dbHelper;
 
-  InventoryRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
+  InventoryRepository({DatabaseHelper? dbHelper})
+    : _dbHelper = dbHelper ?? DatabaseHelper.instance;
 
-  Future<List<InventoryItem>> getItems({String? searchQuery, bool activeOnly = true}) async {
+  Future<List<InventoryItem>> getItems({
+    String? searchQuery,
+    bool activeOnly = true,
+  }) async {
     final db = await _dbHelper.db;
     var where = '${InventoryItemTable.deletedAt} IS NULL';
     var args = <dynamic>[];
@@ -22,25 +27,38 @@ class InventoryRepository {
       where += ' AND ${InventoryItemTable.isActive} = 1';
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      where += ' AND (${InventoryItemTable.name} LIKE ? OR ${InventoryItemTable.code} LIKE ?)';
+      where +=
+          ' AND (${InventoryItemTable.name} LIKE ? OR ${InventoryItemTable.code} LIKE ?)';
       args.add('%${searchQuery.trim()}%');
       args.add('%${searchQuery.trim()}%');
     }
 
-    final results = await db.query(_tableName, where: where, whereArgs: args, orderBy: '${InventoryItemTable.name} ASC');
+    final results = await db.query(
+      _tableName,
+      where: where,
+      whereArgs: args,
+      orderBy: '${InventoryItemTable.name} ASC',
+    );
     return results.map((m) => InventoryItem.fromMap(m)).toList();
   }
 
   Future<InventoryItem?> getItemById(String id) async {
     final db = await _dbHelper.db;
-    final results = await db.query(_tableName, where: '${InventoryItemTable.id} = ? AND ${InventoryItemTable.deletedAt} IS NULL', whereArgs: [id], limit: 1);
+    final results = await db.query(
+      _tableName,
+      where:
+          '${InventoryItemTable.id} = ? AND ${InventoryItemTable.deletedAt} IS NULL',
+      whereArgs: [id],
+      limit: 1,
+    );
     if (results.isEmpty) return null;
     return InventoryItem.fromMap(results.first);
   }
 
   Future<double> getCurrentStock(String itemId) async {
     final db = await _dbHelper.db;
-    final res = await db.rawQuery('''
+    final res = await db.rawQuery(
+      '''
       SELECT COALESCE(SUM(
         CASE 
           WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
@@ -50,7 +68,9 @@ class InventoryRepository {
       ), 0) as current_stock
       FROM ${StockTransactionTable.tableName}
       WHERE ${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL
-    ''', [itemId]);
+    ''',
+      [itemId],
+    );
     return (res.first['current_stock'] as num).toDouble();
   }
 
@@ -133,7 +153,8 @@ class InventoryRepository {
     double? unitCost,
     String? notes,
   }) async {
-    if (type != TransactionType.adjustmentIn && type != TransactionType.adjustmentOut) {
+    if (type != TransactionType.adjustmentIn &&
+        type != TransactionType.adjustmentOut) {
       throw ArgumentError('نوع تراکنش تعدیل نامعتبر است.');
     }
 
@@ -142,7 +163,8 @@ class InventoryRepository {
 
     await db.transaction((txn) async {
       if (type == TransactionType.adjustmentOut) {
-        final stockRes = await txn.rawQuery('''
+        final stockRes = await txn.rawQuery(
+          '''
           SELECT COALESCE(SUM(
             CASE 
               WHEN ${StockTransactionTable.transactionType} IN ('PURCHASE_RECEIPT', 'ADJUSTMENT_IN', 'RETURN') THEN ${StockTransactionTable.quantity}
@@ -152,10 +174,15 @@ class InventoryRepository {
           ), 0) as current_stock
           FROM ${StockTransactionTable.tableName}
           WHERE ${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL
-        ''', [itemId]);
-        final currentStock = (stockRes.first['current_stock'] as num).toDouble();
+        ''',
+          [itemId],
+        );
+        final currentStock = (stockRes.first['current_stock'] as num)
+            .toDouble();
         if (currentStock < quantity) {
-          throw StateError('موجودی کافی برای خروج/تعدیل نیست. موجودی فعلی: $currentStock');
+          throw StateError(
+            'موجودی کافی برای خروج/تعدیل نیست. موجودی فعلی: ${AppNumberFormat.decimal(currentStock)}',
+          );
         }
       }
 
@@ -178,7 +205,8 @@ class InventoryRepository {
     final db = await _dbHelper.db;
     final results = await db.query(
       StockTransactionTable.tableName,
-      where: '${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL',
+      where:
+          '${StockTransactionTable.itemId} = ? AND ${StockTransactionTable.deletedAt} IS NULL',
       whereArgs: [itemId],
       orderBy: '${StockTransactionTable.transactionDate} DESC',
     );

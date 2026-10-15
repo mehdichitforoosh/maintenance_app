@@ -1,6 +1,7 @@
 import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/number_format_utils.dart';
 import '../../models/asset_reading.dart';
 
 class AssetReadingTile extends StatelessWidget {
@@ -36,7 +37,7 @@ class AssetReadingTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${_formatValue(reading.value)} ${reading.unit}',
+                '${AppNumberFormat.decimal(reading.value)} ${reading.unit}',
                 style: valueStyle,
               ),
               const SizedBox(height: 3),
@@ -81,10 +82,5 @@ class AssetReadingTile extends StatelessWidget {
       'vibration' => 'لرزش',
       _ => metricName.replaceAll('_', ' '),
     };
-  }
-
-  static String _formatValue(double value) {
-    if (value == value.roundToDouble()) return value.toInt().toString();
-    return value.toString();
   }
 }

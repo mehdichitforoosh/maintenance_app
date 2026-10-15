@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/number_format_utils.dart';
 
 class InventoryCurrentStockGauge extends StatelessWidget {
   final double stock;
@@ -81,7 +82,7 @@ class InventoryCurrentStockGauge extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '$stock',
+                          AppNumberFormat.decimal(stock),
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(
                                 color: colors.onSurface,
@@ -105,7 +106,7 @@ class InventoryCurrentStockGauge extends StatelessWidget {
                 Text('۰', style: TextStyle(color: colors.onSurfaceVariant)),
                 Text(
                   minimumStock > 0
-                      ? 'حداقل: $minimumStock $unit'
+                      ? 'حداقل: ${AppNumberFormat.decimal(minimumStock)} $unit'
                       : 'حداقل موجودی تعریف نشده',
                   style: TextStyle(
                     color: isLow ? colors.error : colors.onSurfaceVariant,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
@@ -201,7 +202,7 @@ class _PurchaseOrderListScreenState
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'تاریخ سفارش: ${po.orderDate}',
+                                          'تاریخ سفارش: ${AppDateUtils.formatJalali(po.orderDate)}',
                                           style: TextStyle(
                                             color: Theme.of(
                                               context,
