@@ -43,13 +43,29 @@ class ReportBarChart extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             if (values.isEmpty || maxValue == 0)
-              const SizedBox(
-                height: 130,
-                child: Center(child: Text('داده‌ای برای نمایش نمودار نیست.')),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.insert_chart_outlined,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'در این بازه داده‌ای برای نمودار ثبت نشده است.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               )
             else
               SizedBox(
-                height: 205,
+                height: 190,
                 child: BarChart(
                   BarChartData(
                     maxY: maxValue * 1.2,
@@ -107,6 +123,9 @@ class ReportBarChart extends StatelessWidget {
                               child: Text(
                                 values[index].label,
                                 maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                textDirection: TextDirection.rtl,
                                 style: TextStyle(
                                   fontSize: 9,
                                   color: colors.onSurfaceVariant,

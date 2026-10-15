@@ -10,8 +10,8 @@ import '../models/operational_report.dart';
 import '../providers/report_providers.dart';
 import 'widgets/report_category_sections.dart';
 import 'widgets/report_bar_chart.dart';
-
-enum _ReportPeriod { week, month, year, custom }
+import 'widgets/report_filter_chips.dart'
+    show ReportCategoryPicker, ReportPeriodChips, ReportPeriod;
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -23,7 +23,7 @@ class ReportsScreen extends ConsumerStatefulWidget {
 enum _TrendBucket { daily, weekly, monthly, quarterly }
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
-  _ReportPeriod _period = _ReportPeriod.week;
+  ReportPeriod _period = ReportPeriod.week;
   ReportCategory _category = ReportCategory.workOrders;
   DateTime? _customStart;
   DateTime? _customEnd;
@@ -53,38 +53,29 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
             children: [
-              _periodControls(context),
-              const SizedBox(height: 8),
-              _dateRangeLabel(context, range),
-              const SizedBox(height: 20),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<ReportCategory>(
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(
-                      value: ReportCategory.workOrders,
-                      label: Text('تعمیرات'),
-                      icon: Icon(Icons.build_outlined),
-                    ),
-                    ButtonSegment(
-                      value: ReportCategory.materials,
-                      label: Text('مصرف قطعات'),
-                      icon: Icon(Icons.inventory_2_outlined),
-                    ),
-                    ButtonSegment(
-                      value: ReportCategory.purchases,
-                      label: Text('دریافت خرید'),
-                      icon: Icon(Icons.local_shipping_outlined),
-                    ),
-                  ],
-                  selected: {_category},
-                  onSelectionChanged: (selection) {
-                    setState(() => _category = selection.first);
-                  },
-                ),
+              Text(
+                'بازه گزارش',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 6),
+              _periodControls(context),
+              const SizedBox(height: 4),
+              _dateRangeLabel(context, range),
+              const SizedBox(height: 14),
+              Text(
+                'دسته گزارش',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              ReportCategoryPicker(
+                selected: _category,
+                onSelected: (category) => setState(() => _category = category),
+              ),
+              const SizedBox(height: 12),
               reportAsync.when(
                 data: (report) => ReportCategorySections(
                   category: _category,
@@ -118,43 +109,46 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   Widget _periodControls(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SegmentedButton<_ReportPeriod>(
-        showSelectedIcon: false,
-        segments: const [
-          ButtonSegment(value: _ReportPeriod.week, label: Text('هفتگی')),
-          ButtonSegment(value: _ReportPeriod.month, label: Text('ماهانه')),
-          ButtonSegment(value: _ReportPeriod.year, label: Text('سالانه')),
-          ButtonSegment(
-            value: _ReportPeriod.custom,
-            label: Text('بازه دلخواه'),
-            icon: Icon(Icons.date_range_outlined),
-          ),
-        ],
-        selected: {_period},
-        onSelectionChanged: (selection) {
-          final selected = selection.first;
-          if (selected == _ReportPeriod.custom) {
-            _selectCustomRange();
-          } else {
-            setState(() => _period = selected);
-          }
-        },
-      ),
+    return ReportPeriodChips(
+      selected: _period,
+      onSelected: (selected) {
+        if (selected == ReportPeriod.custom) {
+          _selectCustomRange();
+        } else {
+          setState(() => _period = selected);
+        }
+      },
     );
   }
 
   Widget _dateRangeLabel(BuildContext context, _DateRange range) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Text(
-        '${AppDateUtils.formatJalali(range.start.toIso8601String())}'
-        ' تا ${AppDateUtils.formatJalali(range.endExclusive.subtract(const Duration(days: 1)).toIso8601String())}',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+    return Row(
+      children: [
+        Icon(
+          Icons.calendar_today_outlined,
+          size: 15,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
-      ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            '${AppDateUtils.formatJalali(range.start.toIso8601String())}'
+            ' تا ${AppDateUtils.formatJalali(range.endExclusive.subtract(const Duration(days: 1)).toIso8601String())}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: _selectCustomRange,
+          icon: const Icon(Icons.edit_calendar_outlined, size: 16),
+          label: const Text('تغییر'),
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+        ),
+      ],
     );
   }
 
@@ -183,7 +177,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         selectedRange.end.month,
         selectedRange.end.day,
       );
-      _period = _ReportPeriod.custom;
+      _period = ReportPeriod.custom;
     });
   }
 
@@ -191,23 +185,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     switch (_period) {
-      case _ReportPeriod.week:
+      case ReportPeriod.week:
         final daysSinceSaturday = (today.weekday + 1) % 7;
         final start = today.subtract(Duration(days: daysSinceSaturday));
         return _DateRange(start, today.add(const Duration(days: 1)));
-      case _ReportPeriod.month:
+      case ReportPeriod.month:
         final jalaliToday = Jalali.fromDateTime(today);
         return _DateRange(
           Jalali(jalaliToday.year, jalaliToday.month, 1).toDateTime(),
           today.add(const Duration(days: 1)),
         );
-      case _ReportPeriod.year:
+      case ReportPeriod.year:
         final jalaliToday = Jalali.fromDateTime(today);
         return _DateRange(
           Jalali(jalaliToday.year, 1, 1).toDateTime(),
           today.add(const Duration(days: 1)),
         );
-      case _ReportPeriod.custom:
+      case ReportPeriod.custom:
         final start = _customStart ?? today;
         final end = _customEnd ?? today;
         return _DateRange(start, end.add(const Duration(days: 1)));

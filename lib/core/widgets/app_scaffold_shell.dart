@@ -17,6 +17,7 @@ class AppScaffoldShell extends StatelessWidget {
     if (loc.startsWith('/work-orders')) return 2;
     if (loc.startsWith('/inventory')) return 3;
     if (loc.startsWith('/settings') ||
+        loc.startsWith('/reports') ||
         loc.startsWith('/locations') ||
         loc.startsWith('/maintenance-plans') ||
         loc.startsWith('/purchases') ||

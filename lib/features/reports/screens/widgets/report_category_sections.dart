@@ -60,23 +60,29 @@ class ReportCategorySections extends StatelessWidget {
           values: taskTrend,
         ),
         const SizedBox(height: 12),
-        const ReportTableHeading(
+        const ReportSectionHeading(
           title: 'وظایف تکمیل‌شده',
           subtitle: '۵۰ مورد آخر',
         ),
         if (report.completedTaskRows.isEmpty)
           const NoReportData(message: 'در این بازه وظیفه‌ای تکمیل نشده است.')
         else
-          ReportTableCard(
-            columns: const ['وظیفه / تجهیز / تاریخ', 'شماره کار', 'زمان کار'],
-            rows: report.completedTaskRows
+          ReportRecordList(
+            records: report.completedTaskRows
                 .map(
-                  (task) => [
-                    '${task.title}\n${task.assetName}\n'
+                  (task) => ReportRecord(
+                    title: task.title,
+                    subtitle:
+                        '${task.assetName} · '
                         '${AppDateUtils.formatJalaliShort(task.completedAt)}',
-                    task.workOrderNumber,
-                    _formatHours(task.laborMinutes),
-                  ],
+                    trailing: _formatHours(task.laborMinutes),
+                    icon: Icons.task_alt_outlined,
+                    details: [
+                      ('شماره دستورکار', task.workOrderNumber),
+                      ('زمان کار', _formatHours(task.laborMinutes)),
+                      ('زمان توقف', _formatHours(task.downtimeMinutes)),
+                    ],
+                  ),
                 )
                 .toList(),
           ),
@@ -131,24 +137,37 @@ class ReportCategorySections extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 12),
-        const ReportTableHeading(
+        const ReportSectionHeading(
           title: 'مصرف به تفکیک کالا',
           subtitle: '۲۰ قلم اول',
         ),
         if (report.materialUsage.isEmpty)
           const NoReportData(message: 'در این بازه مصرفی ثبت نشده است.')
         else
-          ReportTableCard(
-            columns: const ['کالا', 'مقدار', 'هزینه ثبت‌شده'],
-            rows: report.materialUsage
+          ReportRecordList(
+            records: report.materialUsage
                 .map(
-                  (usage) => [
-                    usage.name,
-                    '${AppNumberFormat.decimal(usage.quantity)} ${usage.unit}',
-                    usage.hasUnpricedCost
+                  (usage) => ReportRecord(
+                    title: usage.name,
+                    subtitle:
+                        '${AppNumberFormat.decimal(usage.quantity)} ${usage.unit} مصرف',
+                    trailing: usage.hasUnpricedCost
                         ? 'نامشخص'
                         : AppNumberFormat.decimal(usage.totalCost),
-                  ],
+                    icon: Icons.inventory_2_outlined,
+                    details: [
+                      (
+                        'مقدار مصرف',
+                        '${AppNumberFormat.decimal(usage.quantity)} ${usage.unit}',
+                      ),
+                      (
+                        'هزینه ثبت‌شده',
+                        usage.hasUnpricedCost
+                            ? 'نامشخص'
+                            : AppNumberFormat.decimal(usage.totalCost),
+                      ),
+                    ],
+                  ),
                 )
                 .toList(),
           ),
@@ -181,25 +200,44 @@ class ReportCategorySections extends StatelessWidget {
           values: receiptTrend,
         ),
         const SizedBox(height: 12),
-        const ReportTableHeading(
+        const ReportSectionHeading(
           title: 'ریز رسیدهای خرید',
           subtitle: '۱۰۰ مورد آخر',
         ),
         if (report.receipts.isEmpty)
           const NoReportData(message: 'در این بازه رسید خریدی ثبت نشده است.')
         else
-          ReportTableCard(
-            columns: const ['سفارش / کالا', 'مقدار', 'ارزش', 'تاریخ'],
-            rows: report.receipts
+          ReportRecordList(
+            records: report.receipts
                 .map(
-                  (receipt) => [
-                    '${receipt.purchaseOrderNumber}\n'
-                        '${receipt.supplierName ?? 'بدون نام تأمین‌کننده'}\n'
-                        '${receipt.itemName}',
-                    '${AppNumberFormat.decimal(receipt.quantity)} ${receipt.unit}',
-                    AppNumberFormat.decimal(receipt.totalCost),
-                    AppDateUtils.formatJalaliShort(receipt.transactionDate),
-                  ],
+                  (receipt) => ReportRecord(
+                    title: receipt.itemName,
+                    subtitle:
+                        'سفارش ${receipt.purchaseOrderNumber} · '
+                        '${AppDateUtils.formatJalaliShort(receipt.transactionDate)}',
+                    trailing:
+                        '${AppNumberFormat.decimal(receipt.quantity)} ${receipt.unit}',
+                    icon: Icons.inventory_2_outlined,
+                    details: [
+                      ('تأمین‌کننده', receipt.supplierName ?? 'ثبت نشده'),
+                      (
+                        'مقدار دریافت',
+                        '${AppNumberFormat.decimal(receipt.quantity)} ${receipt.unit}',
+                      ),
+                      (
+                        'بهای واحد',
+                        '${AppNumberFormat.decimal(receipt.unitCost)} تومان',
+                      ),
+                      (
+                        'ارزش ردیف',
+                        '${AppNumberFormat.decimal(receipt.totalCost)} تومان',
+                      ),
+                      (
+                        'تاریخ دریافت',
+                        AppDateUtils.formatDisplay(receipt.transactionDate),
+                      ),
+                    ],
+                  ),
                 )
                 .toList(),
           ),
