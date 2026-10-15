@@ -42,6 +42,9 @@ class _DashboardContent extends ConsumerWidget {
     final summaryAsync = ref.watch(dashboardSummaryProvider(facilityId));
     final todayTasksAsync = ref.watch(dashboardTodayTasksProvider(facilityId));
     final lowStockAsync = ref.watch(lowStockItemsProvider);
+    final completedTaskTrendAsync = ref.watch(dashboardCompletedTaskTrendProvider(facilityId));
+    final materialTrendAsync = ref.watch(dashboardMaterialConsumptionTrendProvider(facilityId));
+    final topMaterialsAsync = ref.watch(dashboardTopConsumedMaterialsProvider(facilityId));
 
     return Scaffold(
       appBar: AppBar(
@@ -65,6 +68,9 @@ class _DashboardContent extends ConsumerWidget {
           ref.invalidate(dashboardTodayTasksProvider(facilityId));
           ref.invalidate(lowStockItemsProvider);
           ref.invalidate(dashboardWorkOrderStatusProvider(facilityId));
+          ref.invalidate(dashboardCompletedTaskTrendProvider(facilityId));
+          ref.invalidate(dashboardMaterialConsumptionTrendProvider(facilityId));
+          ref.invalidate(dashboardTopConsumedMaterialsProvider(facilityId));
         },
         child: ListView(
           padding: const EdgeInsets.all(16.0),
@@ -193,6 +199,79 @@ class _DashboardContent extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
+            const SectionHeader(title: 'گزارش‌های عملکردی'),
+            Row(
+              children: [
+                Expanded(
+                  child: _TrendCard(
+                    title: 'وظایف تکمیل‌شده',
+                    subtitle: 'هفت روز اخیر',
+                    dataAsync: completedTaskTrendAsync,
+                    valueKey: 'count',
+                    color: const Color(0xFF10B981),
+                    formatter: (value) => value.toInt().toString(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _TrendCard(
+                    title: 'مصرف مواد',
+                    subtitle: 'هفت روز اخیر',
+                    dataAsync: materialTrendAsync,
+                    valueKey: 'quantity',
+                    color: const Color(0xFF8B5CF6),
+                    formatter: (value) => value.toStringAsFixed(value % 1 == 0 ? 0 : 1),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            const SectionHeader(title: 'پرفروش‌ترین/پربازده‌ترین مواد مصرفی'),
+            topMaterialsAsync.when(
+              data: (items) {
+                if (items.isEmpty) {
+                  return const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('هیچ مصرفی برای مواد ثبت نشده است.'),
+                    ),
+                  );
+                }
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      children: items.map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item['name'] as String,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              Text(
+                                '${(item['quantity'] as num).toStringAsFixed((item['quantity'] as num) % 1 == 0 ? 0 : 1)} ${item['unit']}',
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                );
+              },
+              loading: () => const AppLoading(),
+              error: (e, _) => Text('خطا در بارگذاری مواد مصرفی: $e'),
+            ),
+            const SizedBox(height: 24),
+
             // Quick Shortcuts
             const SectionHeader(title: 'میانبرهای سریع'),
             Card(
@@ -311,6 +390,91 @@ class _DashboardContent extends ConsumerWidget {
               },
               loading: () => const AppLoading(),
               error: (e, _) => Text('خطا: $e'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrendCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final AsyncValue<List<Map<String, dynamic>>> dataAsync;
+  final String valueKey;
+  final Color color;
+  final String Function(double) formatter;
+
+  const _TrendCard({
+    required this.title,
+    required this.subtitle,
+    required this.dataAsync,
+    required this.valueKey,
+    required this.color,
+    required this.formatter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 120,
+              child: dataAsync.when(
+                data: (data) {
+                  if (data.isEmpty) {
+                    return const Center(child: Text('داده‌ای وجود ندارد'));
+                  }
+
+                  final maxValue = data.fold<double>(0, (prev, item) {
+                    final value = (item[valueKey] as num?)?.toDouble() ?? 0;
+                    return value > prev ? value : prev;
+                  });
+
+                  return LineChart(
+                    LineChartData(
+                      gridData: FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(
+                        show: false,
+                      ),
+                      minY: 0,
+                      maxY: maxValue == 0 ? 1 : maxValue + 1,
+                      lineTouchData: LineTouchData(enabled: true),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: data.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final item = entry.value;
+                            final value = (item[valueKey] as num?)?.toDouble() ?? 0.0;
+                            return FlSpot(index.toDouble(), value);
+                          }).toList(),
+                          isCurved: true,
+                          color: color,
+                          barWidth: 3,
+                          dotData: FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: color.withValues(alpha: 0.18),
+                          ),
+                        ),
+                      ],
+                      extraLinesData: ExtraLinesData(),
+                    ),
+                  );
+                },
+                loading: () => const Center(child: AppLoading()),
+                error: (e, _) => Center(child: Text('خطا: $e')),
+              ),
             ),
           ],
         ),

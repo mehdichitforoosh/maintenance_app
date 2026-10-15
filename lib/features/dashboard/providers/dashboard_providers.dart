@@ -20,3 +20,18 @@ final dashboardWorkOrderStatusProvider = FutureProvider.family<Map<String, int>,
   final repo = ref.watch(dashboardRepositoryProvider);
   return repo.getWorkOrderStatusDistribution(facilityId);
 });
+
+final dashboardCompletedTaskTrendProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, facilityId) async {
+  final repo = ref.watch(dashboardRepositoryProvider);
+  return repo.getCompletedTaskTrend(facilityId, days: 7);
+});
+
+final dashboardMaterialConsumptionTrendProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, facilityId) async {
+  final repo = ref.watch(dashboardRepositoryProvider);
+  return repo.getMaterialConsumptionTrend(facilityId, days: 7);
+});
+
+final dashboardTopConsumedMaterialsProvider = FutureProvider.family<List<Map<String, dynamic>>, String>((ref, facilityId) async {
+  final repo = ref.watch(dashboardRepositoryProvider);
+  return repo.getTopConsumedMaterials(facilityId, limit: 5);
+});

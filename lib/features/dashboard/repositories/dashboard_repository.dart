@@ -2,6 +2,7 @@ import '../../../core/storage/database/database_helper.dart';
 import '../../../core/storage/database/tables/asset_table.dart';
 import '../../../core/storage/database/tables/inventory_item_table.dart';
 import '../../../core/storage/database/tables/stock_transaction_table.dart';
+import '../../../core/storage/database/tables/work_order_material_table.dart';
 import '../../../core/storage/database/tables/work_order_table.dart';
 import '../../../core/storage/database/tables/work_order_task_table.dart';
 
@@ -86,6 +87,124 @@ class DashboardRepository {
       map[r[WorkOrderTable.status] as String] = (r['count'] as num).toInt();
     }
     return map;
+  }
+
+  Future<List<Map<String, dynamic>>> getCompletedTaskTrend(String facilityId, {int days = 7}) async {
+    final db = await _dbHelper.db;
+    final end = DateTime.now();
+    final start = end.subtract(Duration(days: days - 1));
+    final startDay = start.toIso8601String().substring(0, 10);
+    final endDay = end.toIso8601String().substring(0, 10);
+
+    final results = await db.rawQuery('''
+      WITH RECURSIVE day_series(day) AS (
+        SELECT ?
+        UNION ALL
+        SELECT date(day, '+1 day')
+        FROM day_series
+        WHERE day < ?
+      )
+      SELECT d.day AS day_label,
+             COALESCE(COUNT(t.${WorkOrderTaskTable.id}), 0) AS task_count
+      FROM day_series d
+      LEFT JOIN ${WorkOrderTaskTable.tableName} t
+        ON date(t.${WorkOrderTaskTable.completedAt}) = d.day
+       AND t.${WorkOrderTaskTable.status} = 'COMPLETED'
+       AND t.${WorkOrderTaskTable.deletedAt} IS NULL
+      LEFT JOIN ${WorkOrderTable.tableName} w
+        ON w.${WorkOrderTable.id} = t.${WorkOrderTaskTable.workOrderId}
+       AND w.${WorkOrderTable.facilityId} = ?
+       AND w.${WorkOrderTable.deletedAt} IS NULL
+      GROUP BY d.day
+      ORDER BY d.day ASC
+    ''', [startDay, endDay, facilityId]);
+
+    return results
+        .map((row) => {
+              'day': row['day_label'] as String,
+              'count': (row['task_count'] as num?)?.toInt() ?? 0,
+            })
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getMaterialConsumptionTrend(String facilityId, {int days = 7}) async {
+    final db = await _dbHelper.db;
+    final end = DateTime.now();
+    final start = end.subtract(Duration(days: days - 1));
+    final startDay = start.toIso8601String().substring(0, 10);
+    final endDay = end.toIso8601String().substring(0, 10);
+
+    final results = await db.rawQuery('''
+      WITH RECURSIVE day_series(day) AS (
+        SELECT ?
+        UNION ALL
+        SELECT date(day, '+1 day')
+        FROM day_series
+        WHERE day < ?
+      )
+      SELECT d.day AS day_label,
+             COALESCE(SUM(st.${StockTransactionTable.quantity}), 0) AS consumed_qty
+      FROM day_series d
+      LEFT JOIN ${StockTransactionTable.tableName} st
+        ON date(st.${StockTransactionTable.transactionDate}) = d.day
+       AND st.${StockTransactionTable.transactionType} = 'MAINTENANCE_CONSUMPTION'
+       AND st.${StockTransactionTable.deletedAt} IS NULL
+      LEFT JOIN ${WorkOrderMaterialTable.tableName} wom
+        ON wom.${WorkOrderMaterialTable.id} = st.${StockTransactionTable.workOrderMaterialId}
+       AND wom.${WorkOrderMaterialTable.deletedAt} IS NULL
+      LEFT JOIN ${WorkOrderTaskTable.tableName} wt
+        ON wt.${WorkOrderTaskTable.id} = wom.${WorkOrderMaterialTable.workOrderTaskId}
+       AND wt.${WorkOrderTaskTable.deletedAt} IS NULL
+      LEFT JOIN ${WorkOrderTable.tableName} w
+        ON w.${WorkOrderTable.id} = wt.${WorkOrderTaskTable.workOrderId}
+       AND w.${WorkOrderTable.facilityId} = ?
+       AND w.${WorkOrderTable.deletedAt} IS NULL
+      GROUP BY d.day
+      ORDER BY d.day ASC
+    ''', [startDay, endDay, facilityId]);
+
+    return results
+        .map((row) => {
+              'day': row['day_label'] as String,
+              'quantity': (row['consumed_qty'] as num?)?.toDouble() ?? 0.0,
+            })
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getTopConsumedMaterials(String facilityId, {int limit = 5}) async {
+    final db = await _dbHelper.db;
+    final results = await db.rawQuery('''
+      SELECT i.${InventoryItemTable.name},
+             i.${InventoryItemTable.unit},
+             SUM(st.${StockTransactionTable.quantity}) AS total_qty
+      FROM ${StockTransactionTable.tableName} st
+      JOIN ${WorkOrderMaterialTable.tableName} wom
+        ON wom.${WorkOrderMaterialTable.id} = st.${StockTransactionTable.workOrderMaterialId}
+       AND wom.${WorkOrderMaterialTable.deletedAt} IS NULL
+      JOIN ${InventoryItemTable.tableName} i
+        ON i.${InventoryItemTable.id} = wom.${WorkOrderMaterialTable.itemId}
+       AND i.${InventoryItemTable.deletedAt} IS NULL
+      JOIN ${WorkOrderTaskTable.tableName} wt
+        ON wt.${WorkOrderTaskTable.id} = wom.${WorkOrderMaterialTable.workOrderTaskId}
+       AND wt.${WorkOrderTaskTable.deletedAt} IS NULL
+      JOIN ${WorkOrderTable.tableName} w
+        ON w.${WorkOrderTable.id} = wt.${WorkOrderTaskTable.workOrderId}
+       AND w.${WorkOrderTable.facilityId} = ?
+       AND w.${WorkOrderTable.deletedAt} IS NULL
+      WHERE st.${StockTransactionTable.transactionType} = 'MAINTENANCE_CONSUMPTION'
+        AND st.${StockTransactionTable.deletedAt} IS NULL
+      GROUP BY i.${InventoryItemTable.id}, i.${InventoryItemTable.name}, i.${InventoryItemTable.unit}
+      ORDER BY total_qty DESC
+      LIMIT ?
+    ''', [facilityId, limit]);
+
+    return results
+        .map((row) => {
+              'name': row[InventoryItemTable.name] as String,
+              'unit': row[InventoryItemTable.unit] as String,
+              'quantity': (row['total_qty'] as num?)?.toDouble() ?? 0.0,
+            })
+        .toList();
   }
 
   Future<List<Map<String, dynamic>>> getTodayTasks(String facilityId) async {
