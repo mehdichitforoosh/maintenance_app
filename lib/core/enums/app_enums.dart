@@ -494,7 +494,8 @@ enum TransactionType {
       case 'ADJUSTMENT_IN': return TransactionType.adjustmentIn;
       case 'ADJUSTMENT_OUT': return TransactionType.adjustmentOut;
       case 'RETURN': return TransactionType.returnItem;
-      default: return TransactionType.adjustmentIn;
+      default:
+        throw FormatException('Unknown stock transaction type: $value');
     }
   }
 

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/storage/key_value_storage.dart';
-import '../widgets/onboarding_bottom_navigation.dart';
-import '../widgets/onboarding_header.dart';
-import '../widgets/onboarding_page_content.dart';
-import '../widgets/onboarding_page_indicator.dart';
+import 'widgets/onboarding_bottom_navigation.dart';
+import 'widgets/onboarding_header.dart';
+import 'widgets/onboarding_page_content.dart';
+import 'widgets/onboarding_page_indicator.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});

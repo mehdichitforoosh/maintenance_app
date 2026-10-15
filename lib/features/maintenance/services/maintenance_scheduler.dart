@@ -18,11 +18,11 @@ class MaintenanceScheduler {
 
     for (final planMap in planMaps) {
       final plan = MaintenancePlan.fromMap(planMap);
-      
+
       if (plan.scheduleType == ScheduleType.calendar) {
         await _processCalendarPlan(db, facilityId, plan, nowDate, nowIso);
       } else if (plan.scheduleType == ScheduleType.oneTime) {
-        await _processOneTimePlan(db, facilityId, plan, nowIso);
+        await _processOneTimePlan(db, facilityId, plan, nowDate, nowIso);
       }
     }
   }
@@ -57,11 +57,13 @@ class MaintenanceScheduler {
     Database db,
     String facilityId,
     MaintenancePlan plan,
+    DateTime nowDate,
     String nowIso,
   ) async {
     if (plan.oneTimeDueAt == null) return;
     final dueDate = DateTime.tryParse(plan.oneTimeDueAt!);
     if (dueDate == null) return;
+    if (dueDate.isAfter(nowDate) && !_isSameDay(dueDate, nowDate)) return;
 
     final occurrenceKey = 'one-time:${plan.oneTimeDueAt}';
     await _createTaskIdempotently(
@@ -88,7 +90,8 @@ class MaintenanceScheduler {
     // Check if task with same (maintenance_plan_id, source_occurrence_key) already exists
     final existing = await db.query(
       'work_order_tasks',
-      where: 'maintenance_plan_id = ? AND source_occurrence_key = ? AND deleted_at IS NULL',
+      where:
+          'maintenance_plan_id = ? AND source_occurrence_key = ? AND deleted_at IS NULL',
       whereArgs: [plan.id, occurrenceKey],
     );
 
@@ -99,7 +102,8 @@ class MaintenanceScheduler {
     String workOrderId;
     final openWos = await db.query(
       'work_orders',
-      where: 'facility_id = ? AND status = ? AND work_order_type = ? AND deleted_at IS NULL',
+      where:
+          'facility_id = ? AND status = ? AND work_order_type = ? AND deleted_at IS NULL',
       whereArgs: [facilityId, 'OPEN', 'PREVENTIVE'],
       limit: 1,
     );
@@ -108,7 +112,8 @@ class MaintenanceScheduler {
       workOrderId = openWos.first['id'] as String;
     } else {
       workOrderId = IdGenerator.generate();
-      final woNumber = 'WO-PM-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
+      final woNumber =
+          'WO-PM-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
       await db.insert('work_orders', {
         'id': workOrderId,
         'facility_id': facilityId,

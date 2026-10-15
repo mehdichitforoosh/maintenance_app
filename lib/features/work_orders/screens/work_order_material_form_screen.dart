@@ -8,6 +8,7 @@ import '../../inventory/models/inventory_item.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../models/work_order_task.dart';
 import '../providers/work_order_providers.dart';
+import 'widgets/material_form_message.dart';
 
 class WorkOrderMaterialFormScreen extends ConsumerStatefulWidget {
   final String workOrderId;
@@ -105,7 +106,7 @@ class _WorkOrderMaterialFormScreenState
                 )
                 .toList();
             if (availableTasks.isEmpty) {
-              return const _MaterialFormMessage(
+              return const MaterialFormMessage(
                 icon: EneftyIcons.task_bold,
                 message: 'برای افزودن متریال، ابتدا یک وظیفه باز ثبت کنید.',
               );
@@ -121,7 +122,7 @@ class _WorkOrderMaterialFormScreenState
               error: (error, _) => AppErrorState(message: error.toString()),
               data: (items) {
                 if (items.isEmpty) {
-                  return const _MaterialFormMessage(
+                  return const MaterialFormMessage(
                     icon: EneftyIcons.box_bold,
                     message: 'کالای فعالی در انبار ثبت نشده است.',
                   );
@@ -320,29 +321,5 @@ class _WorkOrderMaterialFormScreenState
       return '$fieldName باید عددی معتبر و صفر یا بزرگ‌تر باشد.';
     }
     return null;
-  }
-}
-
-class _MaterialFormMessage extends StatelessWidget {
-  final IconData icon;
-  final String message;
-
-  const _MaterialFormMessage({required this.icon, required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-          ],
-        ),
-      ),
-    );
   }
 }
