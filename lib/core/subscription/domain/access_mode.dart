@@ -1,7 +1,9 @@
 enum AccessMode {
   fullAccess,
   readOnly,
-  trialNotStarted,
+  trialNotStarted;
+
+  bool get allowsWrite => this == AccessMode.fullAccess;
 }
 
 enum AccessOperation {
