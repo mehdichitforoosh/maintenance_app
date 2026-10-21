@@ -35,7 +35,7 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final repo = ref.read(purchaseRepositoryProvider);
+      final actions = ref.read(purchaseActionsProvider);
       final lines = <Map<String, dynamic>>[];
 
       for (final item in items) {
@@ -52,15 +52,12 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
       }
 
       if (lines.isNotEmpty) {
-        await repo.receiveItems(
+        await actions.receiveItems(
           purchaseOrderId: widget.purchaseOrderId,
           receivedLines: lines,
         );
       }
 
-      ref.invalidate(purchaseOrderItemsProvider(widget.purchaseOrderId));
-      ref.invalidate(inventoryItemsProvider);
-      ref.invalidate(lowStockItemsProvider);
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {

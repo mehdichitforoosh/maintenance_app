@@ -20,10 +20,12 @@ class MaintenancePlanFormScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MaintenancePlanFormScreen> createState() => _MaintenancePlanFormScreenState();
+  ConsumerState<MaintenancePlanFormScreen> createState() =>
+      _MaintenancePlanFormScreenState();
 }
 
-class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormScreen> {
+class _MaintenancePlanFormScreenState
+    extends ConsumerState<MaintenancePlanFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
@@ -90,42 +92,53 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
     setState(() => _isLoading = true);
 
     try {
-      final repo = ref.read(maintenancePlanRepositoryProvider);
-
       if (_existingPlan != null) {
         final updated = _existingPlan!.copyWith(
           assetId: _selectedAssetId!,
           title: _titleController.text.trim(),
-          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          description: _descController.text.trim().isEmpty
+              ? null
+              : _descController.text.trim(),
           activityType: _activityType,
           priority: _priority,
           scheduleType: _scheduleType,
-          calendarIntervalValue: _scheduleType == ScheduleType.calendar ? int.parse(_intervalController.text.trim()) : null,
-          calendarIntervalUnit: _scheduleType == ScheduleType.calendar ? _calendarUnit : null,
+          calendarIntervalValue: _scheduleType == ScheduleType.calendar
+              ? int.parse(_intervalController.text.trim())
+              : null,
+          calendarIntervalUnit: _scheduleType == ScheduleType.calendar
+              ? _calendarUnit
+              : null,
         );
-        await repo.updatePlan(updated);
+        await ref
+            .read(maintenancePlanActionsProvider)
+            .update(updated, previousAssetId: _existingPlan!.assetId);
       } else {
-        await repo.createPlan(
-          assetId: _selectedAssetId!,
-          title: _titleController.text.trim(),
-          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          activityType: _activityType,
-          priority: _priority,
-          scheduleType: _scheduleType,
-          calendarIntervalValue: _scheduleType == ScheduleType.calendar ? int.parse(_intervalController.text.trim()) : null,
-          calendarIntervalUnit: _scheduleType == ScheduleType.calendar ? _calendarUnit : null,
-        );
+        await ref
+            .read(maintenancePlanActionsProvider)
+            .create(
+              assetId: _selectedAssetId!,
+              title: _titleController.text.trim(),
+              description: _descController.text.trim().isEmpty
+                  ? null
+                  : _descController.text.trim(),
+              activityType: _activityType,
+              priority: _priority,
+              scheduleType: _scheduleType,
+              calendarIntervalValue: _scheduleType == ScheduleType.calendar
+                  ? int.parse(_intervalController.text.trim())
+                  : null,
+              calendarIntervalUnit: _scheduleType == ScheduleType.calendar
+                  ? _calendarUnit
+                  : null,
+            );
       }
 
-      final facility = await ref.read(primaryFacilityProvider.future);
-      if (facility != null) {
-        ref.invalidate(allFacilityPlansProvider(facility.id));
-      }
-      ref.invalidate(maintenancePlansProvider(_selectedAssetId!));
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -139,7 +152,10 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'ویرایش برنامه PM' : 'تعریف برنامه نگهداری جدید (PM)', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isEditing ? 'ویرایش برنامه PM' : 'تعریف برنامه نگهداری جدید (PM)',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -154,7 +170,11 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                   final assetsAsync = ref.watch(assetsProvider(facility.id));
                   return assetsAsync.when(
                     data: (assets) {
-                      if (assets.isEmpty) return const Text('ابتدا باید تجهیزی در سیستم ثبت کنید.');
+                      if (assets.isEmpty) {
+                        return const Text(
+                          'ابتدا باید تجهیزی در سیستم ثبت کنید.',
+                        );
+                      }
                       _selectedAssetId ??= assets.first.id;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
@@ -165,8 +185,16 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                             prefixIcon: Icon(EneftyIcons.cpu_bold),
                             border: OutlineInputBorder(),
                           ),
-                          items: assets.map((a) => DropdownMenuItem(value: a.id, child: Text('${a.name} (${a.code})'))).toList(),
-                          onChanged: (v) => setState(() => _selectedAssetId = v),
+                          items: assets
+                              .map(
+                                (a) => DropdownMenuItem(
+                                  value: a.id,
+                                  child: Text('${a.name} (${a.code})'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _selectedAssetId = v),
                         ),
                       );
                     },
@@ -185,7 +213,8 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                   prefixIcon: Icon(EneftyIcons.calendar_2_bold),
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) => AppValidators.required(v, fieldName: 'عنوان برنامه'),
+                validator: (v) =>
+                    AppValidators.required(v, fieldName: 'عنوان برنامه'),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<ActivityType>(
@@ -195,8 +224,17 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                   prefixIcon: Icon(EneftyIcons.task_bold),
                   border: OutlineInputBorder(),
                 ),
-                items: ActivityType.values.map((a) => DropdownMenuItem(value: a, child: Text(a.displayName))).toList(),
-                onChanged: (v) => setState(() => _activityType = v ?? ActivityType.inspection),
+                items: ActivityType.values
+                    .map(
+                      (a) => DropdownMenuItem(
+                        value: a,
+                        child: Text(a.displayName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(
+                  () => _activityType = v ?? ActivityType.inspection,
+                ),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<Priority>(
@@ -206,8 +244,16 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                   prefixIcon: Icon(EneftyIcons.danger_bold),
                   border: OutlineInputBorder(),
                 ),
-                items: Priority.values.map((p) => DropdownMenuItem(value: p, child: Text(p.displayName))).toList(),
-                onChanged: (v) => setState(() => _priority = v ?? Priority.medium),
+                items: Priority.values
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(p.displayName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) =>
+                    setState(() => _priority = v ?? Priority.medium),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<ScheduleType>(
@@ -217,8 +263,16 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                   prefixIcon: Icon(EneftyIcons.clock_bold),
                   border: OutlineInputBorder(),
                 ),
-                items: ScheduleType.values.map((s) => DropdownMenuItem(value: s, child: Text(s.displayName))).toList(),
-                onChanged: (v) => setState(() => _scheduleType = v ?? ScheduleType.calendar),
+                items: ScheduleType.values
+                    .map(
+                      (s) => DropdownMenuItem(
+                        value: s,
+                        child: Text(s.displayName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) =>
+                    setState(() => _scheduleType = v ?? ScheduleType.calendar),
               ),
               if (_scheduleType == ScheduleType.calendar) ...[
                 const SizedBox(height: 16),
@@ -234,7 +288,10 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                           prefixIcon: Icon(EneftyIcons.timer_bold),
                           border: OutlineInputBorder(),
                         ),
-                        validator: (v) => AppValidators.positiveNumber(v, fieldName: 'فاصله زمانی'),
+                        validator: (v) => AppValidators.positiveNumber(
+                          v,
+                          fieldName: 'فاصله زمانی',
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -246,8 +303,17 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
                           labelText: 'واحد',
                           border: OutlineInputBorder(),
                         ),
-                        items: CalendarUnit.values.map((u) => DropdownMenuItem(value: u, child: Text(u.displayName))).toList(),
-                        onChanged: (v) => setState(() => _calendarUnit = v ?? CalendarUnit.day),
+                        items: CalendarUnit.values
+                            .map(
+                              (u) => DropdownMenuItem(
+                                value: u,
+                                child: Text(u.displayName),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setState(
+                          () => _calendarUnit = v ?? CalendarUnit.day,
+                        ),
                       ),
                     ),
                   ],
@@ -264,9 +330,13 @@ class _MaintenancePlanFormScreenState extends ConsumerState<MaintenancePlanFormS
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                icon: Icon(isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold),
+                icon: Icon(
+                  isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
+                ),
                 onPressed: _isLoading ? null : _save,
-                label: Text(isEditing ? 'بروزرسانی برنامه PM' : 'ذخیره برنامه PM'),
+                label: Text(
+                  isEditing ? 'بروزرسانی برنامه PM' : 'ذخیره برنامه PM',
+                ),
               ),
             ],
           ),

@@ -32,10 +32,12 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
   Future<void> _loadExistingFacility() async {
     final facility = await ref.read(primaryFacilityProvider.future);
     if (facility != null && mounted) {
-      _existingFacility = facility;
-      _nameController.text = facility.name;
-      _descController.text = facility.description ?? '';
-      _addressController.text = facility.address ?? '';
+      setState(() {
+        _existingFacility = facility;
+        _nameController.text = facility.name;
+        _descController.text = facility.description ?? '';
+        _addressController.text = facility.address ?? '';
+      });
     }
   }
 
@@ -52,8 +54,6 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final repo = ref.read(facilityRepositoryProvider);
-
       if (_existingFacility != null) {
         final updated = _existingFacility!.copyWith(
           name: _nameController.text.trim(),
@@ -64,21 +64,22 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
               ? null
               : _addressController.text.trim(),
         );
-        await repo.updateFacility(updated);
+        await ref.read(facilityActionsProvider).update(updated);
       } else {
-        await repo.createFacility(
-          name: _nameController.text.trim(),
-          description: _descController.text.trim().isEmpty
-              ? null
-              : _descController.text.trim(),
-          address: _addressController.text.trim().isEmpty
-              ? null
-              : _addressController.text.trim(),
-        );
+        await ref
+            .read(facilityActionsProvider)
+            .create(
+              name: _nameController.text.trim(),
+              description: _descController.text.trim().isEmpty
+                  ? null
+                  : _descController.text.trim(),
+              address: _addressController.text.trim().isEmpty
+                  ? null
+                  : _addressController.text.trim(),
+            );
       }
 
-      await KeyValueStorage.instance.setOnboardingCompleted();
-      ref.invalidate(primaryFacilityProvider);
+      await KeyValueStorage.instance.setFacilitySetupCompleted();
       await ref.read(primaryFacilityProvider.future);
 
       if (mounted) {
@@ -126,13 +127,13 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                   foregroundColor: Theme.of(
                     context,
                   ).colorScheme.onPrimaryContainer,
-                  child: Icon(EneftyIcons.building_bold, size: 48),
+                  child: Icon(EneftyIcons.buildings_2_outline, size: 48),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   isEditing
                       ? 'ویرایش اطلاعات عمومی کارگاه'
-                      : 'خوش آمدید به سیستم نگهداری و تعمیرات (CMMS)',
+                      : 'خوش آمدید به سیستم نگهداری و تعمیرات',
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -154,7 +155,7 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                   decoration: const InputDecoration(
                     labelText: 'نام کارگاه / کارخانه *',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(EneftyIcons.building_bold),
+                    prefixIcon: Icon(EneftyIcons.building_outline),
                   ),
                   validator: (v) =>
                       AppValidators.required(v, fieldName: 'نام کارگاه'),
@@ -165,7 +166,7 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                   decoration: const InputDecoration(
                     labelText: 'توضیحات کارگاه',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(EneftyIcons.document_bold),
+                    prefixIcon: Icon(EneftyIcons.document_outline),
                   ),
                   maxLines: 2,
                 ),
@@ -175,38 +176,42 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
                   decoration: const InputDecoration(
                     labelText: 'آدرس موقعیت',
                     border: OutlineInputBorder(),
-                    prefixIcon: Icon(EneftyIcons.location_bold),
+                    prefixIcon: Icon(EneftyIcons.location_outline),
                   ),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 32),
-                FilledButton.icon(
-                  icon: _isLoading
-                      ? const SizedBox.shrink()
-                      : Icon(
-                          isEditing
-                              ? EneftyIcons.edit_2_bold
-                              : EneftyIcons.tick_circle_bold,
-                        ),
-                  onPressed: _isLoading ? null : _submit,
-                  label: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: FilledButton.icon(
+                    icon: _isLoading
+                        ? const SizedBox.shrink()
+                        : Icon(
+                            isEditing
+                                ? EneftyIcons.edit_2_bold
+                                : EneftyIcons.tick_circle_bold,
                           ),
-                        )
-                      : Text(
-                          isEditing
-                              ? 'بروزرسانی کارگاه'
-                              : 'ذخیره و ورود به سیستم',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                    onPressed: _isLoading ? null : _submit,
+                    label: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            isEditing
+                                ? 'بروزرسانی کارگاه'
+                                : 'ذخیره و ورود به سیستم',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
+                  ),
                 ),
               ],
             ),

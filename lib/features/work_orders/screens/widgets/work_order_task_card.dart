@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/enums/app_enums.dart';
 import '../../models/work_order_task.dart';
 import '../../providers/work_order_providers.dart';
-import '../../../dashboard/providers/dashboard_providers.dart';
 import 'task_detail_sections.dart';
 
 class WorkOrderTaskCard extends ConsumerWidget {
@@ -125,14 +124,13 @@ class WorkOrderTaskCard extends ConsumerWidget {
 
     try {
       await ref
-          .read(workOrderRepositoryProvider)
-          .reopenCompletedTask(taskId: task.id, reason: reason);
-      ref.invalidate(workOrderDetailProvider(workOrderId));
-      ref.invalidate(workOrderTasksProvider(workOrderId));
-      ref.invalidate(workOrderTaskEventsProvider(task.id));
-      ref.invalidate(workOrdersProvider(facilityId));
-      ref.invalidate(dashboardSummaryProvider(facilityId));
-      ref.invalidate(dashboardCompletedTaskTrendProvider(facilityId));
+          .read(workOrderActionsProvider)
+          .reopenTask(
+            workOrderId: workOrderId,
+            taskId: task.id,
+            facilityId: facilityId,
+            reason: reason,
+          );
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

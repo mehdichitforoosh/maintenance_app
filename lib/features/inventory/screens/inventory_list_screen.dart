@@ -116,6 +116,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                     onActionPressed: allItems.isEmpty
                         ? () => context.push('/inventory/new')
                         : null,
+                    icon: EneftyIcons.box_outline,
                   );
                 }
 

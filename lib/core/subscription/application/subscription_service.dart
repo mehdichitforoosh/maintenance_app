@@ -1,20 +1,18 @@
 import '../data/subscription_state_store.dart';
+import '../domain/subscription_status.dart';
 import '../domain/subscription_state.dart';
 
 class SubscriptionService {
   final SubscriptionStateStore store;
   final DateTime Function() clock;
 
-  SubscriptionService({
-    required this.store,
-    required this.clock,
-  });
+  SubscriptionService({required this.store, required this.clock});
 
   Future<SubscriptionState?> load() => store.load();
 
   Future<SubscriptionState> startTrial() async {
     final saved = await store.load() ?? const SubscriptionState();
-    if (saved.trialStartedAtUtc != null) {
+    if (saved.trialStartedAtUtc != null || saved.planId != null) {
       return saved;
     }
 
@@ -23,6 +21,7 @@ class SubscriptionService {
 
     final next = saved.copyWith(
       planId: 'trial',
+      status: SubscriptionStatus.trialing,
       trialStartedAtUtc: now,
       trialEndsAtUtc: end,
       lastSeenAtUtc: now,
@@ -39,10 +38,9 @@ class SubscriptionService {
 
     if (lastSeen != null && now.isBefore(lastSeen.toUtc())) {
       final reset = saved.copyWith(
-        trialStartedAtUtc: null,
-        trialEndsAtUtc: null,
-        entitlementStartedAtUtc: null,
-        entitlementEndsAtUtc: null,
+        clearTrialEndDate: true,
+        clearEntitlement: true,
+        status: SubscriptionStatus.revoked,
         lastSeenAtUtc: now,
       );
       await store.save(reset);
@@ -52,4 +50,3 @@ class SubscriptionService {
     return saved;
   }
 }
-

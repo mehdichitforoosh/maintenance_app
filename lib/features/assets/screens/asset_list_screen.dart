@@ -151,6 +151,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                         onActionPressed: allAssets.isEmpty
                             ? () => context.push('/assets/new')
                             : null,
+                        icon: EneftyIcons.cpu_outline,
                       );
                     }
 

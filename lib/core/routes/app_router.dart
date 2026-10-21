@@ -24,6 +24,8 @@ import '../../features/purchases/screens/purchase_order_list_screen.dart';
 import '../../features/purchases/screens/receive_purchase_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/subscription/presentation/subscription_screen.dart';
+import '../../features/subscription/presentation/trial_intro_screen.dart';
 import '../../features/work_orders/screens/complete_task_screen.dart';
 import '../../features/work_orders/screens/correct_task_completion_screen.dart';
 import '../../features/work_orders/screens/work_order_detail_screen.dart';
@@ -36,7 +38,12 @@ import '../widgets/app_scaffold_shell.dart';
 GoRouter createAppRouter({required String initialLocation}) => GoRouter(
   initialLocation: initialLocation,
   routes: [
+    GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
     GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
+    GoRoute(
+      path: '/subscription',
+      builder: (_, _) => const SubscriptionScreen(),
+    ),
     GoRoute(
       path: '/setup/facility',
       builder: (_, _) => const FacilitySetupScreen(),

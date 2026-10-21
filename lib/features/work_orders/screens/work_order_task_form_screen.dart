@@ -71,22 +71,22 @@ class _WorkOrderTaskFormScreenState
     setState(() => _isLoading = true);
 
     try {
-      final repo = ref.read(workOrderRepositoryProvider);
-      await repo.addTaskToWorkOrder(
-        workOrderId: widget.workOrderId,
-        assetId: _selectedAssetId!,
-        maintenancePlanId: _selectedMaintenancePlanId,
-        title: _titleController.text.trim(),
-        description: _descController.text.trim().isEmpty
-            ? null
-            : _descController.text.trim(),
-        activityType: _activityType,
-        plannedDueAt: _dueDateController.text.trim().isEmpty
-            ? null
-            : _dueDateController.text.trim(),
-      );
+      await ref
+          .read(workOrderActionsProvider)
+          .addTask(
+            workOrderId: widget.workOrderId,
+            assetId: _selectedAssetId!,
+            maintenancePlanId: _selectedMaintenancePlanId,
+            title: _titleController.text.trim(),
+            description: _descController.text.trim().isEmpty
+                ? null
+                : _descController.text.trim(),
+            activityType: _activityType,
+            plannedDueAt: _dueDateController.text.trim().isEmpty
+                ? null
+                : _dueDateController.text.trim(),
+          );
 
-      ref.invalidate(workOrderTasksProvider(widget.workOrderId));
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {

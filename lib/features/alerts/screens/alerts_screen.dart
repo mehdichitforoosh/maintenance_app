@@ -59,9 +59,21 @@ class AlertsScreen extends ConsumerWidget {
                       isThreeLine: true,
                       trailing: PopupMenuButton<AlertStatus>(
                         onSelected: (status) async {
-                          final repo = ref.read(alertRepositoryProvider);
-                          await repo.updateAlertStatus(alert.id, status);
-                          ref.invalidate(alertsProvider(facility.id));
+                          try {
+                            await ref
+                                .read(alertActionsProvider)
+                                .updateStatus(
+                                  alertId: alert.id,
+                                  facilityId: facility.id,
+                                  status: status,
+                                );
+                          } catch (error) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('خطا: $error')),
+                              );
+                            }
+                          }
                         },
                         itemBuilder: (context) => [
                           const PopupMenuItem(

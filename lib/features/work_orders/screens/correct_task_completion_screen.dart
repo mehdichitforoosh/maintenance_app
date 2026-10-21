@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
-import '../../dashboard/providers/dashboard_providers.dart';
 import '../../inventory/models/inventory_item.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../models/work_order_material.dart';
@@ -100,9 +99,11 @@ class _CorrectTaskCompletionScreenState
       }
 
       await ref
-          .read(workOrderRepositoryProvider)
+          .read(workOrderActionsProvider)
           .correctCompletedTask(
+            workOrderId: widget.workOrderId,
             taskId: task.id,
+            facilityId: facilityId,
             reason: _reasonController.text.trim(),
             result: _result,
             findings: _findingsController.text.trim().isEmpty
@@ -113,17 +114,6 @@ class _CorrectTaskCompletionScreenState
             actualMaterials: desiredMaterials,
           );
 
-      ref.invalidate(workOrderDetailProvider(widget.workOrderId));
-      ref.invalidate(workOrderTasksProvider(widget.workOrderId));
-      ref.invalidate(workOrderMaterialsProvider(widget.taskId));
-      ref.invalidate(workOrderTaskEventsProvider(widget.taskId));
-      ref.invalidate(inventoryItemsProvider);
-      ref.invalidate(lowStockItemsProvider);
-      if (facilityId != null) {
-        ref.invalidate(dashboardSummaryProvider(facilityId));
-        ref.invalidate(dashboardMaterialConsumptionTrendProvider(facilityId));
-        ref.invalidate(dashboardTopConsumedMaterialsProvider(facilityId));
-      }
       if (mounted) context.pop();
     } catch (error) {
       if (mounted) {

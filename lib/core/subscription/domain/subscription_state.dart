@@ -43,15 +43,22 @@ class SubscriptionState {
     String? purchaseReference,
     DateTime? lastVerifiedAtUtc,
     bool? renewalEnabled,
+    bool clearTrialEndDate = false,
+    bool clearEntitlement = false,
   }) {
     return SubscriptionState(
       planId: planId ?? this.planId,
       status: status ?? this.status,
       trialStartedAtUtc: trialStartedAtUtc ?? this.trialStartedAtUtc,
-      trialEndsAtUtc: trialEndsAtUtc ?? this.trialEndsAtUtc,
-      entitlementStartedAtUtc:
-      entitlementStartedAtUtc ?? this.entitlementStartedAtUtc,
-      entitlementEndsAtUtc: entitlementEndsAtUtc ?? this.entitlementEndsAtUtc,
+      trialEndsAtUtc: clearTrialEndDate
+          ? null
+          : trialEndsAtUtc ?? this.trialEndsAtUtc,
+      entitlementStartedAtUtc: clearEntitlement
+          ? null
+          : entitlementStartedAtUtc ?? this.entitlementStartedAtUtc,
+      entitlementEndsAtUtc: clearEntitlement
+          ? null
+          : entitlementEndsAtUtc ?? this.entitlementEndsAtUtc,
       lastSeenAtUtc: lastSeenAtUtc ?? this.lastSeenAtUtc,
       providerId: providerId ?? this.providerId,
       storeProductId: storeProductId ?? this.storeProductId,
@@ -66,8 +73,9 @@ class SubscriptionState {
     'status': status.value,
     'trialStartedAtUtc': trialStartedAtUtc?.toUtc().toIso8601String(),
     'trialEndsAtUtc': trialEndsAtUtc?.toUtc().toIso8601String(),
-    'entitlementStartedAtUtc':
-    entitlementStartedAtUtc?.toUtc().toIso8601String(),
+    'entitlementStartedAtUtc': entitlementStartedAtUtc
+        ?.toUtc()
+        .toIso8601String(),
     'entitlementEndsAtUtc': entitlementEndsAtUtc?.toUtc().toIso8601String(),
     'lastSeenAtUtc': lastSeenAtUtc?.toUtc().toIso8601String(),
     'providerId': providerId,
@@ -104,13 +112,13 @@ class SubscriptionState {
   bool get hasTrialStarted => trialStartedAtUtc != null;
   bool get trialActiveAtNow =>
       trialStartedAtUtc != null &&
-          trialEndsAtUtc != null &&
-          DateTime.now().toUtc().isBefore(trialEndsAtUtc!.toUtc());
+      trialEndsAtUtc != null &&
+      DateTime.now().toUtc().isBefore(trialEndsAtUtc!.toUtc());
 
   bool get paidActiveAtNow =>
       entitlementStartedAtUtc != null &&
-          entitlementEndsAtUtc != null &&
-          DateTime.now().toUtc().isBefore(entitlementEndsAtUtc!.toUtc());
+      entitlementEndsAtUtc != null &&
+      DateTime.now().toUtc().isBefore(entitlementEndsAtUtc!.toUtc());
 
   String get summary => planId ?? SubscriptionPlanId.trial.value;
 }

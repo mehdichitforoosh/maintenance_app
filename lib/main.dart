@@ -11,6 +11,8 @@ import 'core/localizations/persian_localizations.dart';
 import 'core/routes/app_router.dart';
 import 'core/storage/database/database_helper.dart';
 import 'core/storage/key_value_storage.dart';
+import 'core/subscription/application/subscription_service.dart';
+import 'core/subscription/data/local_subscription_state_store.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/facilities/repositories/facility_repository.dart';
@@ -25,8 +27,17 @@ void main() async {
   await initializeDateFormatting('fa_IR');
   Intl.defaultLocale = 'fa_IR';
 
-  final initialLocation = KeyValueStorage.instance.isFirstRun
-      ? '/onboarding'
+  final storage = KeyValueStorage.instance;
+  final subscriptionState = await SubscriptionService(
+    store: LocalSubscriptionStateStore(),
+    clock: () => DateTime.now().toUtc(),
+  ).resetIfClockMovedBackwards();
+  final initialLocation = !storage.isOnboardingCompleted
+      ? subscriptionState.trialStartedAtUtc == null
+            ? '/welcome'
+            : '/onboarding'
+      : storage.isFirstRun
+      ? '/setup/facility'
       : await FacilityRepository().hasFacility()
       ? '/'
       : '/setup/facility';

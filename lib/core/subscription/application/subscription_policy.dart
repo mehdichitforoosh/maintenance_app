@@ -1,14 +1,12 @@
 import '../domain/access_mode.dart';
 import '../domain/subscription_state.dart';
+import '../domain/subscription_status.dart';
 
 class AccessDecision {
   final AccessMode accessMode;
   final String reason;
 
-  const AccessDecision({
-    required this.accessMode,
-    required this.reason,
-  });
+  const AccessDecision({required this.accessMode, required this.reason});
 
   bool get canWrite => accessMode == AccessMode.fullAccess;
 }
@@ -19,15 +17,24 @@ class SubscriptionPolicy {
   AccessDecision evaluate(SubscriptionState state, DateTime nowUtc) {
     final normalizedNow = nowUtc.toUtc();
 
+    if (state.status == SubscriptionStatus.revoked) {
+      return const AccessDecision(
+        accessMode: AccessMode.readOnly,
+        reason: 'revoked',
+      );
+    }
+
     final trialStarted = state.trialStartedAtUtc != null;
     final trialEnds = state.trialEndsAtUtc;
-    final trialIsActive = trialStarted &&
+    final trialIsActive =
+        trialStarted &&
         trialEnds != null &&
         normalizedNow.isBefore(trialEnds.toUtc());
 
     final paidStarted = state.entitlementStartedAtUtc != null;
     final paidEnds = state.entitlementEndsAtUtc;
-    final paidIsActive = paidStarted &&
+    final paidIsActive =
+        paidStarted &&
         paidEnds != null &&
         normalizedNow.isBefore(paidEnds.toUtc());
 
@@ -59,9 +66,13 @@ class SubscriptionPolicy {
   }
 
   bool trialStartsAndExpired(SubscriptionState state, DateTime nowUtc) {
+    if (state.planId == 'trial' &&
+        state.trialStartedAtUtc != null &&
+        state.trialEndsAtUtc == null) {
+      return true;
+    }
     return state.trialStartedAtUtc != null &&
         state.trialEndsAtUtc != null &&
         !nowUtc.isBefore(state.trialEndsAtUtc!.toUtc());
   }
 }
-

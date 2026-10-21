@@ -55,9 +55,10 @@ class _WorkOrderMaterialFormScreenState
     setState(() => _isLoading = true);
     try {
       await ref
-          .read(workOrderRepositoryProvider)
-          .addMaterialToTask(
-            workOrderTaskId: _selectedTaskId!,
+          .read(workOrderActionsProvider)
+          .addMaterial(
+            workOrderId: widget.workOrderId,
+            taskId: _selectedTaskId!,
             itemId: _selectedItemId!,
             plannedQuantity: _parseOptional(_plannedQtyController.text),
             actualQuantity: _parseOptional(_actualQtyController.text),
@@ -67,8 +68,6 @@ class _WorkOrderMaterialFormScreenState
                 : _notesController.text.trim(),
           );
 
-      ref.invalidate(workOrderMaterialsProvider(_selectedTaskId!));
-      ref.invalidate(workOrderTasksProvider(widget.workOrderId));
       if (mounted) context.pop();
     } catch (error) {
       if (mounted) {

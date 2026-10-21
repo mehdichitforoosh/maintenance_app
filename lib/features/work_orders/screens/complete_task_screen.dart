@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../../core/utils/validators.dart';
-import '../../dashboard/providers/dashboard_providers.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../providers/work_order_providers.dart';
 
@@ -50,41 +49,27 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final repo = ref.read(workOrderRepositoryProvider);
-      final workOrder = await repo.getWorkOrderById(widget.workOrderId);
-      await repo.completeTask(
-        taskId: widget.taskId,
-        result: _result,
-        findings: _findingsController.text.trim().isEmpty
-            ? null
-            : _findingsController.text.trim(),
-        laborMinutes: int.tryParse(_laborController.text.trim()) ?? 0,
-        downtimeMinutes: int.tryParse(_downtimeController.text.trim()) ?? 0,
-        consumedMaterials: _consumedMaterials.isEmpty
-            ? null
-            : _consumedMaterials,
+      final workOrder = await ref.read(
+        workOrderDetailProvider(widget.workOrderId).future,
       );
+      if (workOrder == null) throw StateError('دستورکار یافت نشد.');
+      await ref
+          .read(workOrderActionsProvider)
+          .completeTask(
+            workOrderId: widget.workOrderId,
+            taskId: widget.taskId,
+            facilityId: workOrder.facilityId,
+            result: _result,
+            findings: _findingsController.text.trim().isEmpty
+                ? null
+                : _findingsController.text.trim(),
+            laborMinutes: int.tryParse(_laborController.text.trim()) ?? 0,
+            downtimeMinutes: int.tryParse(_downtimeController.text.trim()) ?? 0,
+            consumedMaterials: _consumedMaterials.isEmpty
+                ? null
+                : _consumedMaterials,
+          );
 
-      ref.invalidate(workOrderDetailProvider(widget.workOrderId));
-      ref.invalidate(workOrderTasksProvider(widget.workOrderId));
-      ref.invalidate(workOrderMaterialsProvider(widget.taskId));
-      ref.invalidate(workOrderTaskEventsProvider(widget.taskId));
-      ref.invalidate(inventoryItemsProvider);
-      ref.invalidate(lowStockItemsProvider);
-      if (workOrder != null) {
-        ref.invalidate(dashboardSummaryProvider(workOrder.facilityId));
-        ref.invalidate(dashboardTodayTasksProvider(workOrder.facilityId));
-        ref.invalidate(dashboardWorkOrderStatusProvider(workOrder.facilityId));
-        ref.invalidate(
-          dashboardCompletedTaskTrendProvider(workOrder.facilityId),
-        );
-        ref.invalidate(
-          dashboardMaterialConsumptionTrendProvider(workOrder.facilityId),
-        );
-        ref.invalidate(
-          dashboardTopConsumedMaterialsProvider(workOrder.facilityId),
-        );
-      }
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {

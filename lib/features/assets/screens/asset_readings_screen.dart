@@ -6,7 +6,6 @@ import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../models/asset_reading.dart';
 import '../providers/asset_providers.dart';
-import '../repositories/asset_reading_repository.dart';
 import 'widgets/asset_reading_form.dart';
 import 'widgets/asset_reading_tile.dart';
 
@@ -75,13 +74,11 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final repository = ref.read(assetReadingRepositoryProvider);
       final readingId = _editingReadingId;
       final message = readingId == null
-          ? await _createReading(repository)
-          : await _correctReading(repository, readingId);
+          ? await _createReading()
+          : await _correctReading(readingId);
 
-      ref.invalidate(assetReadingsProvider(widget.assetId));
       if (mounted) {
         _resetForm();
         ScaffoldMessenger.of(
@@ -99,30 +96,32 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
     }
   }
 
-  Future<String> _createReading(AssetReadingRepository repository) async {
-    await repository.recordReading(
-      assetId: widget.assetId,
-      metricName: _metricController.text.trim(),
-      value: double.parse(_valueController.text.trim()),
-      unit: _unitController.text.trim(),
-      recordedAt: _recordedAt.toUtc().toIso8601String(),
-      notes: _optionalNotes,
-    );
+  Future<String> _createReading() async {
+    await ref
+        .read(assetReadingActionsProvider)
+        .record(
+          assetId: widget.assetId,
+          metricName: _metricController.text.trim(),
+          value: double.parse(_valueController.text.trim()),
+          unit: _unitController.text.trim(),
+          recordedAt: _recordedAt.toUtc().toIso8601String(),
+          notes: _optionalNotes,
+        );
     return 'خوانش با موفقیت ثبت شد.';
   }
 
-  Future<String> _correctReading(
-    AssetReadingRepository repository,
-    String readingId,
-  ) async {
-    final result = await repository.correctReading(
-      readingId: readingId,
-      value: double.parse(_valueController.text.trim()),
-      unit: _unitController.text.trim(),
-      recordedAt: _recordedAt.toUtc().toIso8601String(),
-      reason: _reasonController.text.trim(),
-      notes: _optionalNotes,
-    );
+  Future<String> _correctReading(String readingId) async {
+    final result = await ref
+        .read(assetReadingActionsProvider)
+        .correct(
+          readingId: readingId,
+          assetId: widget.assetId,
+          value: double.parse(_valueController.text.trim()),
+          unit: _unitController.text.trim(),
+          recordedAt: _recordedAt.toUtc().toIso8601String(),
+          reason: _reasonController.text.trim(),
+          notes: _optionalNotes,
+        );
     if (result.generatedConditionTaskCount > 0) {
       return 'خوانش اصلاح شد و وظیفه نگهداری شرطی ایجاد شد.';
     }

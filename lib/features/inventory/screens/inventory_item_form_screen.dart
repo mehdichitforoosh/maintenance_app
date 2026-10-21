@@ -32,6 +32,7 @@ class _InventoryItemFormScreenState
   bool _isActive = true;
   bool _isLoading = false;
   InventoryItem? _existingItem;
+  String? _loadError;
 
   @override
   void initState() {
@@ -44,8 +45,7 @@ class _InventoryItemFormScreenState
   Future<void> _loadItem() async {
     setState(() => _isLoading = true);
     try {
-      final repo = ref.read(inventoryRepositoryProvider);
-      final item = await repo.getItemById(widget.itemId!);
+      final item = await ref.read(inventoryItemProvider(widget.itemId!).future);
       if (item != null && mounted) {
         _existingItem = item;
         _nameController.text = item.name;
@@ -56,7 +56,11 @@ class _InventoryItemFormScreenState
         _descController.text = item.description ?? '';
         _itemType = item.itemType;
         _isActive = item.isActive;
+      } else if (mounted) {
+        _loadError = 'کالا یافت نشد.';
       }
+    } catch (error) {
+      if (mounted) _loadError = 'بارگذاری کالا ناموفق بود: $error';
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -78,8 +82,6 @@ class _InventoryItemFormScreenState
     setState(() => _isLoading = true);
 
     try {
-      final repo = ref.read(inventoryRepositoryProvider);
-
       if (_existingItem != null) {
         final updated = _existingItem!.copyWith(
           name: _nameController.text.trim(),
@@ -95,27 +97,27 @@ class _InventoryItemFormScreenState
               : _descController.text.trim(),
           isActive: _isActive,
         );
-        await repo.updateItem(updated);
+        await ref.read(inventoryActionsProvider).updateItem(updated);
       } else {
-        await repo.createItem(
-          name: _nameController.text.trim(),
-          code: _codeController.text.trim(),
-          itemType: _itemType,
-          unit: _unitController.text.trim(),
-          minimumStock: double.tryParse(_minStockController.text.trim()) ?? 0.0,
-          defaultUnitCost: _costController.text.trim().isEmpty
-              ? null
-              : double.tryParse(_costController.text.trim()),
-          description: _descController.text.trim().isEmpty
-              ? null
-              : _descController.text.trim(),
-          isActive: _isActive,
-        );
+        await ref
+            .read(inventoryActionsProvider)
+            .createItem(
+              name: _nameController.text.trim(),
+              code: _codeController.text.trim(),
+              itemType: _itemType,
+              unit: _unitController.text.trim(),
+              minimumStock:
+                  double.tryParse(_minStockController.text.trim()) ?? 0.0,
+              defaultUnitCost: _costController.text.trim().isEmpty
+                  ? null
+                  : double.tryParse(_costController.text.trim()),
+              description: _descController.text.trim().isEmpty
+                  ? null
+                  : _descController.text.trim(),
+              isActive: _isActive,
+            );
       }
 
-      ref.invalidate(inventoryItemsProvider);
-      ref.invalidate(allInventoryItemsProvider);
-      ref.invalidate(lowStockItemsProvider);
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
@@ -143,6 +145,8 @@ class _InventoryItemFormScreenState
         padding: const EdgeInsets.all(16),
         child: _isLoading && isEditing && _existingItem == null
             ? const AppLoading()
+            : _loadError != null
+            ? Center(child: Text(_loadError!))
             : Form(
                 key: _formKey,
                 child: ListView(

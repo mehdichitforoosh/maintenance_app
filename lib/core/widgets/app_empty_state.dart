@@ -1,3 +1,4 @@
+import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 
 class AppEmptyState extends StatelessWidget {
@@ -11,7 +12,7 @@ class AppEmptyState extends StatelessWidget {
     super.key,
     required this.title,
     this.message,
-    this.icon = Icons.inbox_outlined,
+    this.icon = EneftyIcons.direct_normal_outline,
     this.actionLabel,
     this.onActionPressed,
   });

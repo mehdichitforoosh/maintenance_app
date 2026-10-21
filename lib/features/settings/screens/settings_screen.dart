@@ -209,7 +209,7 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle: 'زمان‌بندی تقویمی، کارکردی و شرطی تجهیزات',
                       onTap: () => context.push('/maintenance-plans'),
                     ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    const Divider(height: 1, indent: 16, endIndent: 16, thickness: 1,),
                     SettingsTile(
                       icon: EneftyIcons.location_bold,
                       iconColor: const Color(0xFF0D9488),
@@ -217,7 +217,7 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle: 'مدیریت ساختار مکان‌ها و سالن‌ها',
                       onTap: () => context.push('/locations'),
                     ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    const Divider(height: 1, indent: 16, endIndent: 16, thickness: 1,),
                     SettingsTile(
                       icon: EneftyIcons.chart_2_bold,
                       iconColor: const Color(0xFF9333EA),
@@ -225,7 +225,7 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle: 'مشاهده ساختار درختی والد و فرزند تجهیزات',
                       onTap: () => context.push('/assets/tree'),
                     ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    const Divider(height: 1, indent: 16, endIndent: 16, thickness: 1,),
                     SettingsTile(
                       icon: EneftyIcons.shopping_cart_bold,
                       iconColor: const Color(0xFFEA580C),
@@ -233,7 +233,7 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle: 'مدیریت سفارشات تامین‌کنندگان و دریافت انبار',
                       onTap: () => context.push('/purchases'),
                     ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    const Divider(height: 1, indent: 16, endIndent: 16, thickness: 1,),
                     SettingsTile(
                       icon: EneftyIcons.box_bold,
                       iconColor: const Color(0xFF4F46E5),
@@ -241,7 +241,7 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle: 'ثبت ورود/خروج اصلاحی کالا و قطعات',
                       onTap: () => context.push('/inventory/adjustment'),
                     ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    const Divider(height: 1, indent: 16, endIndent: 16, thickness: 1,),
                     SettingsTile(
                       icon: EneftyIcons.notification_bold,
                       iconColor: const Color(0xFFDC2626),
@@ -249,7 +249,7 @@ class SettingsScreen extends ConsumerWidget {
                       subtitle: 'بررسی هشدارهای سررسید، تأخیر و کمبود موجودی',
                       onTap: () => context.push('/alerts'),
                     ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    const Divider(height: 1, indent: 16, endIndent: 16, thickness: 1,),
                     SettingsTile(
                       icon: EneftyIcons.chart_2_bold,
                       iconColor: const Color(0xFF7C3AED),
@@ -262,33 +262,16 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // System & Database Info
-              const SectionHeader(title: 'سیستم و پایگاه داده'),
+              const SectionHeader(title: 'اشتراک'),
               Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: EdgeInsets.all(16),
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.secondaryContainer,
-                    child: Icon(
-                      EneftyIcons.data_bold,
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
-                    ),
-                  ),
-                  title: Text(
-                    'پایگاه داده محلی SQLite',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    'نسخه 1.0.0 — سازگار با معماری آفلاین و همگام‌سازی ابری',
-                  ),
+                child: SettingsTile(
+                  icon: Icons.workspace_premium_outlined,
+                  iconColor: Theme.of(context).colorScheme.primary,
+                  title: 'وضعیت اشتراک و دسترسی',
+                  subtitle: 'مشاهده وضعیت دوره آزمایشی و امکانات خرید',
+                  onTap: () => context.push('/subscription'),
                 ),
               ),
-              const SizedBox(height: 40),
             ],
           );
         },

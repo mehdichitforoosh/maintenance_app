@@ -33,11 +33,10 @@ class KeyValueStorage {
   Future<void> setBool(String key, bool value) async {
     _cache[key] = value.toString();
     final db = await DatabaseHelper.instance.db;
-    await db.insert(
-      _tableName,
-      {'key': key, 'value': value.toString()},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(_tableName, {
+      'key': key,
+      'value': value.toString(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   String? getString(String key) => _cache[key];
@@ -45,20 +44,28 @@ class KeyValueStorage {
   Future<void> setString(String key, String value) async {
     _cache[key] = value;
     final db = await DatabaseHelper.instance.db;
-    await db.insert(
-      _tableName,
-      {'key': key, 'value': value},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert(_tableName, {
+      'key': key,
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   // App Specific Keys
   static const String _keyIsFirstRun = 'is_first_run';
+  static const String _keyOnboardingCompleted = 'onboarding_completed';
   static const String _keyThemeMode = 'theme_mode';
 
   bool get isFirstRun => getBool(_keyIsFirstRun, defaultValue: true);
-  Future<void> setOnboardingCompleted() async =>
-      setBool(_keyIsFirstRun, false);
+  bool get isOnboardingCompleted =>
+      getBool(_keyOnboardingCompleted, defaultValue: !isFirstRun);
+
+  Future<void> setOnboardingCompleted() =>
+      setBool(_keyOnboardingCompleted, true);
+
+  Future<void> setFacilitySetupCompleted() async {
+    await setOnboardingCompleted();
+    await setBool(_keyIsFirstRun, false);
+  }
 
   String get themeModeName => getString(_keyThemeMode) ?? 'system';
   Future<void> setThemeModeName(String name) async =>

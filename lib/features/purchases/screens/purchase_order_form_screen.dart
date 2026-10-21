@@ -16,10 +16,12 @@ class PurchaseOrderFormScreen extends ConsumerStatefulWidget {
   const PurchaseOrderFormScreen({super.key, this.purchaseOrderId});
 
   @override
-  ConsumerState<PurchaseOrderFormScreen> createState() => _PurchaseOrderFormScreenState();
+  ConsumerState<PurchaseOrderFormScreen> createState() =>
+      _PurchaseOrderFormScreenState();
 }
 
-class _PurchaseOrderFormScreenState extends ConsumerState<PurchaseOrderFormScreen> {
+class _PurchaseOrderFormScreenState
+    extends ConsumerState<PurchaseOrderFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _supplierController = TextEditingController();
   final _notesController = TextEditingController();
@@ -62,41 +64,51 @@ class _PurchaseOrderFormScreenState extends ConsumerState<PurchaseOrderFormScree
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate() || (_selectedItemId == null && _existingOrder == null)) return;
+    if (!_formKey.currentState!.validate() ||
+        (_selectedItemId == null && _existingOrder == null)) {
+      return;
+    }
     setState(() => _isLoading = true);
 
     try {
       final facility = await ref.read(primaryFacilityProvider.future);
       if (facility == null) return;
-      final repo = ref.read(purchaseRepositoryProvider);
+      final actions = ref.read(purchaseActionsProvider);
 
       if (_existingOrder != null) {
         final updated = _existingOrder!.copyWith(
-          supplierName: _supplierController.text.trim().isEmpty ? null : _supplierController.text.trim(),
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          supplierName: _supplierController.text.trim().isEmpty
+              ? null
+              : _supplierController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         );
-        await repo.updatePurchaseOrder(updated);
+        await actions.updatePurchaseOrder(updated);
       } else {
-        await repo.createPurchaseOrder(
+        await actions.createPurchaseOrder(
           facilityId: facility.id,
           supplierName: _supplierController.text.trim(),
           orderDate: AppDateUtils.formatDateOnly(DateTime.now()),
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
           items: [
             {
               'item_id': _selectedItemId,
               'ordered_quantity': double.parse(_qtyController.text.trim()),
               'unit_price': double.parse(_priceController.text.trim()),
-            }
+            },
           ],
         );
       }
 
-      ref.invalidate(purchaseOrdersProvider(facility.id));
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -110,11 +122,18 @@ class _PurchaseOrderFormScreenState extends ConsumerState<PurchaseOrderFormScree
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'ویرایش سفارش خرید' : 'ثبت سفارش خرید جدید', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isEditing ? 'ویرایش سفارش خرید' : 'ثبت سفارش خرید جدید',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: invItemsAsync.when(
         data: (items) {
-          if (items.isEmpty && !isEditing) return const Center(child: Text('ابتدا باید کالایی در انبار تعریف کنید.'));
+          if (items.isEmpty && !isEditing) {
+            return const Center(
+              child: Text('ابتدا باید کالایی در انبار تعریف کنید.'),
+            );
+          }
           if (items.isNotEmpty) _selectedItemId ??= items.first.id;
 
           return Padding(
@@ -130,7 +149,8 @@ class _PurchaseOrderFormScreenState extends ConsumerState<PurchaseOrderFormScree
                       prefixIcon: Icon(EneftyIcons.user_bold),
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) => AppValidators.required(v, fieldName: 'تأمین‌کننده'),
+                    validator: (v) =>
+                        AppValidators.required(v, fieldName: 'تأمین‌کننده'),
                   ),
                   if (!isEditing) ...[
                     const SizedBox(height: 16),
@@ -141,7 +161,14 @@ class _PurchaseOrderFormScreenState extends ConsumerState<PurchaseOrderFormScree
                         prefixIcon: Icon(EneftyIcons.box_bold),
                         border: OutlineInputBorder(),
                       ),
-                      items: items.map((i) => DropdownMenuItem(value: i.id, child: Text('${i.name} (${i.code})'))).toList(),
+                      items: items
+                          .map(
+                            (i) => DropdownMenuItem(
+                              value: i.id,
+                              child: Text('${i.name} (${i.code})'),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (v) => setState(() => _selectedItemId = v),
                     ),
                     const SizedBox(height: 16),
@@ -150,26 +177,36 @@ class _PurchaseOrderFormScreenState extends ConsumerState<PurchaseOrderFormScree
                         Expanded(
                           child: TextFormField(
                             controller: _qtyController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             decoration: const InputDecoration(
                               labelText: 'مقدار سفارش *',
                               prefixIcon: Icon(EneftyIcons.ruler_bold),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => AppValidators.positiveNumber(v, fieldName: 'مقدار'),
+                            validator: (v) => AppValidators.positiveNumber(
+                              v,
+                              fieldName: 'مقدار',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
                             controller: _priceController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             decoration: const InputDecoration(
                               labelText: 'قیمت واحد (تومان) *',
                               prefixIcon: Icon(EneftyIcons.money_bold),
                               border: OutlineInputBorder(),
                             ),
-                            validator: (v) => AppValidators.nonNegativeNumber(v, fieldName: 'قیمت واحد'),
+                            validator: (v) => AppValidators.nonNegativeNumber(
+                              v,
+                              fieldName: 'قیمت واحد',
+                            ),
                           ),
                         ),
                       ],
@@ -186,9 +223,15 @@ class _PurchaseOrderFormScreenState extends ConsumerState<PurchaseOrderFormScree
                   ),
                   const SizedBox(height: 24),
                   FilledButton.icon(
-                    icon: Icon(isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold),
+                    icon: Icon(
+                      isEditing
+                          ? EneftyIcons.edit_2_bold
+                          : EneftyIcons.add_bold,
+                    ),
                     onPressed: _isLoading ? null : _save,
-                    label: Text(isEditing ? 'بروزرسانی سفارش' : 'ثبت سفارش خرید'),
+                    label: Text(
+                      isEditing ? 'بروزرسانی سفارش' : 'ثبت سفارش خرید',
+                    ),
                   ),
                 ],
               ),

@@ -152,6 +152,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                         onActionPressed: allOrders.isEmpty
                             ? () => context.push('/work-orders/new')
                             : null,
+                        icon: EneftyIcons.document_text_outline,
                       );
                     }
 

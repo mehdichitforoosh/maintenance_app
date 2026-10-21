@@ -15,7 +15,8 @@ class WorkOrderFormScreen extends ConsumerStatefulWidget {
   const WorkOrderFormScreen({super.key, this.workOrderId});
 
   @override
-  ConsumerState<WorkOrderFormScreen> createState() => _WorkOrderFormScreenState();
+  ConsumerState<WorkOrderFormScreen> createState() =>
+      _WorkOrderFormScreenState();
 }
 
 class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
@@ -41,8 +42,9 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
   Future<void> _loadWorkOrder() async {
     setState(() => _isLoading = true);
     try {
-      final repo = ref.read(workOrderRepositoryProvider);
-      final wo = await repo.getWorkOrderById(widget.workOrderId!);
+      final wo = await ref.read(
+        workOrderDetailProvider(widget.workOrderId!).future,
+      );
       if (wo != null && mounted) {
         _existingWorkOrder = wo;
         _titleController.text = wo.title;
@@ -74,7 +76,8 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
       lastDate: Jalali(1450, 12),
     );
     if (picked != null) {
-      final formatted = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      final formatted =
+          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
       setState(() => _scheduledAtController.text = formatted);
     }
   }
@@ -86,36 +89,48 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
     try {
       final facility = await ref.read(primaryFacilityProvider.future);
       if (facility == null) return;
-      final repo = ref.read(workOrderRepositoryProvider);
-
       if (_existingWorkOrder != null) {
         final updated = _existingWorkOrder!.copyWith(
           title: _titleController.text.trim(),
-          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          scheduledAt: _scheduledAtController.text.trim().isEmpty ? null : _scheduledAtController.text.trim(),
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          description: _descController.text.trim().isEmpty
+              ? null
+              : _descController.text.trim(),
+          scheduledAt: _scheduledAtController.text.trim().isEmpty
+              ? null
+              : _scheduledAtController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
           workOrderType: _workOrderType,
           priority: _priority,
         );
-        await repo.updateWorkOrder(updated);
-        ref.invalidate(workOrderDetailProvider(updated.id));
+        await ref.read(workOrderActionsProvider).updateWorkOrder(updated);
       } else {
-        await repo.createWorkOrder(
-          facilityId: facility.id,
-          title: _titleController.text.trim(),
-          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-          scheduledAt: _scheduledAtController.text.trim().isEmpty ? null : _scheduledAtController.text.trim(),
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-          workOrderType: _workOrderType,
-          priority: _priority,
-        );
+        await ref
+            .read(workOrderActionsProvider)
+            .createWorkOrder(
+              facilityId: facility.id,
+              title: _titleController.text.trim(),
+              description: _descController.text.trim().isEmpty
+                  ? null
+                  : _descController.text.trim(),
+              scheduledAt: _scheduledAtController.text.trim().isEmpty
+                  ? null
+                  : _scheduledAtController.text.trim(),
+              notes: _notesController.text.trim().isEmpty
+                  ? null
+                  : _notesController.text.trim(),
+              workOrderType: _workOrderType,
+              priority: _priority,
+            );
       }
 
-      ref.invalidate(workOrdersProvider(facility.id));
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -128,7 +143,10 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'ویرایش دستورکار' : 'ایجاد دستورکار جدید', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isEditing ? 'ویرایش دستورکار' : 'ایجاد دستورکار جدید',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -143,7 +161,8 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
                   prefixIcon: Icon(EneftyIcons.document_text_bold),
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) => AppValidators.required(v, fieldName: 'عنوان دستورکار'),
+                validator: (v) =>
+                    AppValidators.required(v, fieldName: 'عنوان دستورکار'),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<WorkOrderType>(
@@ -153,8 +172,17 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
                   prefixIcon: Icon(EneftyIcons.task_bold),
                   border: OutlineInputBorder(),
                 ),
-                items: WorkOrderType.values.map((w) => DropdownMenuItem(value: w, child: Text(w.displayName))).toList(),
-                onChanged: (v) => setState(() => _workOrderType = v ?? WorkOrderType.corrective),
+                items: WorkOrderType.values
+                    .map(
+                      (w) => DropdownMenuItem(
+                        value: w,
+                        child: Text(w.displayName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(
+                  () => _workOrderType = v ?? WorkOrderType.corrective,
+                ),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<Priority>(
@@ -164,8 +192,16 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
                   prefixIcon: Icon(EneftyIcons.danger_bold),
                   border: OutlineInputBorder(),
                 ),
-                items: Priority.values.map((p) => DropdownMenuItem(value: p, child: Text(p.displayName))).toList(),
-                onChanged: (v) => setState(() => _priority = v ?? Priority.medium),
+                items: Priority.values
+                    .map(
+                      (p) => DropdownMenuItem(
+                        value: p,
+                        child: Text(p.displayName),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) =>
+                    setState(() => _priority = v ?? Priority.medium),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -198,7 +234,9 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
-                icon: Icon(isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold),
+                icon: Icon(
+                  isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
+                ),
                 onPressed: _isLoading ? null : _save,
                 label: Text(isEditing ? 'بروزرسانی دستورکار' : 'ثبت دستورکار'),
               ),

@@ -37,17 +37,13 @@ class WorkOrderDetailScreen extends ConsumerWidget {
                 tooltip: 'تغییر وضعیت دستورکار',
                 onSelected: (newStatus) async {
                   try {
-                    final repository = ref.read(workOrderRepositoryProvider);
-                    if (newStatus == WorkOrderStatus.completed) {
-                      await repository.closeWorkOrder(workOrderId);
-                    } else {
-                      await repository.updateWorkOrderStatus(
-                        workOrderId,
-                        newStatus,
-                      );
-                    }
-                    ref.invalidate(workOrderDetailProvider(workOrderId));
-                    ref.invalidate(workOrdersProvider(workOrder.facilityId));
+                    await ref
+                        .read(workOrderActionsProvider)
+                        .updateStatus(
+                          workOrderId: workOrderId,
+                          facilityId: workOrder.facilityId,
+                          status: newStatus,
+                        );
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

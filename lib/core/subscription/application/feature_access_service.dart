@@ -2,6 +2,7 @@ import '../../storage/key_value_storage.dart';
 import '../domain/access_mode.dart';
 import '../domain/app_feature.dart';
 import '../domain/subscription_state.dart';
+import '../domain/subscription_status.dart';
 import '../data/subscription_state_store.dart';
 import 'subscription_policy.dart';
 
@@ -41,16 +42,18 @@ class DefaultFeatureAccessService implements FeatureAccessService {
     required AppFeature feature,
     required AccessOperation operation,
   }) async {
-    if (KeyValueStorage.instance.isFirstRun && operation == AccessOperation.write) {
+    if (KeyValueStorage.instance.isFirstRun &&
+        operation == AccessOperation.write) {
       return const AccessDecision(
         accessMode: AccessMode.fullAccess,
         reason: 'initial_setup',
       );
     }
 
-    final rawState = await store.load() ?? const SubscriptionState();
-    final normalizedState = _normalizeState(rawState);
     final now = clock().toUtc();
+    final rawState = await store.load() ?? const SubscriptionState();
+    final normalizedState = _normalizeState(rawState, now);
+    await store.save(normalizedState);
     final decision = policy.evaluate(normalizedState, now);
 
     if (operation == AccessOperation.read) {
@@ -61,9 +64,7 @@ class DefaultFeatureAccessService implements FeatureAccessService {
       return decision;
     }
 
-    throw AccessDeniedException(
-      _farsiMessageFor(feature, decision.reason),
-    );
+    throw AccessDeniedException(_farsiMessageFor(feature, decision.reason));
   }
 
   @override
@@ -100,16 +101,14 @@ class DefaultFeatureAccessService implements FeatureAccessService {
     return 'دسترسی به «$featureName» رد شد: $reasonText.';
   }
 
-  SubscriptionState _normalizeState(SubscriptionState state) {
-    final now = clock().toUtc();
+  SubscriptionState _normalizeState(SubscriptionState state, DateTime now) {
     final lastSeen = state.lastSeenAtUtc;
 
     if (lastSeen != null && now.isBefore(lastSeen.toUtc())) {
       return state.copyWith(
-        trialStartedAtUtc: null,
-        trialEndsAtUtc: null,
-        entitlementStartedAtUtc: null,
-        entitlementEndsAtUtc: null,
+        clearTrialEndDate: true,
+        clearEntitlement: true,
+        status: SubscriptionStatus.revoked,
         lastSeenAtUtc: now,
       );
     }
@@ -117,4 +116,3 @@ class DefaultFeatureAccessService implements FeatureAccessService {
     return state.copyWith(lastSeenAtUtc: now);
   }
 }
-

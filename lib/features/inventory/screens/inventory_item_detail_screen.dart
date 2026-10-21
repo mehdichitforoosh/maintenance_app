@@ -20,7 +20,7 @@ class InventoryItemDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(allInventoryItemsProvider);
     final txsAsync = ref.watch(stockTransactionsProvider(itemId));
-    final repo = ref.watch(inventoryRepositoryProvider);
+    final stockAsync = ref.watch(inventoryCurrentStockProvider(itemId));
 
     return itemsAsync.when(
       data: (items) {
@@ -43,17 +43,8 @@ class InventoryItemDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: FutureBuilder<double>(
-            future: repo.getCurrentStock(itemId),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return AppErrorState(message: snapshot.error.toString());
-              }
-              if (!snapshot.hasData) {
-                return const AppLoading();
-              }
-
-              final stock = snapshot.data!;
+          body: stockAsync.when(
+            data: (stock) {
               final isLow = stock <= item.minimumStock;
               return ListView(
                 padding: const EdgeInsets.all(16),
@@ -111,6 +102,8 @@ class InventoryItemDetailScreen extends ConsumerWidget {
                 ],
               );
             },
+            loading: () => const AppLoading(),
+            error: (error, _) => AppErrorState(message: error.toString()),
           ),
         );
       },
