@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
 import '../../inventory/models/inventory_item.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../models/work_order_task.dart';
@@ -30,7 +32,7 @@ class _WorkOrderMaterialFormScreenState
 
   String? _selectedTaskId;
   String? _selectedItemId;
-  bool _isLoading = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -42,6 +44,7 @@ class _WorkOrderMaterialFormScreenState
   }
 
   Future<void> _save() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTaskId == null || _selectedItemId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,7 +55,7 @@ class _WorkOrderMaterialFormScreenState
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
     try {
       await ref
           .read(workOrderActionsProvider)
@@ -76,7 +79,7 @@ class _WorkOrderMaterialFormScreenState
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -164,152 +167,143 @@ class _WorkOrderMaterialFormScreenState
     List<InventoryItem> items,
     InventoryItem selectedItem,
   ) {
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        children: [
-          DropdownButtonFormField<String>(
-            initialValue: _selectedTaskId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'وظیفه مرتبط *',
-              prefixIcon: Icon(EneftyIcons.task_bold),
-              border: OutlineInputBorder(),
-            ),
-            items: tasks
-                .map(
-                  (task) => DropdownMenuItem(
-                    value: task.id,
-                    child: Text(task.title, overflow: TextOverflow.ellipsis),
+    return AppFormBody(
+      formKey: _formKey,
+      children: [
+        DropdownButtonFormField<String>(
+          initialValue: _selectedTaskId,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'وظیفه مرتبط *',
+            prefixIcon: Icon(EneftyIcons.task_bold),
+            border: OutlineInputBorder(),
+          ),
+          items: tasks
+              .map(
+                (task) => DropdownMenuItem(
+                  value: task.id,
+                  child: Text(task.title, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: _isSubmitting
+              ? null
+              : (value) => setState(() => _selectedTaskId = value),
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedItemId,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'کالای انبار / قطعه یدکی *',
+            prefixIcon: Icon(EneftyIcons.box_bold),
+            border: OutlineInputBorder(),
+          ),
+          items: items
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item.id,
+                  child: Text(
+                    '${item.name} (${item.code}) · ${item.unit}',
+                    overflow: TextOverflow.ellipsis,
                   ),
-                )
-                .toList(),
-            onChanged: _isLoading
-                ? null
-                : (value) => setState(() => _selectedTaskId = value),
+                ),
+              )
+              .toList(),
+          onChanged: _isSubmitting
+              ? null
+              : (value) {
+                  setState(() {
+                    _selectedItemId = value;
+                    final item = items.firstWhere((item) => item.id == value);
+                    _unitCostController.text =
+                        item.defaultUnitCost?.toString() ?? '';
+                  });
+                },
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'مقادیر متریال',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _plannedQtyController,
+          enabled: !_isSubmitting,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'مقدار برنامه‌ریزی‌شده',
+            prefixIcon: const Icon(EneftyIcons.ruler_bold),
+            suffixText: selectedItem.unit,
+            border: const OutlineInputBorder(),
           ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: _selectedItemId,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'کالای انبار / قطعه یدکی *',
-              prefixIcon: Icon(EneftyIcons.box_bold),
-              border: OutlineInputBorder(),
-            ),
-            items: items
-                .map(
-                  (item) => DropdownMenuItem(
-                    value: item.id,
-                    child: Text(
-                      '${item.name} (${item.code}) · ${item.unit}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: _isLoading
-                ? null
-                : (value) {
-                    setState(() {
-                      _selectedItemId = value;
-                      final item = items.firstWhere((item) => item.id == value);
-                      _unitCostController.text =
-                          item.defaultUnitCost?.toString() ?? '';
-                    });
-                  },
+          validator: (value) {
+            final error = _optionalNonNegative(
+              value,
+              fieldName: 'مقدار برنامه‌ریزی‌شده',
+            );
+            if (error != null) return error;
+            if ((value == null || value.trim().isEmpty) &&
+                _actualQtyController.text.trim().isEmpty) {
+              return 'مقدار برنامه‌ریزی‌شده یا مقدار مصرف واقعی را وارد کنید.';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _actualQtyController,
+          enabled: !_isSubmitting,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            labelText: 'مقدار مصرف واقعی',
+            helperText: 'موجودی پس از تکمیل وظیفه به‌صورت اتمی کسر می‌شود.',
+            prefixIcon: const Icon(EneftyIcons.box_bold),
+            suffixText: selectedItem.unit,
+            border: const OutlineInputBorder(),
           ),
-          const SizedBox(height: 20),
-          Text(
-            'مقادیر متریال',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          validator: (value) =>
+              _optionalNonNegative(value, fieldName: 'مقدار مصرف واقعی'),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _unitCostController,
+          enabled: !_isSubmitting,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'بهای واحد هنگام مصرف',
+            helperText: 'به‌صورت پیش‌فرض از بهای پیش‌فرض کالا استفاده می‌شود.',
+            prefixIcon: Icon(EneftyIcons.money_bold),
+            suffixText: 'تومان',
+            border: OutlineInputBorder(),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _plannedQtyController,
-            enabled: !_isLoading,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: 'مقدار برنامه‌ریزی‌شده',
-              prefixIcon: const Icon(EneftyIcons.ruler_bold),
-              suffixText: selectedItem.unit,
-              border: const OutlineInputBorder(),
-            ),
-            validator: (value) {
-              final error = _optionalNonNegative(
-                value,
-                fieldName: 'مقدار برنامه‌ریزی‌شده',
-              );
-              if (error != null) return error;
-              if ((value == null || value.trim().isEmpty) &&
-                  _actualQtyController.text.trim().isEmpty) {
-                return 'مقدار برنامه‌ریزی‌شده یا مقدار مصرف واقعی را وارد کنید.';
-              }
-              return null;
-            },
+          validator: (value) =>
+              _optionalNonNegative(value, fieldName: 'بهای واحد'),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _notesController,
+          enabled: !_isSubmitting,
+          decoration: const InputDecoration(
+            labelText: 'یادداشت',
+            prefixIcon: Icon(EneftyIcons.note_2_bold),
+            border: OutlineInputBorder(),
+            alignLabelWithHint: true,
           ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _actualQtyController,
-            enabled: !_isLoading,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: 'مقدار مصرف واقعی',
-              helperText: 'موجودی پس از تکمیل وظیفه به‌صورت اتمی کسر می‌شود.',
-              prefixIcon: const Icon(EneftyIcons.box_bold),
-              suffixText: selectedItem.unit,
-              border: const OutlineInputBorder(),
-            ),
-            validator: (value) =>
-                _optionalNonNegative(value, fieldName: 'مقدار مصرف واقعی'),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _unitCostController,
-            enabled: !_isLoading,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'بهای واحد هنگام مصرف',
-              helperText:
-                  'به‌صورت پیش‌فرض از بهای پیش‌فرض کالا استفاده می‌شود.',
-              prefixIcon: Icon(EneftyIcons.money_bold),
-              suffixText: 'تومان',
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) =>
-                _optionalNonNegative(value, fieldName: 'بهای واحد'),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _notesController,
-            enabled: !_isLoading,
-            decoration: const InputDecoration(
-              labelText: 'یادداشت',
-              prefixIcon: Icon(EneftyIcons.note_2_bold),
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            textCapitalization: TextCapitalization.sentences,
-            maxLines: 3,
-            minLines: 2,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            icon: _isLoading
-                ? const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(EneftyIcons.add_bold),
-            onPressed: _isLoading ? null : _save,
-            label: const Text('ثبت متریال برای وظیفه'),
-          ),
-        ],
-      ),
+          textCapitalization: TextCapitalization.sentences,
+          maxLines: 3,
+          minLines: 2,
+        ),
+        const SizedBox(height: 24),
+        AppFormSubmitButton(
+          icon: const Icon(EneftyIcons.add_bold),
+          isSubmitting: _isSubmitting,
+          onPressed: _save,
+          label: 'ثبت متریال برای وظیفه',
+        ),
+      ],
     );
   }
 

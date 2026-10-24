@@ -3,6 +3,7 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../models/maintenance_plan.dart';
+import 'maintenance_plan_material_seeder.dart';
 
 class MaintenanceScheduler {
   /// Runs scheduling logic across all active plans in a database transaction or connection.
@@ -10,33 +11,43 @@ class MaintenanceScheduler {
     final nowIso = AppDateUtils.nowUtcIso();
     final nowDate = DateTime.now();
 
-    // Fetch active maintenance plans
-    final planMaps = await db.query(
-      'maintenance_plans',
-      where: 'is_active = 1 AND deleted_at IS NULL',
-    );
+    await db.transaction((txn) async {
+      final planMaps = await txn.rawQuery(
+        '''
+        SELECT plan.*
+        FROM maintenance_plans AS plan
+        INNER JOIN assets AS asset ON asset.id = plan.asset_id
+        WHERE asset.facility_id = ?
+          AND asset.deleted_at IS NULL
+          AND plan.is_active = 1
+          AND plan.deleted_at IS NULL
+      ''',
+        [facilityId],
+      );
 
-    for (final planMap in planMaps) {
-      final plan = MaintenancePlan.fromMap(planMap);
+      for (final planMap in planMaps) {
+        final plan = MaintenancePlan.fromMap(planMap);
 
-      if (plan.scheduleType == ScheduleType.calendar) {
-        await _processCalendarPlan(db, facilityId, plan, nowDate, nowIso);
-      } else if (plan.scheduleType == ScheduleType.oneTime) {
-        await _processOneTimePlan(db, facilityId, plan, nowDate, nowIso);
+        if (plan.scheduleType == ScheduleType.calendar) {
+          await _processCalendarPlan(txn, facilityId, plan, nowDate, nowIso);
+        } else if (plan.scheduleType == ScheduleType.oneTime) {
+          await _processOneTimePlan(txn, facilityId, plan, nowDate, nowIso);
+        }
       }
-    }
+    });
   }
 
   static Future<void> _processCalendarPlan(
-    Database db,
+    DatabaseExecutor db,
     String facilityId,
     MaintenancePlan plan,
     DateTime nowDate,
     String nowIso,
   ) async {
     if (plan.nextDueAt == null) return;
-    final dueDate = DateTime.tryParse(plan.nextDueAt!);
-    if (dueDate == null) return;
+    final parsedDueDate = DateTime.tryParse(plan.nextDueAt!);
+    if (parsedDueDate == null) return;
+    final dueDate = parsedDueDate.toLocal();
 
     // If due today or in the past
     if (dueDate.isBefore(nowDate) || _isSameDay(dueDate, nowDate)) {
@@ -54,15 +65,16 @@ class MaintenanceScheduler {
   }
 
   static Future<void> _processOneTimePlan(
-    Database db,
+    DatabaseExecutor db,
     String facilityId,
     MaintenancePlan plan,
     DateTime nowDate,
     String nowIso,
   ) async {
     if (plan.oneTimeDueAt == null) return;
-    final dueDate = DateTime.tryParse(plan.oneTimeDueAt!);
-    if (dueDate == null) return;
+    final parsedDueDate = DateTime.tryParse(plan.oneTimeDueAt!);
+    if (parsedDueDate == null) return;
+    final dueDate = parsedDueDate.toLocal();
     if (dueDate.isAfter(nowDate) && !_isSameDay(dueDate, nowDate)) return;
 
     final occurrenceKey = 'one-time:${plan.oneTimeDueAt}';
@@ -78,7 +90,7 @@ class MaintenanceScheduler {
   }
 
   static Future<void> _createTaskIdempotently({
-    required Database db,
+    required DatabaseExecutor db,
     required String facilityId,
     required MaintenancePlan plan,
     required String title,
@@ -146,6 +158,12 @@ class MaintenanceScheduler {
       'updated_at': nowIso,
       'sync_status': 'pending',
     });
+    await MaintenancePlanMaterialSeeder.seedTaskMaterials(
+      db,
+      planId: plan.id,
+      taskId: taskId,
+      now: nowIso,
+    );
 
     // Also create an alert event if needed
     final alertId = IdGenerator.generate();

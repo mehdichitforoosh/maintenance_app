@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
+import '../../../core/widgets/app_loading.dart';
 import '../../inventory/models/inventory_item.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../models/work_order_material.dart';
@@ -36,7 +40,7 @@ class _CorrectTaskCompletionScreenState
   TaskResult _result = TaskResult.success;
   String? _selectedItemId;
   String? _initializedTaskId;
-  bool _isSaving = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -74,8 +78,9 @@ class _CorrectTaskCompletionScreenState
     List<InventoryItem> items,
     String? facilityId,
   ) async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
+    setState(() => _isSubmitting = true);
     try {
       final desiredMaterials = <Map<String, dynamic>>[];
       for (final material in materials) {
@@ -122,7 +127,7 @@ class _CorrectTaskCompletionScreenState
         ).showSnackBar(SnackBar(content: Text('خطا در اصلاح اطلاعات: $error')));
       }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -134,6 +139,21 @@ class _CorrectTaskCompletionScreenState
     final workOrderAsync = ref.watch(
       workOrderDetailProvider(widget.workOrderId),
     );
+
+    if (!workOrderAsync.hasValue) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('اصلاح اطلاعات تکمیل وظیفه')),
+        body: workOrderAsync.when(
+          loading: () => const AppLoading(),
+          error: (error, _) => AppErrorState(
+            message: 'بارگذاری دستورکار ناموفق بود: $error',
+            onRetry: () =>
+                ref.invalidate(workOrderDetailProvider(widget.workOrderId)),
+          ),
+          data: (_) => const SizedBox.shrink(),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('اصلاح اطلاعات تکمیل وظیفه')),
@@ -154,22 +174,29 @@ class _CorrectTaskCompletionScreenState
                   task,
                   materials,
                   items,
-                  workOrderAsync.value?.facilityId,
+                  workOrderAsync.value!.facilityId,
                 ),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(
-                  child: Text('بارگذاری اقلام انبار ناموفق بود: $error'),
+                loading: () => const AppLoading(),
+                error: (error, _) => AppErrorState(
+                  message: 'بارگذاری اقلام انبار ناموفق بود: $error',
+                  onRetry: () => ref.invalidate(inventoryItemsProvider),
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) =>
-                Center(child: Text('بارگذاری متریال ناموفق بود: $error')),
+            loading: () => const AppLoading(),
+            error: (error, _) => AppErrorState(
+              message: 'بارگذاری متریال ناموفق بود: $error',
+              onRetry: () =>
+                  ref.invalidate(workOrderMaterialsProvider(widget.taskId)),
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('بارگذاری وظیفه ناموفق بود: $error')),
+        loading: () => const AppLoading(),
+        error: (error, _) => AppErrorState(
+          message: 'بارگذاری وظیفه ناموفق بود: $error',
+          onRetry: () =>
+              ref.invalidate(workOrderTasksProvider(widget.workOrderId)),
+        ),
       ),
     );
   }
@@ -193,223 +220,216 @@ class _CorrectTaskCompletionScreenState
       _selectedItemId = null;
     }
 
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text('اصلاحات با دلیل ثبت می‌شوند و سوابق قبلی حفظ خواهد شد.'),
+    return AppFormBody(
+      formKey: _formKey,
+      children: [
+        const Text('اصلاحات با دلیل ثبت می‌شوند و سوابق قبلی حفظ خواهد شد.'),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<TaskResult>(
+          initialValue: _result,
+          decoration: const InputDecoration(
+            labelText: 'نتیجه انجام کار',
+            border: OutlineInputBorder(),
+          ),
+          items: TaskResult.values
+              .map(
+                (result) => DropdownMenuItem(
+                  value: result,
+                  child: Text(result.displayName),
+                ),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) setState(() => _result = value);
+          },
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _findingsController,
+          decoration: const InputDecoration(
+            labelText: 'یافته‌ها و گزارش کار',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _laborController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'زمان کار (دقیقه)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) =>
+                    _minutesValidator(value, fieldName: 'زمان کار'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _downtimeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'زمان توقف (دقیقه)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) =>
+                    _minutesValidator(value, fieldName: 'زمان توقف'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'اصلاح متریال و مصرف واقعی',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'اختلاف مقدار اصلاح‌شده با دفتر انبار، با تراکنش مصرف یا برگشت ثبت می‌شود؛ تراکنش قبلی حذف نمی‌شود.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        ...materials.map((material) {
+          final item = itemById[material.itemId];
+          return Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: TextFormField(
+              controller: _materialControllers[material.itemId],
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: '${item?.name ?? 'کالای حذف‌شده'} · مقدار واقعی',
+                suffixText: item?.unit,
+                border: const OutlineInputBorder(),
+              ),
+              validator: (value) => _quantityValidator(value),
+            ),
+          );
+        }),
+        if (availableItems.isNotEmpty) ...[
           const SizedBox(height: 16),
-          DropdownButtonFormField<TaskResult>(
-            initialValue: _result,
+          DropdownButtonFormField<String>(
+            initialValue: _selectedItemId,
+            isExpanded: true,
             decoration: const InputDecoration(
-              labelText: 'نتیجه انجام کار',
+              labelText: 'افزودن کالای مصرف‌شده',
               border: OutlineInputBorder(),
             ),
-            items: TaskResult.values
+            items: availableItems
                 .map(
-                  (result) => DropdownMenuItem(
-                    value: result,
-                    child: Text(result.displayName),
+                  (item) => DropdownMenuItem(
+                    value: item.id,
+                    child: Text('${item.name} (${item.unit})'),
                   ),
                 )
                 .toList(),
-            onChanged: (value) {
-              if (value != null) setState(() => _result = value);
-            },
+            onChanged: (value) => setState(() => _selectedItemId = value),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _findingsController,
-            decoration: const InputDecoration(
-              labelText: 'یافته‌ها و گزارش کار',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: _laborController,
-                  keyboardType: TextInputType.number,
+                child: TextField(
+                  controller: _newQuantityController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
-                    labelText: 'زمان کار (دقیقه)',
+                    labelText: 'مقدار مصرف واقعی',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) =>
-                      _minutesValidator(value, fieldName: 'زمان کار'),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _downtimeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'زمان توقف (دقیقه)',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      _minutesValidator(value, fieldName: 'زمان توقف'),
-                ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                tooltip: 'افزودن به اصلاح متریال',
+                onPressed: _selectedItemId == null
+                    ? null
+                    : () {
+                        final quantity = double.tryParse(
+                          _newQuantityController.text.trim(),
+                        );
+                        if (quantity == null ||
+                            !quantity.isFinite ||
+                            quantity < 0) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'مقدار باید عددی صفر یا بیشتر باشد.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        setState(() {
+                          _newMaterialControllers[_selectedItemId!] =
+                              TextEditingController(text: quantity.toString());
+                          _selectedItemId = null;
+                          _newQuantityController.text = '1';
+                        });
+                      },
+                icon: const Icon(Icons.add),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Text(
-            'اصلاح متریال و مصرف واقعی',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'اختلاف مقدار اصلاح‌شده با دفتر انبار، با تراکنش مصرف یا برگشت ثبت می‌شود؛ تراکنش قبلی حذف نمی‌شود.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          ...materials.map((material) {
-            final item = itemById[material.itemId];
-            return Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: TextFormField(
-                controller: _materialControllers[material.itemId],
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: InputDecoration(
-                  labelText: '${item?.name ?? 'کالای حذف‌شده'} · مقدار واقعی',
-                  suffixText: item?.unit,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) => _quantityValidator(value),
-              ),
-            );
-          }),
-          if (availableItems.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedItemId,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'افزودن کالای مصرف‌شده',
-                border: OutlineInputBorder(),
-              ),
-              items: availableItems
-                  .map(
-                    (item) => DropdownMenuItem(
-                      value: item.id,
-                      child: Text('${item.name} (${item.unit})'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _selectedItemId = value),
-            ),
-            const SizedBox(height: 8),
-            Row(
+        ],
+        ..._newMaterialControllers.entries.map((entry) {
+          final item = itemById[entry.key];
+          return Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _newQuantityController,
+                  child: TextFormField(
+                    controller: entry.value,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    decoration: const InputDecoration(
-                      labelText: 'مقدار مصرف واقعی',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: '${item?.name ?? 'کالا'} · مقدار واقعی',
+                      suffixText: item?.unit,
+                      border: const OutlineInputBorder(),
                     ),
+                    validator: (value) => _quantityValidator(value),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  tooltip: 'افزودن به اصلاح متریال',
-                  onPressed: _selectedItemId == null
-                      ? null
-                      : () {
-                          final quantity = double.tryParse(
-                            _newQuantityController.text.trim(),
-                          );
-                          if (quantity == null ||
-                              !quantity.isFinite ||
-                              quantity < 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'مقدار باید عددی صفر یا بیشتر باشد.',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-                          setState(() {
-                            _newMaterialControllers[_selectedItemId!] =
-                                TextEditingController(
-                                  text: quantity.toString(),
-                                );
-                            _selectedItemId = null;
-                            _newQuantityController.text = '1';
-                          });
-                        },
-                  icon: const Icon(Icons.add),
+                IconButton(
+                  tooltip: 'حذف از اصلاح',
+                  onPressed: () {
+                    setState(() {
+                      _newMaterialControllers.remove(entry.key)?.dispose();
+                    });
+                  },
+                  icon: const Icon(Icons.remove_circle_outline),
                 ),
               ],
             ),
-          ],
-          ..._newMaterialControllers.entries.map((entry) {
-            final item = itemById[entry.key];
-            return Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: entry.value,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: '${item?.name ?? 'کالا'} · مقدار واقعی',
-                        suffixText: item?.unit,
-                        border: const OutlineInputBorder(),
-                      ),
-                      validator: (value) => _quantityValidator(value),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'حذف از اصلاح',
-                    onPressed: () {
-                      setState(() {
-                        _newMaterialControllers.remove(entry.key)?.dispose();
-                      });
-                    },
-                    icon: const Icon(Icons.remove_circle_outline),
-                  ),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 20),
-          TextFormField(
-            controller: _reasonController,
-            decoration: const InputDecoration(
-              labelText: 'دلیل اصلاح *',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 2,
-            validator: (value) => value == null || value.trim().isEmpty
-                ? 'لطفاً دلیل اصلاح را وارد کنید.'
-                : null,
+          );
+        }),
+        const SizedBox(height: 20),
+        TextFormField(
+          controller: _reasonController,
+          decoration: const InputDecoration(
+            labelText: 'دلیل اصلاح *',
+            border: OutlineInputBorder(),
           ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: _isSaving
-                ? null
-                : () => _save(task, materials, items, facilityId),
-            child: _isSaving
-                ? const CircularProgressIndicator()
-                : const Text('ثبت اصلاحات'),
-          ),
-        ],
-      ),
+          maxLines: 2,
+          validator: (value) => value == null || value.trim().isEmpty
+              ? 'لطفاً دلیل اصلاح را وارد کنید.'
+              : null,
+        ),
+        const SizedBox(height: 20),
+        AppFormSubmitButton(
+          icon: const Icon(Icons.save_outlined),
+          isSubmitting: _isSubmitting,
+          onPressed: () => _save(task, materials, items, facilityId),
+          label: 'ثبت اصلاحات',
+        ),
+      ],
     );
   }
 

@@ -71,7 +71,7 @@ class AppScaffoldShell extends StatelessWidget {
           surfaceTintColor: Colors.transparent,
           indicatorColor: colorScheme.primaryContainer,
           elevation: 0,
-          height: 65,
+          height: 75,
           onDestinationSelected: (index) => _onItemTapped(context, index),
           destinations: const [
             NavigationDestination(

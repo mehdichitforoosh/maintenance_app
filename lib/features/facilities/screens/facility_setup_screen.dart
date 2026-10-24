@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/storage/key_value_storage.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
 import '../models/facility.dart';
 import '../providers/facility_providers.dart';
 
@@ -21,6 +23,8 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
   final _descController = TextEditingController();
   final _addressController = TextEditingController();
   bool _isLoading = false;
+  bool _isSubmitting = false;
+  String? _loadError;
   Facility? _existingFacility;
 
   @override
@@ -30,14 +34,22 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
   }
 
   Future<void> _loadExistingFacility() async {
-    final facility = await ref.read(primaryFacilityProvider.future);
-    if (facility != null && mounted) {
-      setState(() {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      final facility = await ref.read(primaryFacilityProvider.future);
+      if (facility != null && mounted) {
         _existingFacility = facility;
         _nameController.text = facility.name;
         _descController.text = facility.description ?? '';
         _addressController.text = facility.address ?? '';
-      });
+      }
+    } catch (error) {
+      if (mounted) _loadError = 'بارگذاری اطلاعات کارگاه ناموفق بود: $error';
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -50,8 +62,9 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting || _loadError != null) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       if (_existingFacility != null) {
@@ -96,7 +109,7 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -111,112 +124,83 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CircleAvatar(
-                  radius: 44,
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer,
-                  foregroundColor: Theme.of(
-                    context,
-                  ).colorScheme.onPrimaryContainer,
-                  child: Icon(EneftyIcons.buildings_2_outline, size: 48),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  isEditing
-                      ? 'ویرایش اطلاعات عمومی کارگاه'
-                      : 'خوش آمدید به سیستم نگهداری و تعمیرات',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isEditing
-                      ? 'می‌توانید نام، آدرس و توضیحات کارگاه خود را تغییر دهید.'
-                      : 'لطفاً مشخصات کارگاه یا کارخانه خود را جهت شروع کار ثبت کنید.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'نام کارگاه / کارخانه *',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(EneftyIcons.building_outline),
-                  ),
-                  validator: (v) =>
-                      AppValidators.required(v, fieldName: 'نام کارگاه'),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descController,
-                  decoration: const InputDecoration(
-                    labelText: 'توضیحات کارگاه',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(EneftyIcons.document_outline),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'آدرس موقعیت',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(EneftyIcons.location_outline),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: FilledButton.icon(
-                    icon: _isLoading
-                        ? const SizedBox.shrink()
-                        : Icon(
-                            isEditing
-                                ? EneftyIcons.edit_2_bold
-                                : EneftyIcons.tick_circle_bold,
-                          ),
-                    onPressed: _isLoading ? null : _submit,
-                    label: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            isEditing
-                                ? 'بروزرسانی کارگاه'
-                                : 'ذخیره و ورود به سیستم',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
+      body: AppFormBody(
+        formKey: _formKey,
+        isLoading: _isLoading,
+        loadError: _loadError,
+        onRetry: _loadExistingFacility,
+        padding: const EdgeInsets.all(24),
+        safeArea: true,
+        children: [
+          CircleAvatar(
+            radius: 44,
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+            child: Icon(EneftyIcons.buildings_2_outline, size: 48),
           ),
-        ),
+          const SizedBox(height: 20),
+          Text(
+            isEditing
+                ? 'ویرایش اطلاعات عمومی کارگاه'
+                : 'خوش آمدید به سیستم نگهداری و تعمیرات',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isEditing
+                ? 'می‌توانید نام، آدرس و توضیحات کارگاه خود را تغییر دهید.'
+                : 'لطفاً مشخصات کارگاه یا کارخانه خود را جهت شروع کار ثبت کنید.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          TextFormField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'نام کارگاه / کارخانه *',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(EneftyIcons.building_outline),
+            ),
+            validator: (v) =>
+                AppValidators.required(v, fieldName: 'نام کارگاه'),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _descController,
+            decoration: const InputDecoration(
+              labelText: 'توضیحات کارگاه',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(EneftyIcons.document_outline),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _addressController,
+            decoration: const InputDecoration(
+              labelText: 'آدرس موقعیت',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(EneftyIcons.location_outline),
+            ),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 32),
+          AppFormSubmitButton(
+            icon: Icon(
+              isEditing
+                  ? EneftyIcons.edit_2_bold
+                  : EneftyIcons.tick_circle_bold,
+            ),
+            isSubmitting: _isSubmitting,
+            onPressed: _submit,
+            label: isEditing ? 'بروزرسانی کارگاه' : 'ذخیره و ورود به سیستم',
+          ),
+        ],
       ),
     );
   }

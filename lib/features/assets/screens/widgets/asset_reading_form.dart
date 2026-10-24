@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/validators.dart';
+import '../../../../core/widgets/app_form_submit_button.dart';
 
 class AssetReadingForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
@@ -14,7 +15,7 @@ class AssetReadingForm extends StatelessWidget {
   final Map<String, String> metricUnits;
   final DateTime recordedAt;
   final bool isEditing;
-  final bool isSaving;
+  final bool isSubmitting;
   final ValueChanged<String> onUnitChanged;
   final VoidCallback onSelectDate;
   final VoidCallback onSubmit;
@@ -33,7 +34,7 @@ class AssetReadingForm extends StatelessWidget {
     required this.metricUnits,
     required this.recordedAt,
     required this.isEditing,
-    required this.isSaving,
+    required this.isSubmitting,
     required this.onUnitChanged,
     required this.onSelectDate,
     required this.onSubmit,
@@ -249,27 +250,16 @@ class AssetReadingForm extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: isSaving ? null : onSubmit,
-            icon: isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.add_chart_outlined),
-            label: Text(
-              isSaving
-                  ? 'در حال ثبت...'
-                  : isEditing
-                  ? 'ذخیره اصلاح'
-                  : 'ثبت خوانش',
-            ),
+          AppFormSubmitButton(
+            icon: const Icon(Icons.add_chart_outlined),
+            isSubmitting: isSubmitting,
+            onPressed: onSubmit,
+            label: isEditing ? 'ذخیره اصلاح' : 'ثبت خوانش',
           ),
           if (isEditing) ...[
             const SizedBox(height: 8),
             TextButton(
-              onPressed: isSaving ? null : onCancel,
+              onPressed: isSubmitting ? null : onCancel,
               child: const Text('انصراف از اصلاح'),
             ),
           ],

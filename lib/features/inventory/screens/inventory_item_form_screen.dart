@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
-import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
 import '../models/inventory_item.dart';
 import '../providers/inventory_providers.dart';
 import 'widgets/inventory_item_form_fields.dart';
@@ -31,6 +32,7 @@ class _InventoryItemFormScreenState
   ItemType _itemType = ItemType.consumable;
   bool _isActive = true;
   bool _isLoading = false;
+  bool _isSubmitting = false;
   InventoryItem? _existingItem;
   String? _loadError;
 
@@ -43,7 +45,10 @@ class _InventoryItemFormScreenState
   }
 
   Future<void> _loadItem() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
     try {
       final item = await ref.read(inventoryItemProvider(widget.itemId!).future);
       if (item != null && mounted) {
@@ -78,8 +83,9 @@ class _InventoryItemFormScreenState
   }
 
   Future<void> _save() async {
+    if (_isSubmitting || _loadError != null) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       if (_existingItem != null) {
@@ -126,7 +132,7 @@ class _InventoryItemFormScreenState
         ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -141,71 +147,49 @@ class _InventoryItemFormScreenState
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _isLoading && isEditing && _existingItem == null
-            ? const AppLoading()
-            : _loadError != null
-            ? Center(child: Text(_loadError!))
-            : Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    InventoryItemIdentityFields(
-                      nameController: _nameController,
-                      codeController: _codeController,
-                      itemType: _itemType,
-                      onItemTypeChanged: (type) =>
-                          setState(() => _itemType = type),
-                    ),
-                    const SizedBox(height: 16),
-                    InventoryUnitField(
-                      controller: _unitController,
-                      onChanged: () => setState(() {}),
-                    ),
-                    const SizedBox(height: 16),
-                    InventoryItemStockFields(
-                      minimumStockController: _minStockController,
-                      unitCostController: _costController,
-                    ),
-                    const SizedBox(height: 16),
-                    InventoryItemActiveTile(
-                      isActive: _isActive,
-                      onChanged: (active) => setState(() => _isActive = active),
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _descController,
-                      decoration: const InputDecoration(labelText: 'توضیحات'),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton.icon(
-                      icon: Icon(
-                        isEditing
-                            ? EneftyIcons.edit_2_bold
-                            : EneftyIcons.add_bold,
-                      ),
-                      onPressed: _isLoading ? null : _save,
-                      label: _isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              isEditing
-                                  ? 'بروزرسانی قلم انبار'
-                                  : 'ذخیره قلم انبار',
-                            ),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      body: AppFormBody(
+        formKey: _formKey,
+        isLoading: _isLoading && isEditing && _existingItem == null,
+        loadError: _loadError,
+        onRetry: _loadItem,
+        children: [
+          InventoryItemIdentityFields(
+            nameController: _nameController,
+            codeController: _codeController,
+            itemType: _itemType,
+            onItemTypeChanged: (type) => setState(() => _itemType = type),
+          ),
+          const SizedBox(height: 16),
+          InventoryUnitField(
+            controller: _unitController,
+            onChanged: () => setState(() {}),
+          ),
+          const SizedBox(height: 16),
+          InventoryItemStockFields(
+            minimumStockController: _minStockController,
+            unitCostController: _costController,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _descController,
+            decoration: const InputDecoration(labelText: 'توضیحات'),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          InventoryItemActiveTile(
+            isActive: _isActive,
+            onChanged: (active) => setState(() => _isActive = active),
+          ),
+          const SizedBox(height: 24),
+          AppFormSubmitButton(
+            icon: Icon(
+              isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
+            ),
+            label: isEditing ? 'بروزرسانی قلم انبار' : 'ذخیره قلم انبار',
+            isSubmitting: _isSubmitting,
+            onPressed: _save,
+          ),
+        ],
       ),
     );
   }

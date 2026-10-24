@@ -150,9 +150,8 @@ class _MaintenancePlanListScreenState
 
                         return Card(
                           child: InkWell(
-                            onTap: () => context.push(
-                              '/maintenance-plans/${plan.id}/edit?assetId=${plan.assetId}',
-                            ),
+                            onTap: () =>
+                                context.push('/maintenance-plans/${plan.id}'),
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
                               padding: const EdgeInsets.all(12.0),

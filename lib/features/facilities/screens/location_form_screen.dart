@@ -2,6 +2,8 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
 import '../../../core/utils/validators.dart';
 import '../models/location.dart';
 import '../providers/facility_providers.dart';
@@ -24,6 +26,8 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
   String? _selectedParentLocationId;
   bool _isActive = true;
   bool _isLoading = false;
+  bool _isSubmitting = false;
+  String? _loadError;
   Location? _existingLocation;
 
   @override
@@ -35,11 +39,16 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
   }
 
   Future<void> _loadLocation() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
     try {
       final repo = ref.read(locationRepositoryProvider);
       final loc = await repo.getLocationById(widget.locationId!);
-      if (loc != null && mounted) {
+      if (loc == null) {
+        _loadError = 'موقعیت موردنظر پیدا نشد.';
+      } else if (mounted) {
         _existingLocation = loc;
         _nameController.text = loc.name;
         _codeController.text = loc.code ?? '';
@@ -47,6 +56,8 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
         _selectedParentLocationId = loc.parentLocationId;
         _isActive = loc.isActive;
       }
+    } catch (error) {
+      if (mounted) _loadError = 'بارگذاری موقعیت ناموفق بود: $error';
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -61,12 +72,15 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSubmitting || _loadError != null) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       final facility = await ref.read(primaryFacilityProvider.future);
-      if (facility == null) return;
+      if (facility == null) {
+        throw StateError('ابتدا اطلاعات کارگاه را ثبت کنید.');
+      }
       if (_existingLocation != null) {
         final updated = _existingLocation!.copyWith(
           parentLocationId: _selectedParentLocationId,
@@ -108,7 +122,7 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
         ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -124,121 +138,126 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'نام موقعیت / سالن *',
-                  prefixIcon: Icon(EneftyIcons.location_bold),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    AppValidators.required(v, fieldName: 'نام موقعیت'),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _codeController,
-                decoration: const InputDecoration(
-                  labelText: 'کد موقعیت',
-                  prefixIcon: Icon(EneftyIcons.code_bold),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
+      body: AppFormBody(
+        formKey: _formKey,
+        isLoading: _isLoading && isEditing && _existingLocation == null,
+        loadError: _loadError,
+        onRetry: _loadLocation,
+        children: [
+          TextFormField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'نام موقعیت / سالن *',
+              prefixIcon: Icon(EneftyIcons.location_bold),
+              border: OutlineInputBorder(),
+            ),
+            validator: (v) =>
+                AppValidators.required(v, fieldName: 'نام موقعیت'),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _codeController,
+            decoration: const InputDecoration(
+              labelText: 'کد موقعیت',
+              prefixIcon: Icon(EneftyIcons.code_bold),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
 
-              // Parent Location Selector
-              facilityAsync.when(
-                data: (facility) {
-                  if (facility == null) return const SizedBox.shrink();
-                  final locationsAsync = ref.watch(
-                    locationsProvider(facility.id),
-                  );
-                  return locationsAsync.when(
-                    data: (locations) {
-                      final candidates = locations
-                          .where((loc) => loc.id != widget.locationId)
-                          .toList();
-                      return DropdownButtonFormField<String?>(
-                        initialValue: _selectedParentLocationId,
-                        decoration: const InputDecoration(
-                          labelText: 'موقعیت والد (در صورت وجود)',
-                          prefixIcon: Icon(EneftyIcons.hierarchy_bold),
-                          border: OutlineInputBorder(),
+          // Parent Location Selector
+          facilityAsync.when(
+            data: (facility) {
+              if (facility == null) {
+                return const Text('ابتدا اطلاعات کارگاه را ثبت کنید.');
+              }
+              final locationsAsync = ref.watch(locationsProvider(facility.id));
+              return locationsAsync.when(
+                data: (locations) {
+                  final candidates = locations
+                      .where((loc) => loc.id != widget.locationId)
+                      .toList();
+                  return DropdownButtonFormField<String?>(
+                    initialValue: _selectedParentLocationId,
+                    decoration: const InputDecoration(
+                      labelText: 'موقعیت والد (در صورت وجود)',
+                      prefixIcon: Icon(EneftyIcons.hierarchy_bold),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('اصلی (بدون والد)'),
+                      ),
+                      ...candidates.map(
+                        (loc) => DropdownMenuItem<String?>(
+                          value: loc.id,
+                          child: Text(loc.name),
                         ),
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('اصلی (بدون والد)'),
-                          ),
-                          ...candidates.map(
-                            (loc) => DropdownMenuItem<String?>(
-                              value: loc.id,
-                              child: Text(loc.name),
-                            ),
-                          ),
-                        ],
-                        onChanged: (v) =>
-                            setState(() => _selectedParentLocationId = v),
-                      );
-                    },
-                    loading: () => const LinearProgressIndicator(),
-                    error: (_, _) => const SizedBox.shrink(),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _selectedParentLocationId = v),
                   );
                 },
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
-              const SizedBox(height: 16),
-
-              // Active Switch
-              Card(
-                margin: EdgeInsets.zero,
-                child: SwitchListTile(
-                  value: _isActive,
-                  onChanged: (v) => setState(() => _isActive = v),
-                  title: const Text(
-                    'وضعیت فعال بودن موقعیت',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    _isActive
-                        ? 'موقعیت فعال و قابل انتخاب است'
-                        : 'موقعیت غیرفعال شده است',
-                  ),
-                  secondary: Icon(
-                    _isActive
-                        ? EneftyIcons.tick_circle_bold
-                        : EneftyIcons.close_circle_bold,
-                    color: _isActive ? Colors.green : Colors.grey,
-                  ),
+                loading: () => const LinearProgressIndicator(),
+                error: (error, _) => Text(
+                  'خطا در دریافت موقعیت‌ها: $error',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _descController,
-                decoration: const InputDecoration(
-                  labelText: 'توضیحات',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                icon: Icon(
-                  isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-                ),
-                onPressed: _isLoading ? null : _save,
-                label: Text(isEditing ? 'بروزرسانی موقعیت' : 'ذخیره موقعیت'),
-              ),
-            ],
+              );
+            },
+            loading: () => const LinearProgressIndicator(),
+            error: (error, _) => Text(
+              'خطا در دریافت اطلاعات کارگاه: $error',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
-        ),
+          const SizedBox(height: 16),
+
+          // Active Switch
+          Card(
+            margin: EdgeInsets.zero,
+            child: SwitchListTile(
+              value: _isActive,
+              onChanged: (v) => setState(() => _isActive = v),
+              title: const Text(
+                'وضعیت فعال بودن موقعیت',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              subtitle: Text(
+                _isActive
+                    ? 'موقعیت فعال و قابل انتخاب است'
+                    : 'موقعیت غیرفعال شده است',
+              ),
+              secondary: Icon(
+                _isActive
+                    ? EneftyIcons.tick_circle_bold
+                    : EneftyIcons.close_circle_bold,
+                color: _isActive ? Colors.green : Colors.grey,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _descController,
+            decoration: const InputDecoration(
+              labelText: 'توضیحات',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 24),
+          AppFormSubmitButton(
+            icon: Icon(
+              isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
+            ),
+            isSubmitting: _isSubmitting,
+            onPressed: _save,
+            label: isEditing ? 'بروزرسانی موقعیت' : 'ذخیره موقعیت',
+          ),
+        ],
       ),
     );
   }

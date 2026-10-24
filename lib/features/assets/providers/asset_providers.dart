@@ -4,6 +4,7 @@ import '../../../core/subscription/domain/access_mode.dart';
 import '../../../core/subscription/domain/app_feature.dart';
 import '../../../core/subscription/providers/subscription_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
+import '../../alerts/providers/alert_providers.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../../work_orders/providers/work_order_providers.dart';
 import '../models/asset.dart';
@@ -173,10 +174,12 @@ class AssetReadingActions {
         .getAssetById(assetId);
     if (asset != null) {
       _ref.invalidate(workOrdersProvider(asset.facilityId));
+      _ref.invalidate(alertsProvider(asset.facilityId));
       _ref.invalidate(dashboardSummaryProvider(asset.facilityId));
       _ref.invalidate(dashboardTodayTasksProvider(asset.facilityId));
       _ref.invalidate(assetWorkOrderTasksProvider(assetId));
     }
+    _ref.invalidate(maintenancePlanTasksProvider);
   }
 
   Future<void> _requireWrite() => _ref

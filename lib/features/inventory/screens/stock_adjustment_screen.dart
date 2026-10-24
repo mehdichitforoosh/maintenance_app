@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../providers/inventory_providers.dart';
 
@@ -20,7 +23,7 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
   TransactionType _type = TransactionType.adjustmentIn;
   final _qtyController = TextEditingController();
   final _notesController = TextEditingController();
-  bool _isLoading = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -30,8 +33,9 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
   }
 
   Future<void> _adjust() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate() || _selectedItemId == null) return;
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       await ref
@@ -53,7 +57,7 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
         ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -72,83 +76,82 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
           }
           _selectedItemId ??= items.first.id;
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedItemId,
-                    decoration: const InputDecoration(
-                      labelText: 'انتخاب کالا *',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: items
-                        .map(
-                          (i) => DropdownMenuItem(
-                            value: i.id,
-                            child: Text('${i.name} (${i.code})'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedItemId = v),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<TransactionType>(
-                    initialValue: _type,
-                    decoration: const InputDecoration(
-                      labelText: 'نوع تعدیل *',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: TransactionType.adjustmentIn,
-                        child: Text('تعدیل افزایش (ورود به انبار)'),
+          return AppFormBody(
+            formKey: _formKey,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _selectedItemId,
+                decoration: const InputDecoration(
+                  labelText: 'انتخاب کالا *',
+                  border: OutlineInputBorder(),
+                ),
+                items: items
+                    .map(
+                      (i) => DropdownMenuItem(
+                        value: i.id,
+                        child: Text('${i.name} (${i.code})'),
                       ),
-                      DropdownMenuItem(
-                        value: TransactionType.adjustmentOut,
-                        child: Text('تعدیل کاهش (خروج از انبار)'),
-                      ),
-                    ],
-                    onChanged: (v) => setState(
-                      () => _type = v ?? TransactionType.adjustmentIn,
-                    ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedItemId = v),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<TransactionType>(
+                initialValue: _type,
+                decoration: const InputDecoration(
+                  labelText: 'نوع تعدیل *',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: TransactionType.adjustmentIn,
+                    child: Text('تعدیل افزایش (ورود به انبار)'),
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _qtyController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'مقدار *',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) =>
-                        AppValidators.positiveNumber(v, fieldName: 'مقدار'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _notesController,
-                    decoration: const InputDecoration(
-                      labelText: 'دلیل تعدیل / یادداشت',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _isLoading ? null : _adjust,
-                    child: const Text('ثبت تعدیل موجودی'),
+                  DropdownMenuItem(
+                    value: TransactionType.adjustmentOut,
+                    child: Text('تعدیل کاهش (خروج از انبار)'),
                   ),
                 ],
+                onChanged: (v) =>
+                    setState(() => _type = v ?? TransactionType.adjustmentIn),
               ),
-            ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _qtyController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'مقدار *',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    AppValidators.positiveNumber(v, fieldName: 'مقدار'),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'دلیل تعدیل / یادداشت',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 24),
+              AppFormSubmitButton(
+                icon: const Icon(Icons.inventory_2_outlined),
+                isSubmitting: _isSubmitting,
+                onPressed: _adjust,
+                label: 'ثبت تعدیل موجودی',
+              ),
+            ],
           );
         },
         loading: () => const AppLoading(),
-        error: (e, _) => Center(child: Text('خطا: $e')),
+        error: (e, _) => AppErrorState(
+          message: 'بارگذاری کالاهای انبار ناموفق بود: $e',
+          onRetry: () => ref.invalidate(inventoryItemsProvider),
+        ),
       ),
     );
   }

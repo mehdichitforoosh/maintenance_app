@@ -85,7 +85,7 @@ class AssetDetailScreen extends ConsumerWidget {
                 data: (plans) => AssetMaintenancePlansSection(
                   plans: plans,
                   onPlanTap: (plan) =>
-                      context.push('/maintenance-plans/${plan.id}/edit'),
+                      context.push('/maintenance-plans/${plan.id}'),
                 ),
                 loading: () => const AppLoading(),
                 error: (error, _) => AppErrorState(message: error.toString()),

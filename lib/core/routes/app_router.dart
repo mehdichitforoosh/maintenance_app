@@ -15,6 +15,7 @@ import '../../features/inventory/screens/inventory_item_detail_screen.dart';
 import '../../features/inventory/screens/inventory_item_form_screen.dart';
 import '../../features/inventory/screens/inventory_list_screen.dart';
 import '../../features/inventory/screens/stock_adjustment_screen.dart';
+import '../../features/maintenance/screens/maintenance_plan_detail_screen.dart';
 import '../../features/maintenance/screens/maintenance_plan_form_screen.dart';
 import '../../features/maintenance/screens/maintenance_plan_list_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
@@ -116,6 +117,11 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
             final assetId = state.uri.queryParameters['assetId'] ?? '';
             return MaintenancePlanFormScreen(assetId: assetId);
           },
+        ),
+        GoRoute(
+          path: '/maintenance-plans/:id',
+          builder: (_, state) =>
+              MaintenancePlanDetailScreen(planId: state.pathParameters['id']!),
         ),
         GoRoute(
           path: '/maintenance-plans/:id/edit',

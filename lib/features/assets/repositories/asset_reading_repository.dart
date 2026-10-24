@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../../core/storage/database/database_helper.dart';
 import '../../../core/storage/database/tables/asset_reading_table.dart';
 import '../../../core/storage/database/tables/asset_table.dart';
+import '../../../core/storage/database/tables/alert_event_table.dart';
 import '../../../core/storage/database/tables/maintenance_plan_table.dart';
 import '../../../core/storage/database/tables/work_order_table.dart';
 import '../../../core/storage/database/tables/work_order_task_table.dart';
@@ -10,6 +11,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../maintenance/services/condition_evaluator.dart';
+import '../../maintenance/services/maintenance_plan_material_seeder.dart';
 import '../models/asset_reading.dart';
 
 class AssetReadingCorrectionResult {
@@ -59,7 +61,7 @@ class AssetReadingRepository {
       where: where,
       whereArgs: args,
       orderBy:
-          '${AssetReadingTable.recordedAt} DESC, ${AssetReadingTable.createdAt} DESC',
+          '${AssetReadingTable.recordedAt} DESC, ${AssetReadingTable.createdAt} DESC, rowid DESC',
     );
     return results.map((m) => AssetReading.fromMap(m)).toList();
   }
@@ -75,7 +77,7 @@ class AssetReadingRepository {
           '${AssetReadingTable.assetId} = ? AND ${AssetReadingTable.metricName} = ? AND ${AssetReadingTable.deletedAt} IS NULL AND ${AssetReadingTable.supersededByReadingId} IS NULL',
       whereArgs: [assetId, metricName],
       orderBy:
-          '${AssetReadingTable.recordedAt} DESC, ${AssetReadingTable.createdAt} DESC',
+          '${AssetReadingTable.recordedAt} DESC, ${AssetReadingTable.createdAt} DESC, rowid DESC',
       limit: 1,
     );
     if (results.isEmpty) return null;
@@ -90,6 +92,9 @@ class AssetReadingRepository {
     String? recordedAt,
     String? notes,
   }) async {
+    if (metricName.trim().isEmpty || unit.trim().isEmpty || !value.isFinite) {
+      throw ArgumentError('شاخص، واحد و مقدار خوانش باید معتبر باشند.');
+    }
     final db = await _dbHelper.db;
     final nowIso = AppDateUtils.nowUtcIso();
     final recTime = recordedAt ?? nowIso;
@@ -108,11 +113,70 @@ class AssetReadingRepository {
     );
 
     await db.transaction((txn) async {
+      await _validateMeterProgression(txn, reading);
       await txn.insert(_tableName, reading.toMap());
       await _generateConditionTasks(txn, reading: reading, now: nowIso);
+      await _generateMeterTasks(txn, reading: reading, now: nowIso);
     });
 
     return reading;
+  }
+
+  Future<void> _validateMeterProgression(
+    Transaction txn,
+    AssetReading reading,
+  ) async {
+    final meterPlans = await txn.query(
+      MaintenancePlanTable.tableName,
+      columns: [MaintenancePlanTable.meterName, MaintenancePlanTable.meterUnit],
+      where:
+          '${MaintenancePlanTable.assetId} = ? AND ${MaintenancePlanTable.scheduleType} = ? AND ${MaintenancePlanTable.isActive} = 1 AND ${MaintenancePlanTable.deletedAt} IS NULL',
+      whereArgs: [reading.assetId, 'METER'],
+    );
+    final isMeter = meterPlans.any(
+      (plan) =>
+          (plan[MaintenancePlanTable.meterName] as String?)
+                  ?.trim()
+                  .toLowerCase() ==
+              reading.metricName.trim().toLowerCase() &&
+          (plan[MaintenancePlanTable.meterUnit] as String?)
+                  ?.trim()
+                  .toLowerCase() ==
+              reading.unit.trim().toLowerCase(),
+    );
+    if (!isMeter) return;
+    if (reading.value < 0) {
+      throw ArgumentError('خوانش کنتور نمی‌تواند منفی باشد.');
+    }
+
+    final latest = await txn.query(
+      _tableName,
+      where:
+          '${AssetReadingTable.assetId} = ? AND LOWER(${AssetReadingTable.metricName}) = LOWER(?) AND LOWER(${AssetReadingTable.unit}) = LOWER(?) AND ${AssetReadingTable.deletedAt} IS NULL AND ${AssetReadingTable.supersededByReadingId} IS NULL',
+      whereArgs: [reading.assetId, reading.metricName, reading.unit],
+      orderBy:
+          '${AssetReadingTable.recordedAt} DESC, ${AssetReadingTable.createdAt} DESC, rowid DESC',
+      limit: 1,
+    );
+    if (latest.isNotEmpty &&
+        reading.value < (latest.single[AssetReadingTable.value] as num)) {
+      throw StateError(
+        'مقدار کنتور از آخرین خوانش کمتر است؛ برای بازنشانی کنتور از فرایند اصلاح استفاده کنید.',
+      );
+    }
+    if (latest.isNotEmpty) {
+      final latestRecordedAt = DateTime.tryParse(
+        latest.single[AssetReadingTable.recordedAt] as String,
+      );
+      final currentRecordedAt = DateTime.tryParse(reading.recordedAt);
+      if (latestRecordedAt != null &&
+          currentRecordedAt != null &&
+          currentRecordedAt.isBefore(latestRecordedAt)) {
+        throw StateError(
+          'تاریخ خوانش کنتور نمی‌تواند پیش از آخرین خوانش باشد.',
+        );
+      }
+    }
   }
 
   Future<AssetReadingCorrectionResult> correctReading({
@@ -201,6 +265,12 @@ class AssetReadingRepository {
       );
       generatedConditionTaskCount = conditionResult.generatedCount;
       openConditionTaskCount = conditionResult.openTaskCount;
+      await _generateMeterTasks(
+        txn,
+        reading: replacement,
+        now: now,
+        excludedPlanIds: alreadyTriggeredPlanIds,
+      );
     });
 
     return AssetReadingCorrectionResult(
@@ -296,8 +366,9 @@ class AssetReadingRepository {
         });
       }
 
+      final taskId = IdGenerator.generate();
       await txn.insert(WorkOrderTaskTable.tableName, {
-        WorkOrderTaskTable.id: IdGenerator.generate(),
+        WorkOrderTaskTable.id: taskId,
         WorkOrderTaskTable.workOrderId: workOrderId,
         WorkOrderTaskTable.assetId: reading.assetId,
         WorkOrderTaskTable.maintenancePlanId: planId,
@@ -314,8 +385,157 @@ class AssetReadingRepository {
         WorkOrderTaskTable.updatedAt: now,
         WorkOrderTaskTable.syncStatus: 'pending',
       });
+      await MaintenancePlanMaterialSeeder.seedTaskMaterials(
+        txn,
+        planId: planId,
+        taskId: taskId,
+        now: now,
+      );
       generatedCount++;
     }
     return _ConditionTaskGenerationResult(generatedCount, openTaskCount);
+  }
+
+  Future<void> _generateMeterTasks(
+    Transaction txn, {
+    required AssetReading reading,
+    required String now,
+    Set<String> excludedPlanIds = const {},
+  }) async {
+    final assetRows = await txn.query(
+      AssetTable.tableName,
+      columns: [AssetTable.facilityId],
+      where: '${AssetTable.id} = ? AND ${AssetTable.deletedAt} IS NULL',
+      whereArgs: [reading.assetId],
+      limit: 1,
+    );
+    if (assetRows.isEmpty) return;
+    final facilityId = assetRows.single[AssetTable.facilityId] as String;
+    final plans = await txn.query(
+      MaintenancePlanTable.tableName,
+      where:
+          '${MaintenancePlanTable.assetId} = ? AND ${MaintenancePlanTable.scheduleType} = ? AND ${MaintenancePlanTable.isActive} = 1 AND ${MaintenancePlanTable.deletedAt} IS NULL',
+      whereArgs: [reading.assetId, 'METER'],
+    );
+
+    for (final plan in plans) {
+      final planId = plan[MaintenancePlanTable.id] as String;
+      if (excludedPlanIds.contains(planId)) continue;
+      final meterName = plan[MaintenancePlanTable.meterName] as String?;
+      final meterUnit = plan[MaintenancePlanTable.meterUnit] as String?;
+      final targetValue = (plan[MaintenancePlanTable.nextDueMeterValue] as num?)
+          ?.toDouble();
+      if (meterName == null ||
+          meterUnit == null ||
+          targetValue == null ||
+          !targetValue.isFinite ||
+          reading.metricName.trim().toLowerCase() !=
+              meterName.trim().toLowerCase() ||
+          reading.value < targetValue) {
+        continue;
+      }
+
+      final occurrenceKey = 'meter:${meterName.trim()}:$targetValue';
+      final existing = await txn.query(
+        WorkOrderTaskTable.tableName,
+        columns: [WorkOrderTaskTable.id],
+        where:
+            '${WorkOrderTaskTable.maintenancePlanId} = ? AND ${WorkOrderTaskTable.sourceOccurrenceKey} = ? AND ${WorkOrderTaskTable.deletedAt} IS NULL',
+        whereArgs: [planId, occurrenceKey],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) continue;
+      if (reading.unit.trim().toLowerCase() != meterUnit.trim().toLowerCase()) {
+        continue;
+      }
+
+      final openTasks = await txn.query(
+        WorkOrderTaskTable.tableName,
+        columns: [WorkOrderTaskTable.id],
+        where:
+            '${WorkOrderTaskTable.maintenancePlanId} = ? AND ${WorkOrderTaskTable.status} IN (?, ?) AND ${WorkOrderTaskTable.deletedAt} IS NULL',
+        whereArgs: [planId, 'PENDING', 'IN_PROGRESS'],
+        limit: 1,
+      );
+      if (openTasks.isNotEmpty) continue;
+
+      final workOrders = await txn.query(
+        WorkOrderTable.tableName,
+        where:
+            '${WorkOrderTable.facilityId} = ? AND ${WorkOrderTable.status} = ? AND ${WorkOrderTable.workOrderType} = ? AND ${WorkOrderTable.deletedAt} IS NULL',
+        whereArgs: [facilityId, 'OPEN', 'PREVENTIVE'],
+        limit: 1,
+      );
+      late String workOrderId;
+      if (workOrders.isNotEmpty) {
+        workOrderId = workOrders.single[WorkOrderTable.id] as String;
+      } else {
+        workOrderId = IdGenerator.generate();
+        final suffix = DateTime.now().millisecondsSinceEpoch
+            .toString()
+            .substring(5);
+        await txn.insert(WorkOrderTable.tableName, {
+          WorkOrderTable.id: workOrderId,
+          WorkOrderTable.facilityId: facilityId,
+          WorkOrderTable.workOrderNumber: 'WO-PM-$suffix',
+          WorkOrderTable.title: 'دستورکار پیشگیرانه خودکار',
+          WorkOrderTable.workOrderType: 'PREVENTIVE',
+          WorkOrderTable.priority: plan[MaintenancePlanTable.priority],
+          WorkOrderTable.status: 'OPEN',
+          WorkOrderTable.createdAt: now,
+          WorkOrderTable.updatedAt: now,
+          WorkOrderTable.syncStatus: 'pending',
+        });
+      }
+
+      final taskId = IdGenerator.generate();
+      await txn.insert(WorkOrderTaskTable.tableName, {
+        WorkOrderTaskTable.id: taskId,
+        WorkOrderTaskTable.workOrderId: workOrderId,
+        WorkOrderTaskTable.assetId: reading.assetId,
+        WorkOrderTaskTable.maintenancePlanId: planId,
+        WorkOrderTaskTable.title:
+            '${plan[MaintenancePlanTable.title]} (سررسید کارکرد)',
+        WorkOrderTaskTable.description: plan[MaintenancePlanTable.description],
+        WorkOrderTaskTable.activityType:
+            plan[MaintenancePlanTable.activityType],
+        WorkOrderTaskTable.status: 'PENDING',
+        WorkOrderTaskTable.plannedMeterValue: targetValue,
+        WorkOrderTaskTable.triggeringReadingId: reading.id,
+        WorkOrderTaskTable.sourceOccurrenceKey: occurrenceKey,
+        WorkOrderTaskTable.createdAt: now,
+        WorkOrderTaskTable.updatedAt: now,
+        WorkOrderTaskTable.syncStatus: 'pending',
+      });
+      await MaintenancePlanMaterialSeeder.seedTaskMaterials(
+        txn,
+        planId: planId,
+        taskId: taskId,
+        now: now,
+      );
+      final deduplicationKey = 'alert:plan:$planId:$occurrenceKey';
+      await txn.insert(AlertEventTable.tableName, {
+        AlertEventTable.id: IdGenerator.generate(),
+        AlertEventTable.facilityId: facilityId,
+        AlertEventTable.alertType: 'MAINTENANCE_DUE',
+        AlertEventTable.severity:
+            plan[MaintenancePlanTable.priority] == 'CRITICAL'
+            ? 'CRITICAL'
+            : 'WARNING',
+        AlertEventTable.status: 'ACTIVE',
+        AlertEventTable.title:
+            'سررسید کارکرد: ${plan[MaintenancePlanTable.title]}',
+        AlertEventTable.message:
+            'شاخص ${reading.metricName} به مقدار هدف $targetValue ${reading.unit} رسیده است.',
+        AlertEventTable.assetId: reading.assetId,
+        AlertEventTable.maintenancePlanId: planId,
+        AlertEventTable.workOrderTaskId: taskId,
+        AlertEventTable.deduplicationKey: deduplicationKey,
+        AlertEventTable.triggeredAt: now,
+        AlertEventTable.createdAt: now,
+        AlertEventTable.updatedAt: now,
+        AlertEventTable.syncStatus: 'pending',
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
   }
 }

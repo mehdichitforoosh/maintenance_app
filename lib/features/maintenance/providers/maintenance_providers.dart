@@ -21,6 +21,12 @@ final maintenancePlansProvider =
       return repo.getPlans(assetId);
     });
 
+final maintenancePlanDetailProvider =
+    FutureProvider.family<MaintenancePlan?, String>((ref, planId) async {
+      final repo = ref.watch(maintenancePlanRepositoryProvider);
+      return repo.getPlanById(planId);
+    });
+
 final allFacilityPlansProvider =
     FutureProvider.family<List<MaintenancePlan>, String>((
       ref,
@@ -59,11 +65,14 @@ class MaintenancePlanActions {
     String? meterName,
     double? meterInterval,
     String? meterUnit,
+    double? nextDueMeterValue,
     String? conditionConfigJson,
     String? oneTimeDueAt,
     String? startDate,
     String? nextDueAt,
     ScheduleAnchor scheduleAnchor = ScheduleAnchor.completionDate,
+    bool isActive = true,
+    List<Map<String, dynamic>> materials = const [],
   }) async {
     await _requireWrite();
     final plan = await _ref
@@ -80,11 +89,14 @@ class MaintenancePlanActions {
           meterName: meterName,
           meterInterval: meterInterval,
           meterUnit: meterUnit,
+          nextDueMeterValue: nextDueMeterValue,
           conditionConfigJson: conditionConfigJson,
           oneTimeDueAt: oneTimeDueAt,
           startDate: startDate,
           nextDueAt: nextDueAt,
           scheduleAnchor: scheduleAnchor,
+          isActive: isActive,
+          materials: materials,
         );
     _invalidatePlans(assetId);
     return plan;
@@ -93,11 +105,14 @@ class MaintenancePlanActions {
   Future<MaintenancePlan> update(
     MaintenancePlan plan, {
     String? previousAssetId,
+    List<Map<String, dynamic>>? materials,
   }) async {
     await _requireWrite();
     final updated = await _ref
         .read(maintenancePlanRepositoryProvider)
-        .updatePlan(plan);
+        .updatePlan(plan, materials: materials);
+    _ref.invalidate(maintenancePlanDetailProvider(plan.id));
+    _ref.invalidate(planMaterialsProvider(plan.id));
     _invalidatePlans(previousAssetId ?? plan.assetId);
     _invalidatePlans(updated.assetId);
     return updated;
@@ -106,6 +121,7 @@ class MaintenancePlanActions {
   Future<void> delete(MaintenancePlan plan) async {
     await _requireWrite();
     await _ref.read(maintenancePlanRepositoryProvider).deletePlan(plan.id);
+    _ref.invalidate(maintenancePlanDetailProvider(plan.id));
     _ref.invalidate(planMaterialsProvider(plan.id));
     _invalidatePlans(plan.assetId);
   }
@@ -126,6 +142,19 @@ class MaintenancePlanActions {
           plannedQuantity: plannedQuantity,
           notes: notes,
         );
+    _ref.invalidate(planMaterialsProvider(planId));
+    _invalidatePlans(assetId);
+  }
+
+  Future<void> saveMaterials({
+    required String planId,
+    required String assetId,
+    required List<Map<String, dynamic>> materials,
+  }) async {
+    await _requireWrite();
+    await _ref
+        .read(maintenancePlanRepositoryProvider)
+        .savePlanMaterials(planId: planId, materials: materials);
     _ref.invalidate(planMaterialsProvider(planId));
     _invalidatePlans(assetId);
   }

@@ -95,18 +95,23 @@ class MaintenancePlan {
       priority: Priority.fromDbString(map['priority'] as String?),
       scheduleType: ScheduleType.fromDbString(map['schedule_type'] as String?),
       calendarIntervalValue: map['calendar_interval_value'] as int?,
-      calendarIntervalUnit: CalendarUnit.fromDbString(map['calendar_interval_unit'] as String?),
+      calendarIntervalUnit: CalendarUnit.fromDbString(
+        map['calendar_interval_unit'] as String?,
+      ),
       meterName: map['meter_name'] as String?,
       meterInterval: (map['meter_interval'] as num?)?.toDouble(),
       meterUnit: map['meter_unit'] as String?,
-      lastCompletedMeterValue: (map['last_completed_meter_value'] as num?)?.toDouble(),
+      lastCompletedMeterValue: (map['last_completed_meter_value'] as num?)
+          ?.toDouble(),
       nextDueMeterValue: (map['next_due_meter_value'] as num?)?.toDouble(),
       conditionConfigJson: map['condition_config_json'] as String?,
       oneTimeDueAt: map['one_time_due_at'] as String?,
       startDate: map['start_date'] as String?,
       nextDueAt: map['next_due_at'] as String?,
       lastCompletedAt: map['last_completed_at'] as String?,
-      scheduleAnchor: ScheduleAnchor.fromDbString(map['schedule_anchor'] as String?),
+      scheduleAnchor: ScheduleAnchor.fromDbString(
+        map['schedule_anchor'] as String?,
+      ),
       isActive: (map['is_active'] as int? ?? 1) == 1,
       createdAt: map['created_at'] as String,
       updatedAt: map['updated_at'] as String,
@@ -139,26 +144,51 @@ class MaintenancePlan {
     String? updatedAt,
     String? deletedAt,
     String? syncStatus,
+    bool clearDescription = false,
+    bool clearScheduleFields = false,
+    bool clearNextDueAt = false,
+    bool clearLastCompletedMeterValue = false,
+    bool clearNextDueMeterValue = false,
   }) {
     return MaintenancePlan(
       id: id,
       assetId: assetId ?? this.assetId,
       title: title ?? this.title,
-      description: description ?? this.description,
+      description: clearDescription ? null : description ?? this.description,
       activityType: activityType ?? this.activityType,
       priority: priority ?? this.priority,
       scheduleType: scheduleType ?? this.scheduleType,
-      calendarIntervalValue: calendarIntervalValue ?? this.calendarIntervalValue,
-      calendarIntervalUnit: calendarIntervalUnit ?? this.calendarIntervalUnit,
-      meterName: meterName ?? this.meterName,
-      meterInterval: meterInterval ?? this.meterInterval,
-      meterUnit: meterUnit ?? this.meterUnit,
-      lastCompletedMeterValue: lastCompletedMeterValue ?? this.lastCompletedMeterValue,
-      nextDueMeterValue: nextDueMeterValue ?? this.nextDueMeterValue,
-      conditionConfigJson: conditionConfigJson ?? this.conditionConfigJson,
-      oneTimeDueAt: oneTimeDueAt ?? this.oneTimeDueAt,
-      startDate: startDate ?? this.startDate,
-      nextDueAt: nextDueAt ?? this.nextDueAt,
+      calendarIntervalValue: clearScheduleFields
+          ? calendarIntervalValue
+          : calendarIntervalValue ?? this.calendarIntervalValue,
+      calendarIntervalUnit: clearScheduleFields
+          ? calendarIntervalUnit
+          : calendarIntervalUnit ?? this.calendarIntervalUnit,
+      meterName: clearScheduleFields ? meterName : meterName ?? this.meterName,
+      meterInterval: clearScheduleFields
+          ? meterInterval
+          : meterInterval ?? this.meterInterval,
+      meterUnit: clearScheduleFields ? meterUnit : meterUnit ?? this.meterUnit,
+      lastCompletedMeterValue: clearScheduleFields
+          ? lastCompletedMeterValue
+          : clearLastCompletedMeterValue
+          ? null
+          : lastCompletedMeterValue ?? this.lastCompletedMeterValue,
+      nextDueMeterValue: clearScheduleFields
+          ? nextDueMeterValue
+          : clearNextDueMeterValue
+          ? null
+          : nextDueMeterValue ?? this.nextDueMeterValue,
+      conditionConfigJson: clearScheduleFields
+          ? conditionConfigJson
+          : conditionConfigJson ?? this.conditionConfigJson,
+      oneTimeDueAt: clearScheduleFields
+          ? oneTimeDueAt
+          : oneTimeDueAt ?? this.oneTimeDueAt,
+      startDate: clearScheduleFields ? startDate : startDate ?? this.startDate,
+      nextDueAt: clearScheduleFields || clearNextDueAt
+          ? nextDueAt
+          : nextDueAt ?? this.nextDueAt,
       lastCompletedAt: lastCompletedAt ?? this.lastCompletedAt,
       scheduleAnchor: scheduleAnchor ?? this.scheduleAnchor,
       isActive: isActive ?? this.isActive,

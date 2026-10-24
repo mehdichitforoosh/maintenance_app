@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../inventory/providers/inventory_providers.dart';
@@ -20,7 +23,7 @@ class ReceivePurchaseScreen extends ConsumerStatefulWidget {
 class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _qtyControllers = {};
-  bool _isLoading = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -31,8 +34,9 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
   }
 
   Future<void> _receive(List items) async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       final actions = ref.read(purchaseActionsProvider);
@@ -66,7 +70,7 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
         ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -91,79 +95,78 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
 
           return inventoryItemsAsync.when(
             data: (invItems) {
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    children: [
-                      const Text(
-                        'مقادیر دریافتی اقلام را وارد کنید:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+              return AppFormBody(
+                formKey: _formKey,
+                children: [
+                  const Text(
+                    'مقادیر دریافتی اقلام را وارد کنید:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  ...orderItems.map((item) {
+                    final invItem = invItems
+                        .where((i) => i.id == item.itemId)
+                        .firstOrNull;
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              invItem?.name ?? 'کالا',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'مقدار سفارش‌داده شده: ${AppNumberFormat.decimal(item.orderedQuantity)} ${invItem?.unit ?? ''}',
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _qtyControllers[item.id],
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: const InputDecoration(
+                                labelText: 'مقدار دریافتی *',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) => AppValidators.nonNegativeNumber(
+                                v,
+                                fieldName: 'مقدار دریافتی',
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      ...orderItems.map((item) {
-                        final invItem = invItems
-                            .where((i) => i.id == item.itemId)
-                            .firstOrNull;
-                        return Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  invItem?.name ?? 'کالا',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  'مقدار سفارش‌داده شده: ${AppNumberFormat.decimal(item.orderedQuantity)} ${invItem?.unit ?? ''}',
-                                ),
-                                const SizedBox(height: 12),
-                                TextFormField(
-                                  controller: _qtyControllers[item.id],
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
-                                      ),
-                                  decoration: const InputDecoration(
-                                    labelText: 'مقدار دریافتی *',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  validator: (v) =>
-                                      AppValidators.nonNegativeNumber(
-                                        v,
-                                        fieldName: 'مقدار دریافتی',
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => _receive(orderItems),
-                        child: const Text('ثبت و به‌روزرسانی موجودی انبار'),
-                      ),
-                    ],
+                    );
+                  }),
+                  const SizedBox(height: 24),
+                  AppFormSubmitButton(
+                    icon: const Icon(Icons.inventory_2_outlined),
+                    isSubmitting: _isSubmitting,
+                    onPressed: () => _receive(orderItems),
+                    label: 'ثبت و به‌روزرسانی موجودی انبار',
                   ),
-                ),
+                ],
               );
             },
             loading: () => const AppLoading(),
-            error: (e, _) => Center(child: Text('خطا: $e')),
+            error: (e, _) => AppErrorState(
+              message: 'بارگذاری کالاهای انبار ناموفق بود: $e',
+              onRetry: () => ref.invalidate(inventoryItemsProvider),
+            ),
           );
         },
         loading: () => const AppLoading(),
-        error: (e, _) => Center(child: Text('خطا: $e')),
+        error: (e, _) => AppErrorState(
+          message: 'بارگذاری اقلام سفارش ناموفق بود: $e',
+          onRetry: () => ref.invalidate(
+            purchaseOrderItemsProvider(widget.purchaseOrderId),
+          ),
+        ),
       ),
     );
   }

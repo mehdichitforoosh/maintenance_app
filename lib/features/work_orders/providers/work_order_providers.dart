@@ -4,8 +4,11 @@ import '../../../core/subscription/domain/access_mode.dart';
 import '../../../core/subscription/domain/app_feature.dart';
 import '../../../core/subscription/providers/subscription_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
+import '../../alerts/providers/alert_providers.dart';
+import '../../assets/providers/asset_providers.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../../inventory/providers/inventory_providers.dart';
+import '../../maintenance/providers/maintenance_providers.dart';
 import '../models/work_order.dart';
 import '../models/work_order_material.dart';
 import '../models/work_order_task.dart';
@@ -48,6 +51,12 @@ final assetWorkOrderTasksProvider =
     FutureProvider.family<List<WorkOrderTask>, String>((ref, assetId) async {
       final repo = ref.watch(workOrderRepositoryProvider);
       return repo.getTasksForAsset(assetId);
+    });
+
+final maintenancePlanTasksProvider =
+    FutureProvider.family<List<WorkOrderTask>, String>((ref, planId) async {
+      final repo = ref.watch(workOrderRepositoryProvider);
+      return repo.getTasksForMaintenancePlan(planId);
     });
 
 final workOrderMaterialsProvider =
@@ -185,6 +194,9 @@ class WorkOrderActions {
     required int? laborMinutes,
     required int? downtimeMinutes,
     List<Map<String, dynamic>>? consumedMaterials,
+    double? completionMeterValue,
+    String? maintenancePlanId,
+    String? assetId,
   }) async {
     await _requireWriteAccess();
     // The repository owns the transaction that atomically completes the task
@@ -196,8 +208,18 @@ class WorkOrderActions {
       laborMinutes: laborMinutes,
       downtimeMinutes: downtimeMinutes,
       consumedMaterials: consumedMaterials,
+      completionMeterValue: completionMeterValue,
     );
     _invalidateOrder(workOrderId, facilityId, taskId: taskId);
+    _ref.invalidate(alertsProvider(facilityId));
+    if (maintenancePlanId != null) {
+      _ref.invalidate(maintenancePlanDetailProvider(maintenancePlanId));
+      _ref.invalidate(planMaterialsProvider(maintenancePlanId));
+    }
+    if (assetId != null) {
+      _ref.invalidate(maintenancePlansProvider(assetId));
+      _ref.invalidate(assetReadingsProvider(assetId));
+    }
     _invalidateInventory();
     _invalidateDashboard(facilityId);
   }
@@ -250,6 +272,7 @@ class WorkOrderActions {
     _ref.invalidate(workOrderDetailProvider(workOrderId));
     _ref.invalidate(workOrderTasksProvider(workOrderId));
     _ref.invalidate(assetWorkOrderTasksProvider);
+    _ref.invalidate(maintenancePlanTasksProvider);
     if (taskId != null) {
       _ref.invalidate(workOrderMaterialsProvider(taskId));
       _ref.invalidate(workOrderTaskEventsProvider(taskId));

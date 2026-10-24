@@ -495,9 +495,511 @@ void main() {
       );
       expect(tasks, hasLength(1));
     });
+
+    test(
+      'condition plans ignore readings recorded in incompatible units',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه واحد خوانش');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'پمپ واحد',
+          code: 'P-UNIT',
+        );
+        final plan = await MaintenancePlanRepository(dbHelper: dbHelper).createPlan(
+          assetId: asset.id,
+          title: 'حد دمایی',
+          scheduleType: ScheduleType.condition,
+          conditionConfigJson:
+              '{"metric":"temperature","operator":"gte","threshold":80,"unit":"°C"}',
+        );
+        final readings = AssetReadingRepository(dbHelper: dbHelper);
+
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'temperature',
+          value: 100,
+          unit: '°F',
+        );
+        final db = await dbHelper.db;
+        expect(
+          await db.query(
+            'work_order_tasks',
+            where: 'maintenance_plan_id = ?',
+            whereArgs: [plan.id],
+          ),
+          isEmpty,
+        );
+
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'temperature',
+          value: 85,
+          unit: '°C',
+        );
+        expect(
+          await db.query(
+            'work_order_tasks',
+            where: 'maintenance_plan_id = ?',
+            whereArgs: [plan.id],
+          ),
+          hasLength(1),
+        );
+      },
+    );
+
+    test(
+      'meter plan creates one due task and advances from completion reading',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه کارکرد');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'کمپرسور',
+          code: 'COMP-METER',
+        );
+        final plans = MaintenancePlanRepository(dbHelper: dbHelper);
+        await expectLater(
+          plans.createPlan(
+            assetId: asset.id,
+            title: 'برنامه کارکرد ناقص',
+            scheduleType: ScheduleType.meter,
+            meterName: 'operating_hours',
+            meterInterval: 100,
+            meterUnit: 'h',
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+        final item = await InventoryRepository(dbHelper: dbHelper).createItem(
+          name: 'فیلتر کمپرسور',
+          code: 'COMP-METER-FILTER',
+          unit: 'عدد',
+        );
+        final plan = await plans.createPlan(
+          assetId: asset.id,
+          title: 'سرویس بر اساس ساعت کارکرد',
+          scheduleType: ScheduleType.meter,
+          meterName: 'operating_hours',
+          meterInterval: 100,
+          meterUnit: 'h',
+          nextDueMeterValue: 500,
+          materials: [
+            {'item_id': item.id, 'planned_quantity': 1},
+          ],
+        );
+        final readings = AssetReadingRepository(dbHelper: dbHelper);
+
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'operating_hours',
+          value: 499,
+          unit: 'h',
+        );
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'operating_hours',
+          value: 900,
+          unit: 'minutes',
+        );
+        expect(
+          await WorkOrderRepository(
+            dbHelper: dbHelper,
+          ).getTasksForMaintenancePlan(plan.id),
+          isEmpty,
+        );
+        final db = await dbHelper.db;
+
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'operating_hours',
+          value: 520,
+          unit: 'h',
+        );
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'operating_hours',
+          value: 530,
+          unit: 'h',
+        );
+        final tasks = await WorkOrderRepository(
+          dbHelper: dbHelper,
+        ).getTasksForMaintenancePlan(plan.id);
+        expect(tasks, hasLength(1));
+        expect(tasks.single.plannedMeterValue, 500);
+        final seededMaterials = await db.query(
+          'work_order_materials',
+          where: 'work_order_task_id = ?',
+          whereArgs: [tasks.single.id],
+        );
+        expect(seededMaterials, hasLength(1));
+        expect(seededMaterials.single['item_id'], item.id);
+        expect(seededMaterials.single['planned_quantity'], 1);
+
+        await expectLater(
+          WorkOrderRepository(dbHelper: dbHelper).completeTask(
+            taskId: tasks.single.id,
+            result: TaskResult.success,
+            findings: null,
+            laborMinutes: 20,
+            downtimeMinutes: 0,
+            completionMeterValue: 499,
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+        expect(
+          (await WorkOrderRepository(
+            dbHelper: dbHelper,
+          ).getTasksForMaintenancePlan(plan.id)).single.status,
+          TaskStatus.pending,
+        );
+        expect((await plans.getPlanById(plan.id))?.nextDueMeterValue, 500);
+
+        await WorkOrderRepository(dbHelper: dbHelper).completeTask(
+          taskId: tasks.single.id,
+          result: TaskResult.success,
+          findings: null,
+          laborMinutes: 20,
+          downtimeMinutes: 0,
+          completionMeterValue: 530,
+        );
+        final updatedPlan = await plans.getPlanById(plan.id);
+        expect(updatedPlan?.lastCompletedMeterValue, 530);
+        expect(updatedPlan?.nextDueMeterValue, 630);
+        final completedTasks = await WorkOrderRepository(
+          dbHelper: dbHelper,
+        ).getTasksForMaintenancePlan(plan.id);
+        expect(completedTasks.single.completionMeterValue, 530);
+        expect(completedTasks.single.completionMeterName, 'operating_hours');
+        expect(completedTasks.single.completionMeterUnit, 'h');
+        expect(
+          (await readings.getLatestReading(asset.id, 'operating_hours'))?.value,
+          530,
+        );
+        final alerts = await db.query(
+          'alert_events',
+          where: 'work_order_task_id = ?',
+          whereArgs: [tasks.single.id],
+        );
+        expect(alerts, hasLength(1));
+        expect(alerts.single['status'], 'RESOLVED');
+        await expectLater(
+          readings.recordReading(
+            assetId: asset.id,
+            metricName: 'operating_hours',
+            value: 529,
+            unit: 'h',
+          ),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
+    test(
+      'meter readings reject incompatible units and decreasing counters',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه کنترل کنتور');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'موتور کنتور',
+          code: 'METER-VALIDATION',
+        );
+        final plans = MaintenancePlanRepository(dbHelper: dbHelper);
+        await plans.createPlan(
+          assetId: asset.id,
+          title: 'کنترل ساعت کار',
+          scheduleType: ScheduleType.meter,
+          meterName: 'operating_hours',
+          meterInterval: 100,
+          meterUnit: 'h',
+          nextDueMeterValue: 500,
+        );
+        final readings = AssetReadingRepository(dbHelper: dbHelper);
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'operating_hours',
+          value: 510,
+          unit: 'h',
+        );
+        await readings.recordReading(
+          assetId: asset.id,
+          metricName: 'operating_hours',
+          value: 20,
+          unit: 'minutes',
+        );
+        await expectLater(
+          readings.recordReading(
+            assetId: asset.id,
+            metricName: 'operating_hours',
+            value: 509,
+            unit: 'h',
+          ),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
+    test(
+      'plan materials save, update, and soft-delete with plan changes',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه مواد برنامه');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'پمپ مواد',
+          code: 'P-MATERIALS',
+        );
+        final inventory = InventoryRepository(dbHelper: dbHelper);
+        final firstItem = await inventory.createItem(
+          name: 'فیلتر برنامه‌ای',
+          code: 'PLAN-FILTER',
+          unit: 'عدد',
+        );
+        final secondItem = await inventory.createItem(
+          name: 'روغن برنامه‌ای',
+          code: 'PLAN-OIL',
+          unit: 'لیتر',
+        );
+        final plans = MaintenancePlanRepository(dbHelper: dbHelper);
+        final plan = await plans.createPlan(
+          assetId: asset.id,
+          title: 'سرویس دارای اقلام',
+          scheduleType: ScheduleType.manual,
+          materials: [
+            {
+              'item_id': firstItem.id,
+              'planned_quantity': 2,
+              'notes': 'در هر سرویس',
+            },
+          ],
+        );
+        final firstMaterial = (await plans.getPlanMaterials(plan.id)).single;
+        expect(firstMaterial.plannedQuantity, 2);
+
+        await plans.updatePlan(
+          plan.copyWith(title: 'سرویس به‌روزشده'),
+          materials: [
+            {
+              'item_id': firstItem.id,
+              'planned_quantity': 3,
+              'notes': 'مقدار اصلاح‌شده',
+            },
+            {'item_id': secondItem.id, 'planned_quantity': 1.5},
+          ],
+        );
+        var materials = await plans.getPlanMaterials(plan.id);
+        expect(materials, hasLength(2));
+        expect(
+          materials
+              .singleWhere((material) => material.itemId == firstItem.id)
+              .plannedQuantity,
+          3,
+        );
+
+        await plans.updatePlan(
+          plan.copyWith(title: 'سرویس با قلم دوم'),
+          materials: [
+            {'item_id': secondItem.id, 'planned_quantity': 4},
+          ],
+        );
+        materials = await plans.getPlanMaterials(plan.id);
+        expect(materials, hasLength(1));
+        expect(materials.single.itemId, secondItem.id);
+        expect(materials.single.plannedQuantity, 4);
+        final db = await dbHelper.db;
+        final historicalFirst = await db.query(
+          'maintenance_plan_materials',
+          where: 'maintenance_plan_id = ? AND item_id = ?',
+          whereArgs: [plan.id, firstItem.id],
+        );
+        expect(historicalFirst.single['deleted_at'], isNotNull);
+
+        final formerFirstId = historicalFirst.single['id'];
+        await plans.updatePlan(
+          plan.copyWith(title: 'سرویس با فیلتر دوباره'),
+          materials: [
+            {'item_id': firstItem.id, 'planned_quantity': 5},
+          ],
+        );
+        materials = await plans.getPlanMaterials(plan.id);
+        expect(materials, hasLength(1));
+        expect(materials.single.itemId, firstItem.id);
+        expect(materials.single.id, formerFirstId);
+        expect(materials.single.plannedQuantity, 5);
+      },
+    );
+
+    test(
+      'failed plan material save rolls back plan create and plan updates',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه بازگشت مواد');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'پمپ بازگشت',
+          code: 'P-MATERIAL-ROLLBACK',
+        );
+        final plans = MaintenancePlanRepository(dbHelper: dbHelper);
+        await expectLater(
+          plans.createPlan(
+            assetId: asset.id,
+            title: 'برنامه نامعتبر مواد',
+            scheduleType: ScheduleType.manual,
+            materials: [
+              {'item_id': 'missing-item', 'planned_quantity': 1},
+            ],
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+
+        final plan = await plans.createPlan(
+          assetId: asset.id,
+          title: 'برنامه محفوظ',
+          scheduleType: ScheduleType.manual,
+        );
+        await expectLater(
+          plans.updatePlan(
+            plan.copyWith(title: 'نباید ذخیره شود'),
+            materials: [
+              {'item_id': 'missing-item', 'planned_quantity': 1},
+            ],
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+        expect((await plans.getPlanById(plan.id))?.title, 'برنامه محفوظ');
+        expect(await plans.getPlanMaterials(plan.id), isEmpty);
+      },
+    );
   });
 
   group('Maintenance scheduler', () {
+    test('new plans preserve their active setting', () async {
+      final facility = await FacilityRepository(
+        dbHelper: dbHelper,
+      ).createFacility(name: 'کارگاه برنامه غیرفعال');
+      final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+        facilityId: facility.id,
+        name: 'پمپ غیرفعال',
+        code: 'P-INACTIVE',
+      );
+      final repository = MaintenancePlanRepository(dbHelper: dbHelper);
+
+      final plan = await repository.createPlan(
+        assetId: asset.id,
+        title: 'برنامه در انتظار فعال‌سازی',
+        scheduleType: ScheduleType.manual,
+        isActive: false,
+      );
+
+      expect(plan.isActive, isFalse);
+      expect((await repository.getPlanById(plan.id))?.isActive, isFalse);
+      expect(await repository.getAllActivePlans(facility.id), isEmpty);
+    });
+
+    test(
+      'rejects invalid schedules and clears stale fields when changing type',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه اعتبارسنجی');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'پمپ اعتبارسنجی',
+          code: 'P-VALIDATION',
+        );
+        final plans = MaintenancePlanRepository(dbHelper: dbHelper);
+
+        await expectLater(
+          plans.createPlan(
+            assetId: asset.id,
+            title: 'برنامه نامعتبر',
+            scheduleType: ScheduleType.calendar,
+          ),
+          throwsArgumentError,
+        );
+        await expectLater(
+          plans.createPlan(
+            assetId: asset.id,
+            title: 'شرط نامعتبر',
+            scheduleType: ScheduleType.condition,
+            conditionConfigJson: '{invalid',
+          ),
+          throwsArgumentError,
+        );
+
+        final calendarPlan = await plans.createPlan(
+          assetId: asset.id,
+          title: 'تبدیل زمان‌بندی',
+          scheduleType: ScheduleType.calendar,
+          calendarIntervalValue: 7,
+          calendarIntervalUnit: CalendarUnit.day,
+        );
+        final updated = await plans.updatePlan(
+          calendarPlan.copyWith(
+            scheduleType: ScheduleType.manual,
+            clearScheduleFields: true,
+          ),
+        );
+
+        expect(updated.nextDueAt, isNull);
+        expect(updated.calendarIntervalValue, isNull);
+        expect(updated.calendarIntervalUnit, isNull);
+        expect(updated.oneTimeDueAt, isNull);
+        expect(updated.conditionConfigJson, isNull);
+      },
+    );
+
+    test(
+      'plan execution history excludes soft-deleted work orders and tasks',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه سابقه برنامه');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'موتور سابقه',
+          code: 'M-PLAN-HISTORY',
+        );
+        final plan = await MaintenancePlanRepository(dbHelper: dbHelper)
+            .createPlan(
+              assetId: asset.id,
+              title: 'بازرسی برنامه',
+              scheduleType: ScheduleType.manual,
+            );
+        final workOrders = WorkOrderRepository(dbHelper: dbHelper);
+        final order = await workOrders.createWorkOrder(
+          facilityId: facility.id,
+          title: 'دستورکار مرتبط',
+          workOrderType: WorkOrderType.preventive,
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: order.id,
+          assetId: asset.id,
+          maintenancePlanId: plan.id,
+          title: 'وظیفه مرتبط',
+        );
+        final task = (await workOrders.getTasksForWorkOrder(order.id)).single;
+
+        expect(
+          (await workOrders.getTasksForMaintenancePlan(plan.id)).single.id,
+          task.id,
+        );
+        final db = await dbHelper.db;
+        await db.update(
+          'work_order_tasks',
+          {'deleted_at': AppDateUtils.nowUtcIso()},
+          where: 'id = ?',
+          whereArgs: [task.id],
+        );
+        expect(await workOrders.getTasksForMaintenancePlan(plan.id), isEmpty);
+      },
+    );
+
     test(
       'generates due plan tasks and alerts once and skips future/inactive plans',
       () async {
@@ -537,6 +1039,23 @@ void main() {
           nextDueAt: AppDateUtils.toUtcIso(dueDate),
         );
         await plans.updatePlan(inactivePlan.copyWith(isActive: false));
+        final otherFacility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه دیگر');
+        final otherAsset = await AssetRepository(dbHelper: dbHelper)
+            .createAsset(
+              facilityId: otherFacility.id,
+              name: 'کمپرسور دیگر',
+              code: 'COMP-OTHER',
+            );
+        final otherFacilityPlan = await plans.createPlan(
+          assetId: otherAsset.id,
+          title: 'برنامه کارگاه دیگر',
+          scheduleType: ScheduleType.calendar,
+          calendarIntervalValue: 1,
+          calendarIntervalUnit: CalendarUnit.day,
+          nextDueAt: AppDateUtils.toUtcIso(dueDate),
+        );
 
         await MaintenanceScheduler.runScheduler(db, facility.id);
         await MaintenanceScheduler.runScheduler(db, facility.id);
@@ -571,6 +1090,14 @@ void main() {
             'work_order_tasks',
             where: 'maintenance_plan_id = ? AND deleted_at IS NULL',
             whereArgs: [inactivePlan.id],
+          ),
+          isEmpty,
+        );
+        expect(
+          await db.query(
+            'work_order_tasks',
+            where: 'maintenance_plan_id = ? AND deleted_at IS NULL',
+            whereArgs: [otherFacilityPlan.id],
           ),
           isEmpty,
         );

@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/widgets/app_error_state.dart';
+import '../../../core/widgets/app_form_body.dart';
+import '../../../core/widgets/app_form_submit_button.dart';
+import '../../../core/widgets/app_loading.dart';
 import '../../../core/utils/validators.dart';
 import '../../assets/providers/asset_providers.dart';
 import '../../facilities/providers/facility_providers.dart';
@@ -32,7 +36,7 @@ class _WorkOrderTaskFormScreenState
   String? _selectedAssetId;
   String? _selectedMaintenancePlanId;
   ActivityType _activityType = ActivityType.inspection;
-  bool _isLoading = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -58,6 +62,7 @@ class _WorkOrderTaskFormScreenState
   }
 
   Future<void> _save() async {
+    if (_isSubmitting) return;
     if (!_formKey.currentState!.validate() || _selectedAssetId == null) {
       if (_selectedAssetId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +73,7 @@ class _WorkOrderTaskFormScreenState
       }
       return;
     }
-    setState(() => _isLoading = true);
+    setState(() => _isSubmitting = true);
 
     try {
       await ref
@@ -95,7 +100,7 @@ class _WorkOrderTaskFormScreenState
         ).showSnackBar(SnackBar(content: Text('خطا: $e')));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -127,112 +132,110 @@ class _WorkOrderTaskFormScreenState
                 );
               }
               _selectedAssetId ??= assets.first.id;
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
-                  key: _formKey,
-                  child: ListView(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _selectedAssetId,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'تجهیز هدف *',
-                            prefixIcon: Icon(EneftyIcons.cpu_bold),
-                            border: OutlineInputBorder(),
-                          ),
-                          items: assets
-                              .map(
-                                (a) => DropdownMenuItem(
-                                  value: a.id,
-                                  child: Text('${a.name} (${a.code})'),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedAssetId = value;
-                              _selectedMaintenancePlanId = null;
-                              _titleController.clear();
-                            });
-                          },
-                        ),
+              return AppFormBody(
+                formKey: _formKey,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedAssetId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'تجهیز هدف *',
+                        prefixIcon: Icon(EneftyIcons.cpu_bold),
+                        border: OutlineInputBorder(),
                       ),
-                      plansAsync.when(
-                        data: (plans) => _buildTitleAutocomplete(plans),
-                        loading: () =>
-                            _buildTitleAutocomplete(const [], isLoading: true),
-                        error: (_, _) => _buildTitleAutocomplete(
-                          const [],
-                          failedToLoad: true,
-                          onRetry: () {
-                            ref.invalidate(
-                              allFacilityPlansProvider(facility.id),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<ActivityType>(
-                        initialValue: _activityType,
-                        decoration: const InputDecoration(
-                          labelText: 'نوع فعالیت',
-                          prefixIcon: Icon(EneftyIcons.setting_bold),
-                          border: OutlineInputBorder(),
-                        ),
-                        items: ActivityType.values
-                            .map(
-                              (a) => DropdownMenuItem(
-                                value: a,
-                                child: Text(a.displayName),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) => setState(
-                          () => _activityType = v ?? ActivityType.inspection,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _dueDateController,
-                        readOnly: true,
-                        onTap: _selectDueDate,
-                        decoration: const InputDecoration(
-                          labelText: 'تاریخ سررسید برنامه (شمسی)',
-                          prefixIcon: Icon(EneftyIcons.calendar_2_bold),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _descController,
-                        decoration: const InputDecoration(
-                          labelText: 'توضیحات و دستورالعمل وظیفه',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton.icon(
-                        icon: const Icon(EneftyIcons.add_bold),
-                        onPressed: _isLoading ? null : _save,
-                        label: const Text('افزودن وظیفه به دستورکار'),
-                      ),
-                    ],
+                      items: assets
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text('${a.name} (${a.code})'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedAssetId = value;
+                          _selectedMaintenancePlanId = null;
+                          _titleController.clear();
+                        });
+                      },
+                    ),
                   ),
-                ),
+                  plansAsync.when(
+                    data: (plans) => _buildTitleAutocomplete(plans),
+                    loading: () =>
+                        _buildTitleAutocomplete(const [], isLoading: true),
+                    error: (_, _) => _buildTitleAutocomplete(
+                      const [],
+                      failedToLoad: true,
+                      onRetry: () {
+                        ref.invalidate(allFacilityPlansProvider(facility.id));
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<ActivityType>(
+                    initialValue: _activityType,
+                    decoration: const InputDecoration(
+                      labelText: 'نوع فعالیت',
+                      prefixIcon: Icon(EneftyIcons.setting_bold),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: ActivityType.values
+                        .map(
+                          (a) => DropdownMenuItem(
+                            value: a,
+                            child: Text(a.displayName),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(
+                      () => _activityType = v ?? ActivityType.inspection,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _dueDateController,
+                    readOnly: true,
+                    onTap: _selectDueDate,
+                    decoration: const InputDecoration(
+                      labelText: 'تاریخ سررسید برنامه (شمسی)',
+                      prefixIcon: Icon(EneftyIcons.calendar_2_bold),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _descController,
+                    decoration: const InputDecoration(
+                      labelText: 'توضیحات و دستورالعمل وظیفه',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 24),
+                  AppFormSubmitButton(
+                    icon: const Icon(EneftyIcons.add_bold),
+                    isSubmitting: _isSubmitting,
+                    onPressed: _save,
+                    label: 'افزودن وظیفه به دستورکار',
+                  ),
+                ],
               );
             },
-            loading: () => const LinearProgressIndicator(),
-            error: (error, _) =>
-                Center(child: Text('بارگذاری تجهیزات ناموفق بود: $error')),
+            loading: () => const AppLoading(),
+            error: (error, _) => AppErrorState(
+              message: 'بارگذاری تجهیزات ناموفق بود: $error',
+              onRetry: () => ref.invalidate(assetsProvider(facility.id)),
+            ),
           );
         },
-        loading: () => const LinearProgressIndicator(),
-        error: (error, _) =>
-            Center(child: Text('بارگذاری اطلاعات کارگاه ناموفق بود: $error')),
+        loading: () => const AppLoading(),
+        error: (error, _) => AppErrorState(
+          message: 'بارگذاری اطلاعات کارگاه ناموفق بود: $error',
+          onRetry: () => ref.invalidate(primaryFacilityProvider),
+        ),
       ),
     );
   }

@@ -29,7 +29,7 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
   final _reasonController = TextEditingController();
   DateTime _recordedAt = DateTime.now();
   String? _editingReadingId;
-  bool _isSaving = false;
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -70,8 +70,8 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
   }
 
   Future<void> _submit() async {
-    if (_isSaving || !_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
+    if (_isSubmitting || !_formKey.currentState!.validate()) return;
+    setState(() => _isSubmitting = true);
 
     try {
       final readingId = _editingReadingId;
@@ -92,7 +92,7 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
         ).showSnackBar(SnackBar(content: Text('خطا: $error')));
       }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -198,7 +198,7 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
               correctionReasonController: _reasonController,
               recordedAt: _recordedAt,
               isEditing: _editingReadingId != null,
-              isSaving: _isSaving,
+              isSubmitting: _isSubmitting,
               onUnitChanged: (unit) =>
                   setState(() => _unitController.text = unit),
               onSelectDate: _selectRecordedAt,
@@ -228,7 +228,7 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
                       .map(
                         (reading) => AssetReadingTile(
                           reading: reading,
-                          onEdit: _isSaving
+                          onEdit: _isSubmitting
                               ? null
                               : () => _startCorrection(reading),
                         ),
