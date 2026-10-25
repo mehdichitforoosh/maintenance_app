@@ -6,6 +6,7 @@ import '../../features/assets/screens/asset_list_screen.dart';
 import '../../features/assets/screens/asset_meter_trend_screen.dart';
 import '../../features/assets/screens/asset_readings_screen.dart';
 import '../../features/assets/screens/asset_tree_screen.dart';
+import '../../features/backup/presentation/backup_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/facilities/screens/facility_setup_screen.dart';
 import '../../features/facilities/screens/location_form_screen.dart';
@@ -230,6 +231,7 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
         // Alerts & Settings
         GoRoute(path: '/alerts', builder: (_, _) => const AlertsScreen()),
         GoRoute(path: '/reports', builder: (_, _) => const ReportsScreen()),
+        GoRoute(path: '/backup', builder: (_, _) => const BackupScreen()),
         GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       ],
     ),
