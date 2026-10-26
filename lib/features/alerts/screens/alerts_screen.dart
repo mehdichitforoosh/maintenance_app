@@ -50,7 +50,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                 return const AppEmptyState(
                   title: 'هیچ هشداری وجود ندارد',
                   message: 'وضعیت کارگاه و تجهیزات پایدار است.',
-                  icon: Icons.notifications_none,
+                  icon: EneftyIcons.notification_outline,
                 );
               }
               final visibleAlerts = alerts.where((alert) {

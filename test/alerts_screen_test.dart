@@ -12,6 +12,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('shows every alert type by default', (tester) async {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
     final now = DateTime.now().toUtc().toIso8601String();
     const facility = Facility(
       id: 'facility-1',

@@ -70,7 +70,7 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(EneftyIcons.chart_2_outline),
+                icon: const Icon(EneftyIcons.hierarchy_square_2_outline),
                 tooltip: 'نمایش درختی موقعیت‌ها',
                 onPressed: () => context.push('/locations/tree'),
               ),
@@ -107,6 +107,7 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
                         onActionPressed: allLocations.isEmpty
                             ? () => context.push('/locations/new')
                             : null,
+                        icon: EneftyIcons.location_outline,
                       );
                     }
 

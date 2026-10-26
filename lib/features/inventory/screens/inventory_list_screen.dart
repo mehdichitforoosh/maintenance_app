@@ -140,7 +140,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/inventory/new'),
-        child: const Icon(EneftyIcons.add_outline),
+        child: const Icon(EneftyIcons.add_bold),
       ),
     );
   }

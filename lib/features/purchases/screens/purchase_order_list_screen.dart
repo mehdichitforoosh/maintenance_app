@@ -156,6 +156,7 @@ class _PurchaseOrderListScreenState
                         onActionPressed: allOrders.isEmpty
                             ? () => context.push('/purchases/new')
                             : null,
+                        icon: EneftyIcons.shopping_cart_outline,
                       );
                     }
 

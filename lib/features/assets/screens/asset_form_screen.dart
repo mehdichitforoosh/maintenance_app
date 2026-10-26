@@ -300,7 +300,7 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                     initialValue: _selectedParentAssetId,
                     decoration: const InputDecoration(
                       labelText: 'تجهیز والد (در صورت وجود)',
-                      prefixIcon: Icon(EneftyIcons.hierarchy_square_2_outline),
+                      prefixIcon: Icon(EneftyIcons.hierarchy_outline),
                     ),
                     items: [
                       const DropdownMenuItem<String?>(

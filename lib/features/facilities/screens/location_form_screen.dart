@@ -148,7 +148,7 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
             controller: _nameController,
             decoration: const InputDecoration(
               labelText: 'نام موقعیت / سالن *',
-              prefixIcon: Icon(EneftyIcons.location_bold),
+              prefixIcon: Icon(EneftyIcons.location_outline),
               border: OutlineInputBorder(),
             ),
             validator: (v) =>
@@ -159,7 +159,7 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
             controller: _codeController,
             decoration: const InputDecoration(
               labelText: 'کد موقعیت',
-              prefixIcon: Icon(EneftyIcons.code_bold),
+              prefixIcon: Icon(EneftyIcons.code_outline),
               border: OutlineInputBorder(),
             ),
           ),
@@ -181,7 +181,7 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
                     initialValue: _selectedParentLocationId,
                     decoration: const InputDecoration(
                       labelText: 'موقعیت والد (در صورت وجود)',
-                      prefixIcon: Icon(EneftyIcons.hierarchy_bold),
+                      prefixIcon: Icon(EneftyIcons.hierarchy_outline),
                       border: OutlineInputBorder(),
                     ),
                     items: [
@@ -214,6 +214,15 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          TextFormField(
+            controller: _descController,
+            decoration: const InputDecoration(
+              labelText: 'توضیحات',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 16),
 
           // Active Switch
           Card(
@@ -237,16 +246,6 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
                 color: _isActive ? Colors.green : Colors.grey,
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _descController,
-            decoration: const InputDecoration(
-              labelText: 'توضیحات',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
           ),
           const SizedBox(height: 24),
           AppFormSubmitButton(

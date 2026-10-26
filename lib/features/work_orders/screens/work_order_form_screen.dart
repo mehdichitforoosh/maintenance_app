@@ -172,7 +172,7 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
             controller: _titleController,
             decoration: const InputDecoration(
               labelText: 'عنوان دستورکار *',
-              prefixIcon: Icon(EneftyIcons.document_text_bold),
+              prefixIcon: Icon(EneftyIcons.document_text_outline),
               border: OutlineInputBorder(),
             ),
             validator: (v) =>
@@ -183,7 +183,7 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
             initialValue: _workOrderType,
             decoration: const InputDecoration(
               labelText: 'نوع دستورکار',
-              prefixIcon: Icon(EneftyIcons.task_bold),
+              prefixIcon: Icon(EneftyIcons.task_outline),
               border: OutlineInputBorder(),
             ),
             items: WorkOrderType.values
@@ -199,7 +199,7 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
             initialValue: _priority,
             decoration: const InputDecoration(
               labelText: 'اولویت',
-              prefixIcon: Icon(EneftyIcons.danger_bold),
+              prefixIcon: Icon(EneftyIcons.danger_outline),
               border: OutlineInputBorder(),
             ),
             items: Priority.values
@@ -216,7 +216,7 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
             onTap: _selectScheduledDate,
             decoration: const InputDecoration(
               labelText: 'تاریخ زمان‌بندی (شمسی)',
-              prefixIcon: Icon(EneftyIcons.calendar_2_bold),
+              prefixIcon: Icon(EneftyIcons.calendar_2_outline),
               border: OutlineInputBorder(),
             ),
           ),

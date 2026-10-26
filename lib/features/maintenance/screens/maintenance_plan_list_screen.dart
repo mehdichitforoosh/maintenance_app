@@ -135,6 +135,7 @@ class _MaintenancePlanListScreenState
                         onActionPressed: allPlans.isEmpty
                             ? () => context.push('/maintenance-plans/new')
                             : null,
+                        icon: EneftyIcons.calendar_2_outline,
                       );
                     }
 

@@ -25,7 +25,7 @@ class InventoryItemIdentityFields extends StatelessWidget {
           controller: nameController,
           decoration: const InputDecoration(
             labelText: 'نام کالا / قطعه *',
-            prefixIcon: Icon(EneftyIcons.box_bold),
+            prefixIcon: Icon(EneftyIcons.box_outline),
           ),
           validator: (value) =>
               AppValidators.required(value, fieldName: 'نام کالا'),
@@ -35,7 +35,7 @@ class InventoryItemIdentityFields extends StatelessWidget {
           controller: codeController,
           decoration: const InputDecoration(
             labelText: 'کد کالا (یکتا) *',
-            prefixIcon: Icon(EneftyIcons.code_bold),
+            prefixIcon: Icon(EneftyIcons.code_outline),
           ),
           validator: AppValidators.code,
         ),
@@ -44,7 +44,7 @@ class InventoryItemIdentityFields extends StatelessWidget {
           initialValue: itemType,
           decoration: const InputDecoration(
             labelText: 'نوع کالا',
-            prefixIcon: Icon(EneftyIcons.category_bold),
+            prefixIcon: Icon(EneftyIcons.category_outline),
           ),
           items: ItemType.values
               .map(
@@ -95,7 +95,7 @@ class InventoryUnitField extends StatelessWidget {
           controller: controller,
           decoration: const InputDecoration(
             labelText: 'واحد اندازه‌گیری *',
-            prefixIcon: Icon(EneftyIcons.ruler_bold),
+            prefixIcon: Icon(EneftyIcons.ruler_outline),
           ),
           validator: (value) =>
               AppValidators.required(value, fieldName: 'واحد اندازه‌گیری'),
@@ -143,7 +143,7 @@ class InventoryItemStockFields extends StatelessWidget {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             labelText: 'حداقل موجودی (نقطه سفارش)',
-            prefixIcon: Icon(EneftyIcons.danger_bold),
+            prefixIcon: Icon(EneftyIcons.danger_outline),
           ),
           validator: (value) =>
               AppValidators.nonNegativeNumber(value, fieldName: 'حداقل موجودی'),
@@ -154,7 +154,7 @@ class InventoryItemStockFields extends StatelessWidget {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             labelText: 'قیمت واحد پیش‌فرض (تومان)',
-            prefixIcon: Icon(EneftyIcons.money_bold),
+            prefixIcon: Icon(EneftyIcons.money_outline),
           ),
         ),
       ],

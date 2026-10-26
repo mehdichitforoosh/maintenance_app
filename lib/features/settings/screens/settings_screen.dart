@@ -97,16 +97,6 @@ class SettingsScreen extends ConsumerWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    // gradient: LinearGradient(
-                    //   colors: [
-                    //     Theme.of(
-                    //       context,
-                    //     ).colorScheme.primary.withValues(alpha: 0.05),
-                    //     Theme.of(context).colorScheme.surface,
-                    //   ],
-                    //   begin: Alignment.topRight,
-                    //   end: Alignment.bottomLeft,
-                    // ),
                   ),
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -120,7 +110,7 @@ class SettingsScreen extends ConsumerWidget {
                               context,
                             ).colorScheme.primary.withValues(alpha: 0.1),
                             child: Icon(
-                              EneftyIcons.building_bold,
+                              EneftyIcons.buildings_2_outline,
                               color: Theme.of(context).colorScheme.primary,
                               size: 28,
                             ),
@@ -221,7 +211,7 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     const Divider(height: 1, indent: 16, endIndent: 16, thickness: 1,),
                     SettingsTile(
-                      icon: EneftyIcons.chart_2_bold,
+                      icon: EneftyIcons.hierarchy_square_2_bold,
                       iconColor: const Color(0xFF9333EA),
                       title: 'درخت سلسله‌مراتبی تجهیزات',
                       subtitle: 'مشاهده ساختار درختی والد و فرزند تجهیزات',
