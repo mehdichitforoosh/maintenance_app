@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../providers/work_order_providers.dart';
 import 'widgets/work_order_summary_card.dart';
 import 'widgets/work_order_tasks_section.dart';
@@ -89,17 +90,19 @@ class WorkOrderDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              WorkOrderSummaryCard(workOrder: workOrder),
-              const SizedBox(height: 24),
-              WorkOrderTasksSection(
-                workOrderId: workOrderId,
-                facilityId: workOrder.facilityId,
-                tasksAsync: tasksAsync,
-              ),
-            ],
+          body: AppResponsiveContainer(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                WorkOrderSummaryCard(workOrder: workOrder),
+                const SizedBox(height: 24),
+                WorkOrderTasksSection(
+                  workOrderId: workOrderId,
+                  facilityId: workOrder.facilityId,
+                  tasksAsync: tasksAsync,
+                ),
+              ],
+            ),
           ),
         );
       },

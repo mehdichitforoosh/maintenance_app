@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../../../core/widgets/section_header.dart';
 import '../providers/inventory_providers.dart';
 import 'widgets/inventory_current_stock_gauge.dart';
@@ -46,60 +47,62 @@ class InventoryItemDetailScreen extends ConsumerWidget {
           body: stockAsync.when(
             data: (stock) {
               final isLow = stock <= item.minimumStock;
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  InventoryItemSpecificationsCard(
-                    item: item,
-                    isLowStock: isLow,
-                  ),
-                  InventoryCurrentStockGauge(
-                    stock: stock,
-                    minimumStock: item.minimumStock,
-                    unit: item.unit,
-                  ),
-                  txsAsync.when(
-                    data: (transactions) => Column(
-                      children: [
-                        InventoryStockHistoryChart(
-                          transactions: transactions,
-                          minimumStock: item.minimumStock,
-                          unit: item.unit,
-                        ),
-                        InventoryMovementChart(
-                          transactions: transactions,
-                          unit: item.unit,
-                        ),
-                      ],
+              return AppResponsiveContainer(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    InventoryItemSpecificationsCard(
+                      item: item,
+                      isLowStock: isLow,
                     ),
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
-                  ),
-                  const SizedBox(height: 16),
-                  SectionHeader(title: 'تاریخچه گردش انبار'),
-                  txsAsync.when(
-                    data: (txs) {
-                      if (txs.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Text('تراکنشی ثبت نشده است.'),
+                    InventoryCurrentStockGauge(
+                      stock: stock,
+                      minimumStock: item.minimumStock,
+                      unit: item.unit,
+                    ),
+                    txsAsync.when(
+                      data: (transactions) => Column(
+                        children: [
+                          InventoryStockHistoryChart(
+                            transactions: transactions,
+                            minimumStock: item.minimumStock,
+                            unit: item.unit,
+                          ),
+                          InventoryMovementChart(
+                            transactions: transactions,
+                            unit: item.unit,
+                          ),
+                        ],
+                      ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 16),
+                    SectionHeader(title: 'تاریخچه گردش انبار'),
+                    txsAsync.when(
+                      data: (txs) {
+                        if (txs.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: Text('تراکنشی ثبت نشده است.'),
+                          );
+                        }
+                        return Column(
+                          children: txs
+                              .map(
+                                (transaction) => StockTransactionTile(
+                                  transaction: transaction,
+                                  unit: item.unit,
+                                ),
+                              )
+                              .toList(),
                         );
-                      }
-                      return Column(
-                        children: txs
-                            .map(
-                              (transaction) => StockTransactionTile(
-                                transaction: transaction,
-                                unit: item.unit,
-                              ),
-                            )
-                            .toList(),
-                      );
-                    },
-                    loading: () => const AppLoading(),
-                    error: (e, _) => AppErrorState(message: e.toString()),
-                  ),
-                ],
+                      },
+                      loading: () => const AppLoading(),
+                      error: (e, _) => AppErrorState(message: e.toString()),
+                    ),
+                  ],
+                ),
               );
             },
             loading: () => const AppLoading(),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../../maintenance/providers/maintenance_providers.dart';
 import '../../work_orders/providers/work_order_providers.dart';
 import '../providers/asset_providers.dart';
@@ -42,65 +43,67 @@ class AssetDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              AssetSpecificationsCard(asset: asset),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () =>
-                          context.push('/assets/$assetId/readings'),
-                      icon: const Icon(
-                        EneftyIcons.speedometer_outline,
-                        size: 18,
-                      ),
-                      label: const Text('خوانش‌های تجهیز'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () => context.push(
-                        '/maintenance-plans/new?assetId=$assetId',
-                      ),
-                      icon: const Icon(
-                        EneftyIcons.add_square_outline,
-                        size: 18,
-                      ),
-                      label: const Text('برنامه PM جدید'),
-                    ),
-                  ),
-                ],
-              ),
-              taskHistoryAsync.when(
-                data: (tasks) => AssetWorkOrderCharts(tasks: tasks),
-                loading: () => const AppLoading(),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-              const SizedBox(height: 24),
-              plansAsync.when(
-                data: (plans) => AssetMaintenancePlansSection(
-                  plans: plans,
-                  onPlanTap: (plan) =>
-                      context.push('/maintenance-plans/${plan.id}'),
-                ),
-                loading: () => const AppLoading(),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-              const SizedBox(height: 24),
-              readingsAsync.when(
-                data: (readings) => Column(
+          body: AppResponsiveContainer(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                AssetSpecificationsCard(asset: asset),
+                const SizedBox(height: 16),
+                Row(
                   children: [
-                    AssetMetersSection(assetId: assetId, readings: readings),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () =>
+                            context.push('/assets/$assetId/readings'),
+                        icon: const Icon(
+                          EneftyIcons.speedometer_outline,
+                          size: 18,
+                        ),
+                        label: const Text('خوانش‌های تجهیز'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => context.push(
+                          '/maintenance-plans/new?assetId=$assetId',
+                        ),
+                        icon: const Icon(
+                          EneftyIcons.add_square_outline,
+                          size: 18,
+                        ),
+                        label: const Text('برنامه PM جدید'),
+                      ),
+                    ),
                   ],
                 ),
-                loading: () => const AppLoading(),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-            ],
+                taskHistoryAsync.when(
+                  data: (tasks) => AssetWorkOrderCharts(tasks: tasks),
+                  loading: () => const AppLoading(),
+                  error: (error, _) => AppErrorState(message: error.toString()),
+                ),
+                const SizedBox(height: 24),
+                plansAsync.when(
+                  data: (plans) => AssetMaintenancePlansSection(
+                    plans: plans,
+                    onPlanTap: (plan) =>
+                        context.push('/maintenance-plans/${plan.id}'),
+                  ),
+                  loading: () => const AppLoading(),
+                  error: (error, _) => AppErrorState(message: error.toString()),
+                ),
+                const SizedBox(height: 24),
+                readingsAsync.when(
+                  data: (readings) => Column(
+                    children: [
+                      AssetMetersSection(assetId: assetId, readings: readings),
+                    ],
+                  ),
+                  loading: () => const AppLoading(),
+                  error: (error, _) => AppErrorState(message: error.toString()),
+                ),
+              ],
+            ),
           ),
         );
       },

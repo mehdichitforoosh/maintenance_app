@@ -43,51 +43,56 @@ class AppSearchFilterBar extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'مرتب‌سازی و فیلترها',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'مرتب‌سازی و فیلترها',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Column(
+                    children: SortOrder.values
+                        .map(
+                          (sort) => ListTile(
+                            title: Text(sort.displayName),
+                            leading: Icon(
+                              sort == currentSortOrder
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                              color: sort == currentSortOrder
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                            onTap: () {
+                              onSortOrderChanged(sort);
+                              Navigator.pop(context);
+                            },
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
-              const Divider(),
-              const SizedBox(height: 8),
-              Column(
-                children: SortOrder.values
-                    .map(
-                      (sort) => ListTile(
-                        title: Text(sort.displayName),
-                        leading: Icon(
-                          sort == currentSortOrder
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: sort == currentSortOrder
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        onTap: () {
-                          onSortOrderChanged(sort);
-                          Navigator.pop(context);
-                        },
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
+            ),
           ),
         );
       },

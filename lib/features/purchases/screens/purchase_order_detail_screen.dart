@@ -6,6 +6,7 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../providers/purchase_providers.dart';
@@ -47,109 +48,111 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'اطلاعات سفارش',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+          body: AppResponsiveContainer(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'اطلاعات سفارش',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              po.status.displayName,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 20),
-                      _row(context, 'تأمین‌کننده', po.supplierName ?? '-'),
-                      _row(
-                        context,
-                        'تاریخ سفارش',
-                        AppDateUtils.formatJalali(po.orderDate),
-                      ),
-                      if (po.notes != null && po.notes!.isNotEmpty)
-                        _row(context, 'یادداشت', po.notes!),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (po.status != PurchaseOrderStatus.received &&
-                  po.status != PurchaseOrderStatus.cancelled)
-                FilledButton.icon(
-                  onPressed: () =>
-                      context.push('/purchases/$purchaseOrderId/receive'),
-                  icon: const Icon(EneftyIcons.box_bold),
-                  label: const Text('ثبت رسید دریافت کالا (Goods Receipt)'),
-                ),
-              const SizedBox(height: 24),
-              const SectionHeader(title: 'اقلام سفارش‌داده شده'),
-              itemsAsync.when(
-                data: (lines) {
-                  if (lines.isEmpty) {
-                    return const Text('قلمی در این سفارش نیست.');
-                  }
-                  return inventoryItemsAsync.when(
-                    data: (invItems) {
-                      return Column(
-                        children: lines.map((line) {
-                          final invItem = invItems
-                              .where((i) => i.id == line.itemId)
-                              .firstOrNull;
-                          return Card(
-                            child: ListTile(
-                              leading: Icon(
-                                EneftyIcons.box_bold,
-                                color: Theme.of(context).colorScheme.primary,
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              title: Text(
-                                invItem?.name ?? 'کالای نامشخص',
-                                style: const TextStyle(
+                              child: Text(
+                                po.status.displayName,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 12,
                                 ),
                               ),
-                              subtitle: Text(
-                                'مقدار: ${AppNumberFormat.decimal(line.orderedQuantity)} ${invItem?.unit ?? ''} | قیمت واحد: ${AppNumberFormat.decimal(line.unitPrice)} تومان',
-                              ),
                             ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                    loading: () => const AppLoading(),
-                    error: (e, _) => Text('خطا: $e'),
-                  );
-                },
-                loading: () => const AppLoading(),
-                error: (e, _) => Text('خطا: $e'),
-              ),
-            ],
+                          ],
+                        ),
+                        const Divider(height: 20),
+                        _row(context, 'تأمین‌کننده', po.supplierName ?? '-'),
+                        _row(
+                          context,
+                          'تاریخ سفارش',
+                          AppDateUtils.formatJalali(po.orderDate),
+                        ),
+                        if (po.notes != null && po.notes!.isNotEmpty)
+                          _row(context, 'یادداشت', po.notes!),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (po.status != PurchaseOrderStatus.received &&
+                    po.status != PurchaseOrderStatus.cancelled)
+                  FilledButton.icon(
+                    onPressed: () =>
+                        context.push('/purchases/$purchaseOrderId/receive'),
+                    icon: const Icon(EneftyIcons.box_bold),
+                    label: const Text('ثبت رسید دریافت کالا (Goods Receipt)'),
+                  ),
+                const SizedBox(height: 24),
+                const SectionHeader(title: 'اقلام سفارش‌داده شده'),
+                itemsAsync.when(
+                  data: (lines) {
+                    if (lines.isEmpty) {
+                      return const Text('قلمی در این سفارش نیست.');
+                    }
+                    return inventoryItemsAsync.when(
+                      data: (invItems) {
+                        return Column(
+                          children: lines.map((line) {
+                            final invItem = invItems
+                                .where((i) => i.id == line.itemId)
+                                .firstOrNull;
+                            return Card(
+                              child: ListTile(
+                                leading: Icon(
+                                  EneftyIcons.box_bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                title: Text(
+                                  invItem?.name ?? 'کالای نامشخص',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'مقدار: ${AppNumberFormat.decimal(line.orderedQuantity)} ${invItem?.unit ?? ''} | قیمت واحد: ${AppNumberFormat.decimal(line.unitPrice)} تومان',
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                      loading: () => const AppLoading(),
+                      error: (e, _) => Text('خطا: $e'),
+                    );
+                  },
+                  loading: () => const AppLoading(),
+                  error: (e, _) => Text('خطا: $e'),
+                ),
+              ],
+            ),
           ),
         );
       },

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../facilities/providers/facility_providers.dart';
 import 'widgets/settings_tile.dart';
@@ -25,39 +26,40 @@ class SettingsScreen extends ConsumerWidget {
       ),
       body: facilityAsync.when(
         data: (facility) {
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const SectionHeader(title: 'نمایش'),
-              Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.primaryContainer,
-                    foregroundColor: Theme.of(
-                      context,
-                    ).colorScheme.onPrimaryContainer,
-                    child: Icon(
-                      Theme.of(context).brightness == Brightness.dark
-                          ? Icons.dark_mode_outlined
-                          : Icons.light_mode_outlined,
+          return AppResponsiveContainer(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const SectionHeader(title: 'نمایش'),
+                Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                  ),
-                  title: const Text(
-                    'حالت نمایش',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: const Text('انتخاب پوسته روشن یا تیره برنامه'),
-                  trailing: SegmentedButton<ThemeMode>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(
-                        value: ThemeMode.light,
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      foregroundColor: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer,
+                      child: Icon(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Icons.dark_mode_outlined
+                            : Icons.light_mode_outlined,
+                      ),
+                    ),
+                    title: const Text(
+                      'حالت نمایش',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text('انتخاب پوسته روشن یا تیره برنامه'),
+                    trailing: SegmentedButton<ThemeMode>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(
+                          value: ThemeMode.light,
                         label: Text('روشن'),
                         icon: Icon(Icons.light_mode_outlined),
                       ),
@@ -281,6 +283,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
           );
         },
         loading: () => const AppLoading(),

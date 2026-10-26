@@ -68,44 +68,50 @@ class DashboardContent extends ConsumerWidget {
           children: [
             // Summary Cards
             summaryAsync.when(
-              data: (summary) => GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.4,
-                children: [
-                  _SummaryCard(
-                    title: 'سررسید امروز',
-                    count: summary['due_today'] ?? 0,
-                    color: const Color(0xFFD97706),
-                    icon: EneftyIcons.calendar_2_outline,
-                    onTap: () => context.push('/work-orders'),
-                  ),
-                  _SummaryCard(
-                    title: 'معوق و تأخیر',
-                    count: summary['overdue'] ?? 0,
-                    color: const Color(0xFFDC2626),
-                    icon: EneftyIcons.danger_outline,
-                    onTap: () => context.push('/work-orders'),
-                  ),
-                  _SummaryCard(
-                    title: 'دستورکارهای باز',
-                    count: summary['open_work_orders'] ?? 0,
-                    color: const Color(0xFF2563EB),
-                    icon: EneftyIcons.document_text_outline,
-                    onTap: () => context.push('/work-orders'),
-                  ),
-                  _SummaryCard(
-                    title: 'اقلام کم‌موجودی',
-                    count: summary['low_stock'] ?? 0,
-                    color: const Color(0xFF9333EA),
-                    icon: EneftyIcons.box_outline,
-                    onTap: () => context.push('/inventory'),
-                  ),
-                ],
-              ),
+              data: (summary) {
+                final width = MediaQuery.sizeOf(context).width;
+                final crossAxisCount = width >= 700 ? 4 : 2;
+                final childAspectRatio = width >= 700 ? 2.0 : 1.4;
+
+                return GridView.count(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  childAspectRatio: childAspectRatio,
+                  children: [
+                    _SummaryCard(
+                      title: 'سررسید امروز',
+                      count: summary['due_today'] ?? 0,
+                      color: const Color(0xFFD97706),
+                      icon: EneftyIcons.calendar_2_outline,
+                      onTap: () => context.push('/work-orders'),
+                    ),
+                    _SummaryCard(
+                      title: 'معوق و تأخیر',
+                      count: summary['overdue'] ?? 0,
+                      color: const Color(0xFFDC2626),
+                      icon: EneftyIcons.danger_outline,
+                      onTap: () => context.push('/work-orders'),
+                    ),
+                    _SummaryCard(
+                      title: 'دستورکارهای باز',
+                      count: summary['open_work_orders'] ?? 0,
+                      color: const Color(0xFF2563EB),
+                      icon: EneftyIcons.document_text_outline,
+                      onTap: () => context.push('/work-orders'),
+                    ),
+                    _SummaryCard(
+                      title: 'اقلام کم‌موجودی',
+                      count: summary['low_stock'] ?? 0,
+                      color: const Color(0xFF9333EA),
+                      icon: EneftyIcons.box_outline,
+                      onTap: () => context.push('/inventory'),
+                    ),
+                  ],
+                );
+              },
               loading: () => const SizedBox(height: 150, child: AppLoading()),
               error: (e, _) => Text('خطا در بارگذاری خلاصه: $e'),
             ),

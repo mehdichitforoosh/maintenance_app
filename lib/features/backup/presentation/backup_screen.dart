@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../repositories/backup_repository.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import 'widgets/backup_export_card.dart';
 import 'widgets/backup_import_card.dart';
 import 'widgets/backup_info_banner.dart';
@@ -186,26 +187,28 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       ),
       body: Stack(
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            children: [
-              const BackupInfoBanner(),
-              const SizedBox(height: 22),
-              _buildSectionHeader(context, 'ایجاد پشتیبان'),
-              const SizedBox(height: 8),
-              BackupExportCard(
-                isProcessing: _isProcessing,
-                onShareBackupFilePressed: _shareBackupFile,
-                onExportBackupFilePressed: _exportBackupFile,
-              ),
-              const SizedBox(height: 22),
-              _buildSectionHeader(context, 'بازیابی اطلاعات'),
-              const SizedBox(height: 8),
-              BackupImportCard(
-                isProcessing: _isProcessing,
-                onPickAndImportFilePressed: _pickAndImportFile,
-              ),
-            ],
+          AppResponsiveContainer(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                const BackupInfoBanner(),
+                const SizedBox(height: 22),
+                _buildSectionHeader(context, 'ایجاد پشتیبان'),
+                const SizedBox(height: 8),
+                BackupExportCard(
+                  isProcessing: _isProcessing,
+                  onShareBackupFilePressed: _shareBackupFile,
+                  onExportBackupFilePressed: _exportBackupFile,
+                ),
+                const SizedBox(height: 22),
+                _buildSectionHeader(context, 'بازیابی اطلاعات'),
+                const SizedBox(height: 8),
+                BackupImportCard(
+                  isProcessing: _isProcessing,
+                  onPickAndImportFilePressed: _pickAndImportFile,
+                ),
+              ],
+            ),
           ),
           if (_isProcessing)
             Positioned.fill(

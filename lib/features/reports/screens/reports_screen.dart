@@ -5,6 +5,7 @@ import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../models/operational_report.dart';
 import '../providers/report_providers.dart';
@@ -50,9 +51,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               endExclusive: range.endExclusive,
             )),
           );
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-            children: [
+          return AppResponsiveContainer(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+              children: [
               Text(
                 'بازه گزارش',
                 style: Theme.of(
@@ -100,6 +102,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 error: (error, _) => AppErrorState(message: error.toString()),
               ),
             ],
+          ),
           );
         },
         loading: () => const AppLoading(),

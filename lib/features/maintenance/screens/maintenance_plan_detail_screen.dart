@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../../assets/providers/asset_providers.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../../work_orders/providers/work_order_providers.dart';
@@ -57,43 +58,45 @@ class MaintenancePlanDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              MaintenancePlanSummary(plan: plan),
-              const SizedBox(height: 16),
-              assetAsync.when(
-                data: (asset) => MaintenancePlanAssetCard(asset: asset),
-                loading: () => const AppLoading(),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-              const SizedBox(height: 24),
-              tasksAsync.when(
-                data: (tasks) => MaintenancePlanReport(tasks: tasks),
-                loading: () => const AppLoading(),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-              const SizedBox(height: 24),
-              materialsAsync.when(
-                data: (materials) => itemsAsync.when(
-                  data: (items) => MaintenancePlanMaterialsSection(
-                    materials: materials,
-                    itemNames: {for (final item in items) item.id: item.name},
-                    itemUnits: {for (final item in items) item.id: item.unit},
+          body: AppResponsiveContainer(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                MaintenancePlanSummary(plan: plan),
+                const SizedBox(height: 16),
+                assetAsync.when(
+                  data: (asset) => MaintenancePlanAssetCard(asset: asset),
+                  loading: () => const AppLoading(),
+                  error: (error, _) => AppErrorState(message: error.toString()),
+                ),
+                const SizedBox(height: 24),
+                tasksAsync.when(
+                  data: (tasks) => MaintenancePlanReport(tasks: tasks),
+                  loading: () => const AppLoading(),
+                  error: (error, _) => AppErrorState(message: error.toString()),
+                ),
+                const SizedBox(height: 24),
+                materialsAsync.when(
+                  data: (materials) => itemsAsync.when(
+                    data: (items) => MaintenancePlanMaterialsSection(
+                      materials: materials,
+                      itemNames: {for (final item in items) item.id: item.name},
+                      itemUnits: {for (final item in items) item.id: item.unit},
+                    ),
+                    loading: () => const AppLoading(),
+                    error: (error, _) => AppErrorState(message: error.toString()),
                   ),
                   loading: () => const AppLoading(),
                   error: (error, _) => AppErrorState(message: error.toString()),
                 ),
-                loading: () => const AppLoading(),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-              const SizedBox(height: 24),
-              tasksAsync.when(
-                data: (tasks) => MaintenancePlanTaskHistory(tasks: tasks),
-                loading: () => const AppLoading(),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-            ],
+                const SizedBox(height: 24),
+                tasksAsync.when(
+                  data: (tasks) => MaintenancePlanTaskHistory(tasks: tasks),
+                  loading: () => const AppLoading(),
+                  error: (error, _) => AppErrorState(message: error.toString()),
+                ),
+              ],
+            ),
           ),
         );
       },

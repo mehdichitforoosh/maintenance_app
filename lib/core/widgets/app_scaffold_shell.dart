@@ -51,6 +51,96 @@ class AppScaffoldShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentIndex = _getCurrentIndex(location);
     final colorScheme = Theme.of(context).colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+
+    final isMobile = width < 600;
+    final isExpanded = width >= 900;
+
+    if (!isMobile) {
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: currentIndex,
+              onDestinationSelected: (index) => _onItemTapped(context, index),
+              extended: isExpanded,
+              labelType: isExpanded
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.all,
+              backgroundColor: colorScheme.surface,
+              indicatorColor: colorScheme.primaryContainer,
+              leading: isExpanded
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            EneftyIcons.setting_4_bold,
+                            color: colorScheme.primary,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'مدیریت نگهداری',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Icon(
+                        EneftyIcons.setting_4_bold,
+                        color: colorScheme.primary,
+                        size: 28,
+                      ),
+                    ),
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(EneftyIcons.home_2_outline),
+                  selectedIcon: Icon(EneftyIcons.home_2_bold),
+                  label: Text('داشبورد'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(EneftyIcons.cpu_outline),
+                  selectedIcon: Icon(EneftyIcons.cpu_bold),
+                  label: Text('تجهیزات'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(EneftyIcons.document_text_outline),
+                  selectedIcon: Icon(EneftyIcons.document_text_bold),
+                  label: Text('دستورات کار'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(EneftyIcons.box_outline),
+                  selectedIcon: Icon(EneftyIcons.box_bold),
+                  label: Text('انبار'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(EneftyIcons.setting_2_outline),
+                  selectedIcon: Icon(EneftyIcons.setting_2_bold),
+                  label: Text('تنظیمات'),
+                ),
+              ],
+            ),
+            VerticalDivider(
+              thickness: 1,
+              width: 1,
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+            Expanded(child: child),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       body: child,
