@@ -17,7 +17,7 @@ final alertsProvider = FutureProvider.family<List<AlertEvent>, String>((
   facilityId,
 ) async {
   final repo = ref.watch(alertRepositoryProvider);
-  return repo.getAlerts(facilityId);
+  return repo.reconcileAndGetAlerts(facilityId);
 });
 
 final alertActionsProvider = Provider<AlertActions>((ref) {

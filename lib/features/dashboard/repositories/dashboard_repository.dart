@@ -5,6 +5,7 @@ import '../../../core/storage/database/tables/stock_transaction_table.dart';
 import '../../../core/storage/database/tables/work_order_material_table.dart';
 import '../../../core/storage/database/tables/work_order_table.dart';
 import '../../../core/storage/database/tables/work_order_task_table.dart';
+import '../../maintenance/services/maintenance_scheduler.dart';
 
 class DashboardRepository {
   final DatabaseHelper _dbHelper;
@@ -13,6 +14,8 @@ class DashboardRepository {
 
   Future<Map<String, int>> getSummaryCounts(String facilityId) async {
     final db = await _dbHelper.db;
+    await MaintenanceScheduler.runScheduler(db, facilityId);
+
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
 
     // 1. Due today tasks

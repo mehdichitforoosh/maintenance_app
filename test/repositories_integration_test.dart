@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:maintenance_app/core/enums/app_enums.dart';
 import 'package:maintenance_app/core/storage/database/database_helper.dart';
 import 'package:maintenance_app/core/utils/date_utils.dart';
+import 'package:maintenance_app/features/alerts/repositories/alert_repository.dart';
 import 'package:maintenance_app/features/assets/repositories/asset_reading_repository.dart';
 import 'package:maintenance_app/features/assets/repositories/asset_repository.dart';
 import 'package:maintenance_app/features/facilities/repositories/facility_repository.dart';
@@ -1103,5 +1104,36 @@ void main() {
         );
       },
     );
+
+    test('AlertRepository reconcileAndGetAlerts generates low stock and overdue task alerts', () async {
+      final facilityRepo = FacilityRepository(dbHelper: dbHelper);
+      final inventoryRepo = InventoryRepository(dbHelper: dbHelper);
+      final alertRepo = AlertRepository(dbHelper: dbHelper);
+
+      final facility = await facilityRepo.createFacility(name: 'کارگاه هشدارها');
+
+      // Create an inventory item with 0 stock and min stock = 10
+      final item = await inventoryRepo.createItem(
+        name: 'روغن هیدرولیک V46',
+        code: 'OIL-46',
+        unit: 'لیتر',
+        minimumStock: 10,
+      );
+
+      // Reconcile alerts
+      var alerts = await alertRepo.reconcileAndGetAlerts(facility.id);
+      expect(alerts.any((a) => a.inventoryItemId == item.id && a.alertType == AlertType.lowStock), isTrue);
+
+      // Replenish stock via adjustment
+      await inventoryRepo.adjustStock(
+        itemId: item.id,
+        type: TransactionType.adjustmentIn,
+        quantity: 50,
+      );
+
+      // Reconcile alerts again
+      alerts = await alertRepo.reconcileAndGetAlerts(facility.id);
+      expect(alerts.any((a) => a.inventoryItemId == item.id && a.status == AlertStatus.active), isFalse);
+    });
   });
 }
