@@ -163,7 +163,6 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                         final statusColor = _getStatusColor(asset.status);
 
                         return Card(
-                          elevation: 0,
                           child: InkWell(
                             onTap: () => context.push('/assets/${asset.id}'),
                             borderRadius: BorderRadius.circular(12),
@@ -264,7 +263,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/assets/new'),
-            child: const Icon(EneftyIcons.add_outline),
+            child: const Icon(EneftyIcons.add_bold),
           ),
         );
       },
