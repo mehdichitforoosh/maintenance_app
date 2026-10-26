@@ -11,6 +11,15 @@ class AppDateUtils {
     return result;
   }
 
+  static String _toEnglishDigits(String input) {
+    const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    var result = input;
+    for (var i = 0; i < persianDigits.length; i++) {
+      result = result.replaceAll(persianDigits[i], '$i');
+    }
+    return result;
+  }
+
   /// Returns current UTC timestamp as ISO-8601 string.
   static String nowUtcIso() {
     return DateTime.now().toUtc().toIso8601String();
@@ -26,6 +35,62 @@ class AppDateUtils {
     return '${date.year.toString().padLeft(4, '0')}-'
         '${date.month.toString().padLeft(2, '0')}-'
         '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Converts a Jalali date selected in the UI to the canonical Gregorian
+  /// YYYY-MM-DD representation used for date-only values in storage.
+  static String? jalaliDateToIsoDate(String? value) {
+    final jalali = parseDateOnlyAsJalali(value);
+    if (jalali == null) return null;
+    return formatDateOnly(jalali.toGregorian().toDateTime());
+  }
+
+  /// Parses canonical Gregorian dates, legacy Jalali dates, and ISO timestamps.
+  static Jalali? parseDateOnlyAsJalali(String? value) {
+    final normalized = _toEnglishDigits(value?.trim() ?? '');
+    if (normalized.isEmpty) return null;
+
+    final jalaliMatch = RegExp(
+      r'^(\d{4})/(\d{1,2})/(\d{1,2})$',
+    ).firstMatch(normalized);
+    if (jalaliMatch != null) {
+      try {
+        return Jalali(
+          int.parse(jalaliMatch.group(1)!),
+          int.parse(jalaliMatch.group(2)!),
+          int.parse(jalaliMatch.group(3)!),
+        );
+      } on Exception {
+        return null;
+      }
+    }
+
+    final gregorianMatch = RegExp(
+      r'^(\d{4})-(\d{2})-(\d{2})$',
+    ).firstMatch(normalized);
+    if (gregorianMatch != null) {
+      final year = int.parse(gregorianMatch.group(1)!);
+      final month = int.parse(gregorianMatch.group(2)!);
+      final day = int.parse(gregorianMatch.group(3)!);
+      final date = DateTime(year, month, day);
+      if (date.year != year || date.month != month || date.day != day) {
+        return null;
+      }
+      return Jalali.fromDateTime(date);
+    }
+
+    final timestamp = DateTime.tryParse(normalized);
+    return timestamp == null ? null : Jalali.fromDateTime(timestamp.toLocal());
+  }
+
+  /// Formats a stored date-only value as a Persian Jalali date.
+  /// Legacy Jalali values remain readable while data is migrated by edits.
+  static String formatDateOnlyAsJalali(String? value) {
+    final jalali = parseDateOnlyAsJalali(value);
+    if (jalali == null) return '-';
+    return _toPersianDigits(
+      '${jalali.formatter.yyyy}/${jalali.formatter.mm}/${jalali.formatter.dd}',
+    );
   }
 
   /// Parses ISO string or returns null.

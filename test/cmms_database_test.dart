@@ -1,5 +1,7 @@
 import 'package:maintenance_app/core/enums/app_enums.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:maintenance_app/core/storage/database/migrations/database_migrations.dart';
 import 'package:maintenance_app/core/storage/database/database_helper.dart';
 import 'package:maintenance_app/features/assets/repositories/asset_repository.dart';
 import 'package:maintenance_app/features/facilities/repositories/facility_repository.dart';
@@ -50,6 +52,64 @@ void main() {
         true,
         reason: 'Foreign key check should return no violations',
       );
+    },
+  );
+
+  test(
+    'version 1 asset reading databases are upgraded without data loss',
+    () async {
+      sqfliteFfiInit();
+      final db = await databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+        options: OpenDatabaseOptions(
+          version: 1,
+          singleInstance: false,
+          onCreate: (db, version) async {
+            await db.execute('''
+            CREATE TABLE asset_readings (
+              id TEXT PRIMARY KEY,
+              asset_id TEXT NOT NULL,
+              metric_name TEXT NOT NULL,
+              value REAL NOT NULL,
+              unit TEXT NOT NULL,
+              recorded_at TEXT NOT NULL,
+              notes TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              deleted_at TEXT,
+              sync_status TEXT NOT NULL DEFAULT 'pending'
+            )
+          ''');
+            await db.insert('asset_readings', {
+              'id': 'legacy-reading',
+              'asset_id': 'legacy-asset',
+              'metric_name': 'temperature',
+              'value': 70,
+              'unit': '°C',
+              'recorded_at': '2026-10-26T00:00:00.000Z',
+              'created_at': '2026-10-26T00:00:00.000Z',
+              'updated_at': '2026-10-26T00:00:00.000Z',
+            });
+          },
+        ),
+      );
+
+      try {
+        await DatabaseMigrations.onUpgrade(db, 1, 2);
+        await DatabaseMigrations.onUpgrade(db, 1, 2);
+
+        final columns = await db.rawQuery('PRAGMA table_info(asset_readings)');
+        final names = columns.map((column) => column['name']).toSet();
+        expect(names, contains('superseded_by_reading_id'));
+        expect(names, contains('correction_reason'));
+        final rows = await db.query('asset_readings');
+        expect(rows, hasLength(1));
+        expect(rows.single['id'], 'legacy-reading');
+        expect(rows.single['superseded_by_reading_id'], isNull);
+        expect(rows.single['correction_reason'], isNull);
+      } finally {
+        await db.close();
+      }
     },
   );
 

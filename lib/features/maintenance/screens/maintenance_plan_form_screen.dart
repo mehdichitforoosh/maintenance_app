@@ -127,7 +127,7 @@ class _MaintenancePlanFormScreenState
         }
         _oneTimeDueController.text = plan.oneTimeDueAt == null
             ? ''
-            : AppDateUtils.formatDisplay(plan.oneTimeDueAt, includeTime: false);
+            : AppDateUtils.formatDateOnlyAsJalali(plan.oneTimeDueAt);
         _selectedOneTimeDueDate = plan.oneTimeDueAt;
         final conditionJson = plan.conditionConfigJson;
         if (conditionJson != null) {
@@ -166,9 +166,12 @@ class _MaintenancePlanFormScreenState
   }
 
   Future<void> _selectOneTimeDueDate() async {
+    final selectedDate = AppDateUtils.parseDateOnlyAsJalali(
+      _oneTimeDueController.text,
+    );
     final picked = await showPersianDatePicker(
       context: context,
-      initialDate: Jalali.now(),
+      initialDate: selectedDate ?? Jalali.now(),
       firstDate: Jalali(1370, 1),
       lastDate: Jalali(1450, 12),
     );
@@ -177,9 +180,8 @@ class _MaintenancePlanFormScreenState
         _selectedOneTimeDueDate = AppDateUtils.formatDateOnly(
           picked.toDateTime(),
         );
-        _oneTimeDueController.text = AppDateUtils.formatDisplay(
+        _oneTimeDueController.text = AppDateUtils.formatDateOnlyAsJalali(
           _selectedOneTimeDueDate,
-          includeTime: false,
         );
       });
     }
@@ -773,10 +775,7 @@ class _MaintenancePlanFormScreenState
     if (_oneTimeDueController.text.isEmpty) return null;
     if (plan?.oneTimeDueAt != null &&
         _oneTimeDueController.text ==
-            AppDateUtils.formatDisplay(
-              plan!.oneTimeDueAt,
-              includeTime: false,
-            )) {
+            AppDateUtils.formatDateOnlyAsJalali(plan!.oneTimeDueAt)) {
       return plan.oneTimeDueAt;
     }
     // The picker selection is stored separately so the display stays Jalali.

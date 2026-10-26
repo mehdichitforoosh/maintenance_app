@@ -101,10 +101,7 @@ class MaintenancePlanSummary extends StatelessWidget {
             if (_hasText(plan.oneTimeDueAt))
               _InfoRow(
                 label: 'تاریخ اجرای برنامه',
-                value: AppDateUtils.formatDisplay(
-                  plan.oneTimeDueAt,
-                  includeTime: false,
-                ),
+                value: AppDateUtils.formatDateOnlyAsJalali(plan.oneTimeDueAt),
               ),
             if (_hasText(plan.lastCompletedAt))
               _InfoRow(
@@ -176,8 +173,12 @@ class MaintenancePlanMaterialsSection extends StatelessWidget {
             (material) => ListTile(
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
-                foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.tertiaryContainer,
+                foregroundColor: Theme.of(
+                  context,
+                ).colorScheme.onTertiaryContainer,
                 child: const Icon(EneftyIcons.box_outline),
               ),
               title: Text(itemNames[material.itemId] ?? 'کالای حذف‌شده'),
@@ -281,7 +282,9 @@ class MaintenancePlanTaskHistory extends StatelessWidget {
         TaskStatus.pending => Theme.of(context).colorScheme.tertiaryContainer,
         TaskStatus.inProgress => Theme.of(context).colorScheme.primaryContainer,
         TaskStatus.completed => Colors.green.shade100,
-        TaskStatus.skipped => Theme.of(context).colorScheme.surfaceContainerHighest,
+        TaskStatus.skipped => Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest,
         TaskStatus.cancelled => Theme.of(context).colorScheme.errorContainer,
       };
 }

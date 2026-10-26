@@ -77,5 +77,22 @@ void main() {
         );
       },
     );
+
+    test('converts Jalali date-only values to canonical Gregorian dates', () {
+      expect(AppDateUtils.jalaliDateToIsoDate('۱۴۰۲/۰۳/۰۷'), '2023-05-28');
+      expect(AppDateUtils.formatDateOnlyAsJalali('2023-05-28'), '۱۴۰۲/۰۳/۰۷');
+    });
+
+    test('continues displaying and normalizing legacy Jalali date values', () {
+      expect(AppDateUtils.formatDateOnlyAsJalali('1402/3/7'), '۱۴۰۲/۰۳/۰۷');
+      expect(AppDateUtils.jalaliDateToIsoDate('1402/3/7'), '2023-05-28');
+    });
+
+    test('formats legacy ISO timestamp values as local Jalali dates', () {
+      expect(
+        AppDateUtils.formatDateOnlyAsJalali('2023-05-28T00:00:00.000Z'),
+        AppDateUtils.formatJalali('2023-05-28T00:00:00.000Z'),
+      );
+    });
   });
 }

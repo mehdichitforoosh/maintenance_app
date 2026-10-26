@@ -75,9 +75,15 @@ class MaintenanceScheduler {
     String nowIso,
   ) async {
     if (plan.oneTimeDueAt == null) return;
-    final parsedDueDate = DateTime.tryParse(plan.oneTimeDueAt!);
+    final dueValue = plan.oneTimeDueAt!;
+    final isDateOnly = RegExp(
+      r'^\d{4}(?:-\d{2}-\d{2}|/\d{1,2}/\d{1,2})$',
+    ).hasMatch(dueValue);
+    final parsedDueDate = isDateOnly
+        ? AppDateUtils.parseDateOnlyAsJalali(dueValue)?.toDateTime()
+        : DateTime.tryParse(dueValue)?.toLocal();
     if (parsedDueDate == null) return;
-    final dueDate = parsedDueDate.toLocal();
+    final dueDate = parsedDueDate;
     if (dueDate.isAfter(nowDate) && !_isSameDay(dueDate, nowDate)) return;
 
     final occurrenceKey = 'one-time:${plan.oneTimeDueAt}';

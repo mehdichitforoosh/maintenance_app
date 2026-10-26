@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/app_form_body.dart';
 import '../../../core/widgets/app_form_submit_button.dart';
 import '../../../core/utils/validators.dart';
@@ -66,8 +67,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
         _modelController.text = asset.model ?? '';
         _serialController.text = asset.serialNumber ?? '';
         _descController.text = asset.description ?? '';
-        _installDateController.text = asset.installationDate ?? '';
-        _commDateController.text = asset.commissioningDate ?? '';
+        _installDateController.text = _dateInputValue(asset.installationDate);
+        _commDateController.text = _dateInputValue(asset.commissioningDate);
         _selectedLocationId = asset.locationId;
         _selectedParentAssetId = asset.parentAssetId;
         _assetType = asset.assetType;
@@ -94,17 +95,26 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
   }
 
   Future<void> _selectPersianDate(TextEditingController controller) async {
+    final selectedDate = AppDateUtils.parseDateOnlyAsJalali(controller.text);
     final picked = await showPersianDatePicker(
       context: context,
-      initialDate: Jalali.now(),
+      initialDate: selectedDate ?? Jalali.now(),
       firstDate: Jalali(1370, 1),
       lastDate: Jalali(1450, 12),
     );
     if (picked != null) {
       final formatted =
           '${picked.year}/${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}';
-      setState(() => controller.text = formatted);
+      setState(() {
+        controller.text = AppDateUtils.formatDateOnlyAsJalali(formatted);
+      });
     }
+  }
+
+  String _dateInputValue(String? value) {
+    return AppDateUtils.parseDateOnlyAsJalali(value) == null
+        ? ''
+        : AppDateUtils.formatDateOnlyAsJalali(value);
   }
 
   Future<void> _save() async {
@@ -134,12 +144,12 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
           serialNumber: _serialController.text.trim().isEmpty
               ? null
               : _serialController.text.trim(),
-          installationDate: _installDateController.text.trim().isEmpty
-              ? null
-              : _installDateController.text.trim(),
-          commissioningDate: _commDateController.text.trim().isEmpty
-              ? null
-              : _commDateController.text.trim(),
+          installationDate: AppDateUtils.jalaliDateToIsoDate(
+            _installDateController.text,
+          ),
+          commissioningDate: AppDateUtils.jalaliDateToIsoDate(
+            _commDateController.text,
+          ),
           description: _descController.text.trim().isEmpty
               ? null
               : _descController.text.trim(),
@@ -165,12 +175,12 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
               serialNumber: _serialController.text.trim().isEmpty
                   ? null
                   : _serialController.text.trim(),
-              installationDate: _installDateController.text.trim().isEmpty
-                  ? null
-                  : _installDateController.text.trim(),
-              commissioningDate: _commDateController.text.trim().isEmpty
-                  ? null
-                  : _commDateController.text.trim(),
+              installationDate: AppDateUtils.jalaliDateToIsoDate(
+                _installDateController.text,
+              ),
+              commissioningDate: AppDateUtils.jalaliDateToIsoDate(
+                _commDateController.text,
+              ),
               description: _descController.text.trim().isEmpty
                   ? null
                   : _descController.text.trim(),

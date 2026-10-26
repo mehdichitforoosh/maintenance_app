@@ -19,13 +19,14 @@ import 'tables/work_order_material_table.dart';
 import 'tables/work_order_table.dart';
 import 'tables/work_order_task_event_table.dart';
 import 'tables/work_order_task_table.dart';
+import 'migrations/database_migrations.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._instance();
   DatabaseHelper._instance();
 
   static const String _databaseName = 'cmms_maintenance.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static Database? _database;
 
@@ -80,6 +81,7 @@ class DatabaseHelper {
         version: _databaseVersion,
         onCreate: _onCreate,
         onConfigure: _onConfigure,
+        onUpgrade: DatabaseMigrations.onUpgrade,
       ),
     );
   }

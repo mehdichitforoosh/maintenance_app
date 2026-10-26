@@ -1,3 +1,4 @@
+import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/validators.dart';
@@ -119,7 +120,7 @@ class AssetReadingForm extends StatelessWidget {
                     decoration: const InputDecoration(
                       labelText: 'نوع شاخص',
                       hintText: 'مثلاً operating_hours یا temperature',
-                      prefixIcon: Icon(Icons.analytics_outlined),
+                      prefixIcon: Icon(EneftyIcons.category_2_outline),
                     ),
                     validator: (value) =>
                         AppValidators.required(value, fieldName: 'شاخص'),
@@ -170,7 +171,7 @@ class AssetReadingForm extends StatelessWidget {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'مقدار',
-                    prefixIcon: Icon(Icons.speed_outlined),
+                    prefixIcon: Icon(EneftyIcons.speedometer_outline),
                   ),
                   validator: (value) =>
                       AppValidators.positiveNumber(value, fieldName: 'مقدار'),
@@ -183,7 +184,7 @@ class AssetReadingForm extends StatelessWidget {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     labelText: 'واحد',
-                    prefixIcon: Icon(Icons.straighten_outlined),
+                    prefixIcon: Icon(EneftyIcons.ruler_outline),
                   ),
                   validator: (value) =>
                       AppValidators.required(value, fieldName: 'واحد'),
@@ -214,8 +215,7 @@ class AssetReadingForm extends StatelessWidget {
             child: InputDecorator(
               decoration: const InputDecoration(
                 labelText: 'تاریخ و ساعت ثبت',
-                prefixIcon: Icon(Icons.calendar_month_outlined),
-                suffixIcon: Icon(Icons.edit_calendar_outlined),
+                prefixIcon: Icon(EneftyIcons.calendar_2_outline),
               ),
               child: Text(
                 AppDateUtils.formatDisplay(recordedAt.toIso8601String()),
@@ -231,7 +231,6 @@ class AssetReadingForm extends StatelessWidget {
             decoration: const InputDecoration(
               labelText: 'یادداشت (اختیاری)',
               alignLabelWithHint: true,
-              prefixIcon: Icon(Icons.notes_outlined),
             ),
           ),
           if (isEditing) ...[
@@ -243,7 +242,6 @@ class AssetReadingForm extends StatelessWidget {
               decoration: const InputDecoration(
                 labelText: 'دلیل اصلاح *',
                 alignLabelWithHint: true,
-                prefixIcon: Icon(Icons.edit_note_outlined),
               ),
               validator: (value) =>
                   AppValidators.required(value, fieldName: 'دلیل اصلاح'),
@@ -251,7 +249,7 @@ class AssetReadingForm extends StatelessWidget {
           ],
           const SizedBox(height: 16),
           AppFormSubmitButton(
-            icon: const Icon(Icons.add_chart_outlined),
+            icon: const Icon(EneftyIcons.add_bold),
             isSubmitting: isSubmitting,
             onPressed: onSubmit,
             label: isEditing ? 'ذخیره اصلاح' : 'ثبت خوانش',

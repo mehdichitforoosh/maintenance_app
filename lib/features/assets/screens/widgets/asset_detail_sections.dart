@@ -65,13 +65,13 @@ class AssetSpecificationsCard extends StatelessWidget {
               _infoRow(
                 context,
                 'تاریخ نصب',
-                AppDateUtils.formatJalali(asset.installationDate),
+                AppDateUtils.formatDateOnlyAsJalali(asset.installationDate),
               ),
             if (_hasText(asset.commissioningDate))
               _infoRow(
                 context,
                 'تاریخ بهره‌برداری',
-                AppDateUtils.formatJalali(asset.commissioningDate),
+                AppDateUtils.formatDateOnlyAsJalali(asset.commissioningDate),
               ),
             if (_hasText(asset.description))
               _infoRow(context, 'توضیحات', asset.description!),
@@ -222,7 +222,6 @@ class _AssetMeterTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      elevation: 0,
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: theme.colorScheme.primaryContainer,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
+import '../../../core/widgets/app_responsive_container.dart';
 import '../../../core/widgets/app_empty_state.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
@@ -176,70 +177,73 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
         ),
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            AssetReadingForm(
-              formKey: _formKey,
-              metricController: _metricController,
-              metricFocusNode: _metricFocusNode,
-              metricSuggestions:
-                  readingsAsync.asData?.value
-                      .map((reading) => reading.metricName)
-                      .toSet()
-                      .toList() ??
-                  const [],
-              metricUnits: _latestMetricUnits(
-                readingsAsync.asData?.value ?? const [],
+        child: AppResponsiveContainer(
+          maxWidth: 900,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              AssetReadingForm(
+                formKey: _formKey,
+                metricController: _metricController,
+                metricFocusNode: _metricFocusNode,
+                metricSuggestions:
+                    readingsAsync.asData?.value
+                        .map((reading) => reading.metricName)
+                        .toSet()
+                        .toList() ??
+                    const [],
+                metricUnits: _latestMetricUnits(
+                  readingsAsync.asData?.value ?? const [],
+                ),
+                valueController: _valueController,
+                unitController: _unitController,
+                notesController: _notesController,
+                correctionReasonController: _reasonController,
+                recordedAt: _recordedAt,
+                isEditing: _editingReadingId != null,
+                isSubmitting: _isSubmitting,
+                onUnitChanged: (unit) =>
+                    setState(() => _unitController.text = unit),
+                onSelectDate: _selectRecordedAt,
+                onSubmit: _submit,
+                onCancel: _resetForm,
               ),
-              valueController: _valueController,
-              unitController: _unitController,
-              notesController: _notesController,
-              correctionReasonController: _reasonController,
-              recordedAt: _recordedAt,
-              isEditing: _editingReadingId != null,
-              isSubmitting: _isSubmitting,
-              onUnitChanged: (unit) =>
-                  setState(() => _unitController.text = unit),
-              onSelectDate: _selectRecordedAt,
-              onSubmit: _submit,
-              onCancel: _resetForm,
-            ),
-            const SizedBox(height: 28),
-            Text(
-              'تاریخچه خوانش‌ها',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            readingsAsync.when(
-              data: (readings) {
-                if (readings.isEmpty) {
-                  return const AppEmptyState(
-                    title: 'خوانشی ثبت نشده است',
-                    message:
-                        'پس از ثبت اولین خوانش، تاریخچه آن در این بخش نمایش داده می‌شود.',
-                    icon: Icons.speed_outlined,
+              const SizedBox(height: 28),
+              Text(
+                'تاریخچه خوانش‌ها',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              readingsAsync.when(
+                data: (readings) {
+                  if (readings.isEmpty) {
+                    return const AppEmptyState(
+                      title: 'خوانشی ثبت نشده است',
+                      message:
+                          'پس از ثبت اولین خوانش، تاریخچه آن در این بخش نمایش داده می‌شود.',
+                      icon: Icons.speed_outlined,
+                    );
+                  }
+                  return Column(
+                    children: readings
+                        .map(
+                          (reading) => AssetReadingTile(
+                            reading: reading,
+                            onEdit: _isSubmitting
+                                ? null
+                                : () => _startCorrection(reading),
+                          ),
+                        )
+                        .toList(),
                   );
-                }
-                return Column(
-                  children: readings
-                      .map(
-                        (reading) => AssetReadingTile(
-                          reading: reading,
-                          onEdit: _isSubmitting
-                              ? null
-                              : () => _startCorrection(reading),
-                        ),
-                      )
-                      .toList(),
-                );
-              },
-              loading: () => const AppLoading(),
-              error: (error, _) => AppErrorState(message: error.toString()),
-            ),
-          ],
+                },
+                loading: () => const AppLoading(),
+                error: (error, _) => AppErrorState(message: error.toString()),
+              ),
+            ],
+          ),
         ),
       ),
     );
