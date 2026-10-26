@@ -57,6 +57,9 @@ class MaintenanceScheduler {
         facilityId: facilityId,
         plan: plan,
         title: '${plan.title} (سررسید تقویمی)',
+        alertType: _isBeforeDay(dueDate, nowDate)
+            ? 'MAINTENANCE_OVERDUE'
+            : 'MAINTENANCE_DUE',
         occurrenceKey: occurrenceKey,
         plannedDueAt: plan.nextDueAt,
         nowIso: nowIso,
@@ -83,6 +86,9 @@ class MaintenanceScheduler {
       facilityId: facilityId,
       plan: plan,
       title: '${plan.title} (یک‌باره)',
+      alertType: _isBeforeDay(dueDate, nowDate)
+          ? 'MAINTENANCE_OVERDUE'
+          : 'MAINTENANCE_DUE',
       occurrenceKey: occurrenceKey,
       plannedDueAt: plan.oneTimeDueAt,
       nowIso: nowIso,
@@ -94,6 +100,7 @@ class MaintenanceScheduler {
     required String facilityId,
     required MaintenancePlan plan,
     required String title,
+    required String alertType,
     required String occurrenceKey,
     String? plannedDueAt,
     double? plannedMeterValue,
@@ -171,13 +178,14 @@ class MaintenanceScheduler {
     await db.insert('alert_events', {
       'id': alertId,
       'facility_id': facilityId,
-      'alert_type': 'MAINTENANCE_DUE',
+      'alert_type': alertType,
       'severity': plan.priority == Priority.critical ? 'CRITICAL' : 'WARNING',
       'status': 'ACTIVE',
       'title': 'سررسید نگهداری: ${plan.title}',
       'message': 'برنامه نگهداری سررسید شده است.',
       'asset_id': plan.assetId,
       'maintenance_plan_id': plan.id,
+      'work_order_task_id': taskId,
       'deduplication_key': dedupKey,
       'triggered_at': nowIso,
       'created_at': nowIso,
@@ -188,5 +196,13 @@ class MaintenanceScheduler {
 
   static bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  static bool _isBeforeDay(DateTime a, DateTime b) {
+    return DateTime(
+      a.year,
+      a.month,
+      a.day,
+    ).isBefore(DateTime(b.year, b.month, b.day));
   }
 }

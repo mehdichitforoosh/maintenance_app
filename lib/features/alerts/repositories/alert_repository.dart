@@ -48,27 +48,38 @@ class AlertRepository {
       final dedupKey = 'alert:low_stock:$itemId';
 
       if (calcStock <= minStock) {
-        final alertId = IdGenerator.generate();
-        await db.insert(
+        final severity = calcStock <= 0 ? 'CRITICAL' : 'WARNING';
+        final messageText =
+            'موجودی فعلی (${AppNumberFormat.decimal(calcStock)} $unit) از حداقل موجودی (${AppNumberFormat.decimal(minStock)} $unit) کمتر است.';
+        final titleText = 'موجودی کم: $itemName';
+        await db.update(
           _tableName,
           {
-            AlertEventTable.id: alertId,
-            AlertEventTable.facilityId: facilityId,
-            AlertEventTable.alertType: 'LOW_STOCK',
-            AlertEventTable.severity: calcStock <= 0 ? 'CRITICAL' : 'WARNING',
-            AlertEventTable.status: 'ACTIVE',
-            AlertEventTable.title: 'موجودی کم: $itemName',
-            AlertEventTable.message:
-                'موجودی فعلی (${AppNumberFormat.decimal(calcStock)} $unit) از حداقل موجودی (${AppNumberFormat.decimal(minStock)} $unit) کمتر است.',
-            AlertEventTable.inventoryItemId: itemId,
-            AlertEventTable.deduplicationKey: dedupKey,
-            AlertEventTable.triggeredAt: nowIso,
-            AlertEventTable.createdAt: nowIso,
+            AlertEventTable.severity: severity,
+            AlertEventTable.message: messageText,
             AlertEventTable.updatedAt: nowIso,
             AlertEventTable.syncStatus: 'pending',
           },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
+          where:
+              'deduplication_key = ? AND status IN (?, ?) AND deleted_at IS NULL',
+          whereArgs: [dedupKey, 'ACTIVE', 'ACKNOWLEDGED'],
         );
+        final alertId = IdGenerator.generate();
+        await db.insert(_tableName, {
+          AlertEventTable.id: alertId,
+          AlertEventTable.facilityId: facilityId,
+          AlertEventTable.alertType: 'LOW_STOCK',
+          AlertEventTable.severity: severity,
+          AlertEventTable.status: 'ACTIVE',
+          AlertEventTable.title: titleText,
+          AlertEventTable.message: messageText,
+          AlertEventTable.inventoryItemId: itemId,
+          AlertEventTable.deduplicationKey: dedupKey,
+          AlertEventTable.triggeredAt: nowIso,
+          AlertEventTable.createdAt: nowIso,
+          AlertEventTable.updatedAt: nowIso,
+          AlertEventTable.syncStatus: 'pending',
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       } else {
         // Automatically resolve active low-stock alert if stock is replenished above minimum
         await db.update(
@@ -87,7 +98,8 @@ class AlertRepository {
     }
 
     // 3. Reconcile Overdue Work Orders / Tasks
-    final overdueTasks = await db.rawQuery('''
+    final overdueTasks = await db.rawQuery(
+      '''
       SELECT t.id, t.title, t.asset_id, t.maintenance_plan_id, wo.facility_id
       FROM work_order_tasks t
       INNER JOIN work_orders wo ON wo.id = t.work_order_id
@@ -97,7 +109,9 @@ class AlertRepository {
         AND t.status IN ('PENDING', 'IN_PROGRESS')
         AND t.deleted_at IS NULL
         AND wo.deleted_at IS NULL
-    ''', [facilityId, nowIso]);
+    ''',
+      [facilityId, nowIso],
+    );
 
     for (final row in overdueTasks) {
       final taskId = row['id'] as String;
@@ -106,28 +120,26 @@ class AlertRepository {
       final planId = row['maintenance_plan_id'] as String?;
       final dedupKey = 'alert:overdue_task:$taskId';
 
-      await db.insert(
-        _tableName,
-        {
-          AlertEventTable.id: IdGenerator.generate(),
-          AlertEventTable.facilityId: facilityId,
-          AlertEventTable.alertType: 'WORK_ORDER_OVERDUE',
-          AlertEventTable.severity: 'CRITICAL',
-          AlertEventTable.status: 'ACTIVE',
-          AlertEventTable.title: 'عقب‌افتادگی دستورکار: $title',
-          AlertEventTable.message:
-              'زمان سررسید این دستورکار/وظیفه به پایان رسیده است.',
-          AlertEventTable.assetId: assetId,
-          AlertEventTable.maintenancePlanId: planId,
-          AlertEventTable.workOrderTaskId: taskId,
-          AlertEventTable.deduplicationKey: dedupKey,
-          AlertEventTable.triggeredAt: nowIso,
-          AlertEventTable.createdAt: nowIso,
-          AlertEventTable.updatedAt: nowIso,
-          AlertEventTable.syncStatus: 'pending',
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      final titleText = 'عقب‌افتادگی دستورکار: $title';
+      final messageText =  'زمان سررسید این دستورکار/وظیفه به پایان رسیده است.';
+
+      await db.insert(_tableName, {
+        AlertEventTable.id: IdGenerator.generate(),
+        AlertEventTable.facilityId: facilityId,
+        AlertEventTable.alertType: 'WORK_ORDER_OVERDUE',
+        AlertEventTable.severity: 'CRITICAL',
+        AlertEventTable.status: 'ACTIVE',
+        AlertEventTable.title: titleText,
+        AlertEventTable.message: messageText,
+        AlertEventTable.assetId: assetId,
+        AlertEventTable.maintenancePlanId: planId,
+        AlertEventTable.workOrderTaskId: taskId,
+        AlertEventTable.deduplicationKey: dedupKey,
+        AlertEventTable.triggeredAt: nowIso,
+        AlertEventTable.createdAt: nowIso,
+        AlertEventTable.updatedAt: nowIso,
+        AlertEventTable.syncStatus: 'pending',
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 

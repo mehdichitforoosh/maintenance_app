@@ -391,6 +391,29 @@ class AssetReadingRepository {
         taskId: taskId,
         now: now,
       );
+      await txn.insert(AlertEventTable.tableName, {
+        AlertEventTable.id: IdGenerator.generate(),
+        AlertEventTable.facilityId: facilityId,
+        AlertEventTable.alertType: 'CONDITION_TRIGGERED',
+        AlertEventTable.severity:
+            plan[MaintenancePlanTable.priority] == 'CRITICAL'
+            ? 'CRITICAL'
+            : 'WARNING',
+        AlertEventTable.status: 'ACTIVE',
+        AlertEventTable.title:
+            'شرط بحرانی: ${plan[MaintenancePlanTable.title]}',
+        AlertEventTable.message:
+            'خوانش ${reading.metricName} برابر ${AppNumberFormat.decimal(reading.value)} ${reading.unit} ثبت شد.',
+        AlertEventTable.assetId: reading.assetId,
+        AlertEventTable.maintenancePlanId: planId,
+        AlertEventTable.workOrderTaskId: taskId,
+        AlertEventTable.deduplicationKey:
+            'alert:condition:$planId:$occurrenceKey',
+        AlertEventTable.triggeredAt: now,
+        AlertEventTable.createdAt: now,
+        AlertEventTable.updatedAt: now,
+        AlertEventTable.syncStatus: 'pending',
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
       generatedCount++;
     }
     return _ConditionTaskGenerationResult(generatedCount, openTaskCount);

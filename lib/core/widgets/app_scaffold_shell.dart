@@ -79,13 +79,13 @@ class AppScaffoldShell extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            EneftyIcons.setting_4_bold,
+                            EneftyIcons.setting_5_bold,
                             color: colorScheme.primary,
                             size: 28,
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'مدیریت نگهداری',
+                            'مدیریت نگهداری و تعمیرات',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -98,7 +98,7 @@ class AppScaffoldShell extends StatelessWidget {
                   : Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Icon(
-                        EneftyIcons.setting_4_bold,
+                        EneftyIcons.setting_5_bold,
                         color: colorScheme.primary,
                         size: 28,
                       ),
