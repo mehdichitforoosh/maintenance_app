@@ -858,7 +858,7 @@ class _PlanMaterialsEditor extends ConsumerWidget {
                           _editMaterial(context, items, entry.$1, entry.$2),
                       trailing: IconButton(
                         tooltip: 'حذف قلم',
-                        icon: const Icon(Icons.delete_outline),
+                        icon: const Icon(EneftyIcons.trash_outline),
                         onPressed: () {
                           final updated = [...materials]..removeAt(entry.$1);
                           onChanged(updated);
