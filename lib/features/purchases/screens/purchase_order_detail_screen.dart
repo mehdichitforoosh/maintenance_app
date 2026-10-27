@@ -104,11 +104,15 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 if (po.status != PurchaseOrderStatus.received &&
                     po.status != PurchaseOrderStatus.cancelled)
-                  FilledButton.icon(
-                    onPressed: () =>
-                        context.push('/purchases/$purchaseOrderId/receive'),
-                    icon: const Icon(EneftyIcons.box_bold),
-                    label: const Text('ثبت رسید دریافت کالا (Goods Receipt)'),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: () =>
+                          context.push('/purchases/$purchaseOrderId/receive'),
+                      icon: const Icon(EneftyIcons.box_bold),
+                      label: const Text('ثبت رسید دریافت کالا'),
+                    ),
                   ),
                 const SizedBox(height: 24),
                 const SectionHeader(title: 'اقلام سفارش‌داده شده'),

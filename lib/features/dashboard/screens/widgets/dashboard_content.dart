@@ -3,13 +3,14 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/number_format_utils.dart';
 import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../inventory/providers/inventory_providers.dart';
 import '../../providers/dashboard_providers.dart';
 
-class DashboardContent extends ConsumerWidget {
+class DashboardContent extends ConsumerStatefulWidget {
   final String facilityId;
   final String facilityName;
 
@@ -20,15 +21,24 @@ class DashboardContent extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardContent> createState() => _DashboardContentState();
+}
+
+class _DashboardContentState extends ConsumerState<DashboardContent> {
+  int _trendDays = 7;
+
+  @override
+  Widget build(BuildContext context) {
+    final facilityId = widget.facilityId;
     final summaryAsync = ref.watch(dashboardSummaryProvider(facilityId));
     final todayTasksAsync = ref.watch(dashboardTodayTasksProvider(facilityId));
     final lowStockAsync = ref.watch(lowStockItemsProvider);
+    final trendRequest = (facilityId: facilityId, days: _trendDays);
     final completedTaskTrendAsync = ref.watch(
-      dashboardCompletedTaskTrendProvider(facilityId),
+      dashboardCompletedTaskTrendProvider(trendRequest),
     );
     final materialTrendAsync = ref.watch(
-      dashboardMaterialConsumptionTrendProvider(facilityId),
+      dashboardMaterialConsumptionTrendProvider(trendRequest),
     );
     final topMaterialsAsync = ref.watch(
       dashboardTopConsumedMaterialsProvider(facilityId),
@@ -37,7 +47,7 @@ class DashboardContent extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          facilityName,
+          widget.facilityName,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -59,8 +69,8 @@ class DashboardContent extends ConsumerWidget {
           ref.invalidate(dashboardTodayTasksProvider(facilityId));
           ref.invalidate(lowStockItemsProvider);
           ref.invalidate(dashboardWorkOrderStatusProvider(facilityId));
-          ref.invalidate(dashboardCompletedTaskTrendProvider(facilityId));
-          ref.invalidate(dashboardMaterialConsumptionTrendProvider(facilityId));
+          ref.invalidate(dashboardCompletedTaskTrendProvider);
+          ref.invalidate(dashboardMaterialConsumptionTrendProvider);
           ref.invalidate(dashboardTopConsumedMaterialsProvider(facilityId));
         },
         child: ListView(
@@ -296,30 +306,46 @@ class DashboardContent extends ConsumerWidget {
             const SizedBox(height: 24),
 
             const SectionHeader(title: 'گزارش‌های عملکردی'),
-            Row(
+            Wrap(
+              spacing: 8,
               children: [
-                Expanded(
-                  child: _TrendCard(
-                    title: 'وظایف تکمیل‌شده',
-                    subtitle: 'هفت روز اخیر',
-                    dataAsync: completedTaskTrendAsync,
-                    valueKey: 'count',
-                    color: const Color(0xFF10B981),
-                    formatter: (value) => AppNumberFormat.decimal(value),
+                for (final days in const [7, 30, 90])
+                  ChoiceChip(
+                    label: Text('${AppNumberFormat.decimal(days)} روز'),
+                    selected: _trendDays == days,
+                    onSelected: (_) => setState(() => _trendDays = days),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _TrendCard(
-                    title: 'مصرف مواد',
-                    subtitle: 'هفت روز اخیر',
-                    dataAsync: materialTrendAsync,
-                    valueKey: 'quantity',
-                    color: const Color(0xFF8B5CF6),
-                    formatter: (value) => AppNumberFormat.decimal(value),
-                  ),
-                ),
               ],
+            ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final taskCard = _TrendCard(
+                  title: 'وظایف تکمیل‌شده',
+                  subtitle: '$_trendDays روز اخیر',
+                  dataAsync: completedTaskTrendAsync,
+                  valueKey: 'count',
+                  color: const Color(0xFF10B981),
+                  formatter: (value) => AppNumberFormat.decimal(value),
+                );
+                final materialCard = _TrendCard(
+                  title: 'مصرف مواد',
+                  subtitle: '$_trendDays روز اخیر',
+                  dataAsync: materialTrendAsync,
+                  valueKey: 'quantity',
+                  color: const Color(0xFF8B5CF6),
+                  formatter: (value) => AppNumberFormat.decimal(value),
+                );
+                if (constraints.maxWidth < 650) {
+                  return Column(children: [taskCard, materialCard]);
+                }
+                return Row(
+                  children: [
+                    Expanded(child: taskCard),
+                    const SizedBox(width: 12),
+                    Expanded(child: materialCard),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 24),
 
@@ -584,10 +610,73 @@ class _TrendCard extends StatelessWidget {
                     LineChartData(
                       gridData: FlGridData(show: false),
                       borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(show: false),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 24,
+                            interval: (data.length / 4).ceilToDouble(),
+                            getTitlesWidget: (value, meta) {
+                              final index = value.toInt();
+                              if (index < 0 ||
+                                  index >= data.length ||
+                                  (index != data.length - 1 &&
+                                      index %
+                                              (data.length / 4).ceil().clamp(
+                                                1,
+                                                data.length,
+                                              ) !=
+                                          0)) {
+                                return const SizedBox.shrink();
+                              }
+                              return SideTitleWidget(
+                                meta: meta,
+                                child: Text(
+                                  AppDateUtils.formatJalaliShort(
+                                    data[index]['day'] as String,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
                       minY: 0,
                       maxY: maxValue == 0 ? 1 : maxValue + 1,
-                      lineTouchData: LineTouchData(enabled: true),
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          getTooltipItems: (spots) => spots.map((spot) {
+                            final index = spot.x.toInt();
+                            if (index < 0 || index >= data.length) return null;
+                            return LineTooltipItem(
+                              '${AppDateUtils.formatJalaliShort(data[index]['day'] as String)}\n'
+                              '${formatter(spot.y)}',
+                              TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onInverseSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                       lineBarsData: [
                         LineChartBarData(
                           spots: data.asMap().entries.map((entry) {

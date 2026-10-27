@@ -44,6 +44,7 @@ class ReportTrendPoint {
   final double laborHours;
   final double downtimeHours;
   final double receivedCost;
+  final int receiptCount;
 
   const ReportTrendPoint({
     required this.date,
@@ -51,6 +52,7 @@ class ReportTrendPoint {
     this.laborHours = 0,
     this.downtimeHours = 0,
     this.receivedCost = 0,
+    this.receiptCount = 0,
   });
 }
 

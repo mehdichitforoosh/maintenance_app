@@ -74,6 +74,11 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(EneftyIcons.receipt_item_outline),
+            tooltip: 'گردش انبار',
+            onPressed: () => context.push('/inventory/transactions'),
+          ),
+          IconButton(
             icon: const Icon(EneftyIcons.setting_4_outline),
             tooltip: 'تعدیل موجودی',
             onPressed: () => context.push('/inventory/adjustment'),

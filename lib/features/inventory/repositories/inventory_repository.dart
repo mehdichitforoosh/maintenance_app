@@ -1,11 +1,15 @@
 import '../../../core/enums/app_enums.dart';
 import '../../../core/storage/database/database_helper.dart';
 import '../../../core/storage/database/tables/inventory_item_table.dart';
+import '../../../core/storage/database/tables/purchase_order_item_table.dart';
+import '../../../core/storage/database/tables/purchase_order_table.dart';
 import '../../../core/storage/database/tables/stock_transaction_table.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/id_generator.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../models/inventory_item.dart';
+import '../models/inventory_ledger_entry.dart';
+import '../models/purchase_receipt_detail.dart';
 import '../models/stock_transaction.dart';
 
 class InventoryRepository {
@@ -211,5 +215,111 @@ class InventoryRepository {
       orderBy: '${StockTransactionTable.transactionDate} DESC',
     );
     return results.map((m) => StockTransaction.fromMap(m)).toList();
+  }
+
+  Future<List<InventoryLedgerEntry>> getStockLedger({
+    TransactionType? transactionType,
+    String? itemId,
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    if (fromDate != null &&
+        toDate != null &&
+        DateTime(
+          fromDate.year,
+          fromDate.month,
+          fromDate.day,
+        ).isAfter(DateTime(toDate.year, toDate.month, toDate.day))) {
+      throw ArgumentError('تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.');
+    }
+
+    final db = await _dbHelper.db;
+    final conditions = <String>[
+      'st.${StockTransactionTable.deletedAt} IS NULL',
+      'i.${InventoryItemTable.deletedAt} IS NULL',
+    ];
+    final args = <Object?>[];
+    if (transactionType != null) {
+      conditions.add('st.${StockTransactionTable.transactionType} = ?');
+      args.add(transactionType.toDbString());
+    }
+    if (itemId != null) {
+      conditions.add('st.${StockTransactionTable.itemId} = ?');
+      args.add(itemId);
+    }
+    if (fromDate != null) {
+      final localStart = DateTime(fromDate.year, fromDate.month, fromDate.day);
+      conditions.add('st.${StockTransactionTable.transactionDate} >= ?');
+      args.add(localStart.toUtc().toIso8601String());
+    }
+    if (toDate != null) {
+      final localEndExclusive = DateTime(
+        toDate.year,
+        toDate.month,
+        toDate.day,
+      ).add(const Duration(days: 1));
+      conditions.add('st.${StockTransactionTable.transactionDate} < ?');
+      args.add(localEndExclusive.toUtc().toIso8601String());
+    }
+
+    final results = await db.rawQuery('''
+      SELECT st.*,
+        i.${InventoryItemTable.name} AS item_name,
+        i.${InventoryItemTable.code} AS item_code,
+        i.${InventoryItemTable.unit} AS item_unit
+      FROM ${StockTransactionTable.tableName} st
+      JOIN ${InventoryItemTable.tableName} i
+        ON i.${InventoryItemTable.id} = st.${StockTransactionTable.itemId}
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY st.${StockTransactionTable.transactionDate} DESC,
+        st.${StockTransactionTable.createdAt} DESC
+      ''', args);
+
+    return results.map((row) {
+      final transaction = StockTransaction.fromMap(row);
+      return InventoryLedgerEntry(
+        transaction: transaction,
+        itemName: row['item_name'] as String,
+        itemCode: row['item_code'] as String,
+        unit: row['item_unit'] as String,
+      );
+    }).toList();
+  }
+
+  Future<PurchaseReceiptDetail?> getPurchaseReceiptDetail(
+    String transactionId,
+  ) async {
+    final db = await _dbHelper.db;
+    final results = await db.rawQuery(
+      '''
+      SELECT
+        st.${StockTransactionTable.id} AS transaction_id,
+        st.${StockTransactionTable.itemId} AS item_id,
+        st.${StockTransactionTable.quantity} AS quantity,
+        st.${StockTransactionTable.unitCost} AS unit_cost,
+        st.${StockTransactionTable.transactionDate} AS transaction_date,
+        st.${StockTransactionTable.notes} AS notes,
+        i.${InventoryItemTable.name} AS item_name,
+        i.${InventoryItemTable.code} AS item_code,
+        i.${InventoryItemTable.unit} AS unit,
+        po.${PurchaseOrderTable.id} AS purchase_order_id,
+        po.${PurchaseOrderTable.purchaseOrderNumber} AS purchase_order_number,
+        po.${PurchaseOrderTable.supplierName} AS supplier_name
+      FROM ${StockTransactionTable.tableName} st
+      JOIN ${PurchaseOrderItemTable.tableName} poi
+        ON poi.${PurchaseOrderItemTable.id} = st.${StockTransactionTable.purchaseOrderItemId}
+      JOIN ${PurchaseOrderTable.tableName} po
+        ON po.${PurchaseOrderTable.id} = poi.${PurchaseOrderItemTable.purchaseOrderId}
+      JOIN ${InventoryItemTable.tableName} i
+        ON i.${InventoryItemTable.id} = st.${StockTransactionTable.itemId}
+      WHERE st.${StockTransactionTable.id} = ?
+        AND st.${StockTransactionTable.transactionType} = 'PURCHASE_RECEIPT'
+        AND st.${StockTransactionTable.deletedAt} IS NULL
+      LIMIT 1
+      ''',
+      [transactionId],
+    );
+    if (results.isEmpty) return null;
+    return PurchaseReceiptDetail.fromMap(results.first);
   }
 }

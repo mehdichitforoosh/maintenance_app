@@ -11,6 +11,8 @@ import '../../../core/utils/number_format_utils.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/widgets/app_form_body.dart';
 import '../../../core/widgets/app_form_submit_button.dart';
+import '../../assets/models/asset_metric_option.dart';
+import '../../assets/models/asset_reading.dart';
 import '../../assets/providers/asset_providers.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../../inventory/models/inventory_item.dart';
@@ -60,6 +62,10 @@ class _MaintenancePlanFormScreenState
   String? _loadError;
   MaintenancePlan? _existingPlan;
   List<_PlanMaterialDraft> _materials = [];
+  String? _meterMetricSelection;
+  String? _conditionMetricSelection;
+
+  static const _customMetricKey = '__custom_metric__';
 
   String get _scheduleHelpText {
     switch (_scheduleType) {
@@ -116,6 +122,7 @@ class _MaintenancePlanFormScreenState
         if (plan.calendarIntervalValue != null) {
           _intervalController.text = plan.calendarIntervalValue.toString();
         }
+
         if (mounted) {
           final materials = await ref
               .read(maintenancePlanRepositoryProvider)
@@ -147,6 +154,136 @@ class _MaintenancePlanFormScreenState
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _metricSelectionValue({
+    required List<AssetMetricOption> options,
+    required String metric,
+    required String unit,
+    required String? selection,
+  }) {
+    if (selection == _customMetricKey) return _customMetricKey;
+    if (selection != null && options.any((option) => option.key == selection)) {
+      return selection;
+    }
+
+    final existing = options.where(
+      (option) =>
+          option.metricName.trim().toLowerCase() ==
+              metric.trim().toLowerCase() &&
+          option.unit.trim().toLowerCase() == unit.trim().toLowerCase(),
+    );
+    return existing.isEmpty ? _customMetricKey : existing.first.key;
+  }
+
+  Widget _buildMetricFields({
+    required List<AssetMetricOption> options,
+    required bool condition,
+  }) {
+    final metricController = condition
+        ? _conditionMetricController
+        : _meterNameController;
+    final unitController = condition
+        ? _conditionUnitController
+        : _meterUnitController;
+    final selection = condition
+        ? _conditionMetricSelection
+        : _meterMetricSelection;
+    final selectedValue = _metricSelectionValue(
+      options: options,
+      metric: metricController.text,
+      unit: unitController.text,
+      selection: selection,
+    );
+    final selectedOption = selectedValue == _customMetricKey
+        ? null
+        : options.firstWhere((option) => option.key == selectedValue);
+    final scheduleLabel = condition ? 'شرطی' : 'کارکرد';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<String>(
+          key: ValueKey(
+            '$scheduleLabel:$_selectedAssetId:${options.map((e) => e.key).join('|')}:$selection',
+          ),
+          initialValue: selectedValue,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'شاخص $scheduleLabel *',
+            border: const OutlineInputBorder(),
+          ),
+          items: [
+            ...options.map(
+              (option) => DropdownMenuItem(
+                value: option.key,
+                child: Text(
+                  '${option.metricName} · ${option.unit} '
+                  '(آخرین: ${AppNumberFormat.decimal(option.latestValue)})',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+            const DropdownMenuItem(
+              value: _customMetricKey,
+              child: Text('شاخص جدید / ورود دستی'),
+            ),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              if (condition) {
+                _conditionMetricSelection = value;
+              } else {
+                _meterMetricSelection = value;
+              }
+              if (value != _customMetricKey) {
+                final option = options.firstWhere((item) => item.key == value);
+                metricController.text = option.metricName;
+                unitController.text = option.unit;
+              }
+            });
+          },
+        ),
+        if (options.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              'برای این تجهیز خوانشی ثبت نشده است؛ شاخص و واحد را وارد کنید '
+              'و سپس اولین خوانش را ثبت کنید.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        if (selectedOption == null) ...[
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: metricController,
+            decoration: InputDecoration(
+              labelText: 'نام شاخص $scheduleLabel *',
+              hintText: 'مثلاً temperature یا operating_hours',
+              border: const OutlineInputBorder(),
+            ),
+            validator: (value) =>
+                AppValidators.required(value, fieldName: 'نام شاخص'),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: unitController,
+            decoration: InputDecoration(
+              labelText: 'واحد شاخص $scheduleLabel *',
+              hintText: condition ? 'مثلاً °C' : 'مثلاً ساعت',
+              border: const OutlineInputBorder(),
+            ),
+            validator: (value) =>
+                AppValidators.required(value, fieldName: 'واحد شاخص'),
+          ),
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('واحد متصل به شاخص: ${selectedOption.unit}'),
+          ),
+      ],
+    );
   }
 
   @override
@@ -328,6 +465,12 @@ class _MaintenancePlanFormScreenState
   Widget build(BuildContext context) {
     final isEditing = widget.planId != null;
     final facilityAsync = ref.watch(primaryFacilityProvider);
+    final selectedAssetReadingsAsync = _selectedAssetId == null
+        ? null
+        : ref.watch(assetReadingsProvider(_selectedAssetId!));
+    final metricOptions = AssetMetricOption.fromReadings(
+      selectedAssetReadingsAsync?.asData?.value ?? const <AssetReading>[],
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -399,7 +542,11 @@ class _MaintenancePlanFormScreenState
                             ),
                           )
                           .toList(),
-                      onChanged: (v) => setState(() => _selectedAssetId = v),
+                      onChanged: (v) => setState(() {
+                        _selectedAssetId = v;
+                        _meterMetricSelection = null;
+                        _conditionMetricSelection = null;
+                      }),
                     ),
                   );
                 },
@@ -552,18 +699,15 @@ class _MaintenancePlanFormScreenState
           ],
           if (_scheduleType == ScheduleType.meter) ...[
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _meterNameController,
-              decoration: const InputDecoration(
-                labelText: 'نام شاخص کارکرد *',
-                hintText: 'مانند operating_hours',
-                border: OutlineInputBorder(),
+            if (selectedAssetReadingsAsync?.hasError == true)
+              Text(
+                'بارگذاری شاخص‌های تجهیز ناموفق بود: '
+                '${selectedAssetReadingsAsync!.error}',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-              validator: _scheduleType == ScheduleType.meter
-                  ? (value) =>
-                        AppValidators.required(value, fieldName: 'نام شاخص')
-                  : null,
-            ),
+            if (selectedAssetReadingsAsync?.isLoading == true)
+              const LinearProgressIndicator(),
+            _buildMetricFields(options: metricOptions, condition: false),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -591,43 +735,26 @@ class _MaintenancePlanFormScreenState
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
-                    controller: _meterUnitController,
+                    controller: _meterStartValueController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: const InputDecoration(
-                      labelText: 'واحد *',
-                      hintText: 'ساعت',
+                      labelText: 'اولین مقدار هدف *',
                       border: OutlineInputBorder(),
                     ),
-                    validator: _scheduleType == ScheduleType.meter
-                        ? (value) => AppValidators.required(
-                            value,
-                            fieldName: 'واحد کارکرد',
-                          )
-                        : null,
+                    validator: (value) {
+                      if (_scheduleType != ScheduleType.meter) {
+                        return null;
+                      }
+                      final parsed = double.tryParse(value?.trim() ?? '');
+                      return parsed == null || !parsed.isFinite || parsed < 0
+                          ? 'مقدار صفر یا بزرگ‌تر وارد کنید.'
+                          : null;
+                    },
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _meterStartValueController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'اولین مقدار هدف *',
-                helperText:
-                    'این مقدار باید با واحد شاخص و خوانش‌ها یکسان باشد.',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (_scheduleType != ScheduleType.meter) {
-                  return null;
-                }
-                final parsed = double.tryParse(value?.trim() ?? '');
-                return parsed == null || !parsed.isFinite || parsed < 0
-                    ? 'مقدار صفر یا بزرگ‌تر وارد کنید.'
-                    : null;
-              },
             ),
           ],
           if (_scheduleType == ScheduleType.oneTime) ...[
@@ -647,16 +774,15 @@ class _MaintenancePlanFormScreenState
           ],
           if (_scheduleType == ScheduleType.condition) ...[
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _conditionMetricController,
-              decoration: const InputDecoration(
-                labelText: 'نام شاخص *',
-                hintText: 'مانند temperature',
-                border: OutlineInputBorder(),
+            if (selectedAssetReadingsAsync?.hasError == true)
+              Text(
+                'بارگذاری شاخص‌های تجهیز ناموفق بود: '
+                '${selectedAssetReadingsAsync!.error}',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
-              validator: (value) =>
-                  AppValidators.required(value, fieldName: 'نام شاخص'),
-            ),
+            if (selectedAssetReadingsAsync?.isLoading == true)
+              const LinearProgressIndicator(),
+            _buildMetricFields(options: metricOptions, condition: true),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -707,16 +833,6 @@ class _MaintenancePlanFormScreenState
               ],
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _conditionUnitController,
-              decoration: const InputDecoration(
-                labelText: 'واحد شاخص *',
-                hintText: 'مانند °C',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) =>
-                  AppValidators.required(value, fieldName: 'واحد شاخص'),
-            ),
           ],
           const SizedBox(height: 16),
           TextFormField(

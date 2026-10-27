@@ -7,11 +7,19 @@ import 'report_summary_widgets.dart';
 
 enum ReportCategory { workOrders, materials, purchases }
 
+enum ReportWorkOrderMetric { tasks, labor, downtime }
+
+enum ReportPurchaseMetric { value, receipts }
+
 class ReportCategorySections extends StatelessWidget {
   final ReportCategory category;
   final OperationalReport report;
   final List<ReportChartValue> taskTrend;
   final List<ReportChartValue> receiptTrend;
+  final ReportWorkOrderMetric workOrderMetric;
+  final ValueChanged<ReportWorkOrderMetric> onWorkOrderMetricChanged;
+  final ReportPurchaseMetric purchaseMetric;
+  final ValueChanged<ReportPurchaseMetric> onPurchaseMetricChanged;
 
   const ReportCategorySections({
     super.key,
@@ -19,6 +27,10 @@ class ReportCategorySections extends StatelessWidget {
     required this.report,
     required this.taskTrend,
     required this.receiptTrend,
+    required this.workOrderMetric,
+    required this.onWorkOrderMetricChanged,
+    required this.purchaseMetric,
+    required this.onPurchaseMetricChanged,
   });
 
   @override
@@ -54,9 +66,37 @@ class ReportCategorySections extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
+        SegmentedButton<ReportWorkOrderMetric>(
+          segments: const [
+            ButtonSegment(
+              value: ReportWorkOrderMetric.tasks,
+              label: Text('تعداد'),
+            ),
+            ButtonSegment(
+              value: ReportWorkOrderMetric.labor,
+              label: Text('زمان کار'),
+            ),
+            ButtonSegment(
+              value: ReportWorkOrderMetric.downtime,
+              label: Text('توقف'),
+            ),
+          ],
+          selected: {workOrderMetric},
+          onSelectionChanged: (selection) =>
+              onWorkOrderMetricChanged(selection.first),
+        ),
+        const SizedBox(height: 8),
         ReportBarChart(
-          title: 'روند تکمیل وظایف',
-          valueLabel: 'وظیفه',
+          title: switch (workOrderMetric) {
+            ReportWorkOrderMetric.tasks => 'روند تکمیل وظایف',
+            ReportWorkOrderMetric.labor => 'روند زمان کار',
+            ReportWorkOrderMetric.downtime => 'روند زمان توقف',
+          },
+          valueLabel: switch (workOrderMetric) {
+            ReportWorkOrderMetric.tasks => 'وظیفه',
+            ReportWorkOrderMetric.labor => 'ساعت',
+            ReportWorkOrderMetric.downtime => 'ساعت',
+          },
           values: taskTrend,
         ),
         const SizedBox(height: 12),
@@ -194,9 +234,31 @@ class ReportCategorySections extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
+        SegmentedButton<ReportPurchaseMetric>(
+          segments: const [
+            ButtonSegment(
+              value: ReportPurchaseMetric.value,
+              label: Text('ارزش'),
+            ),
+            ButtonSegment(
+              value: ReportPurchaseMetric.receipts,
+              label: Text('تعداد رسید'),
+            ),
+          ],
+          selected: {purchaseMetric},
+          onSelectionChanged: (selection) =>
+              onPurchaseMetricChanged(selection.first),
+        ),
+        const SizedBox(height: 8),
         ReportBarChart(
-          title: 'ارزش دریافت کالا در بازه',
-          valueLabel: 'هزینه',
+          title: switch (purchaseMetric) {
+            ReportPurchaseMetric.value => 'ارزش دریافت کالا در بازه',
+            ReportPurchaseMetric.receipts => 'تعداد رسیدهای ثبت‌شده',
+          },
+          valueLabel: switch (purchaseMetric) {
+            ReportPurchaseMetric.value => 'هزینه',
+            ReportPurchaseMetric.receipts => 'رسید',
+          },
           values: receiptTrend,
         ),
         const SizedBox(height: 12),

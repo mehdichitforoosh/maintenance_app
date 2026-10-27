@@ -2,6 +2,7 @@ import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/enums/app_enums.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/app_responsive_container.dart';
@@ -93,6 +94,13 @@ class InventoryItemDetailScreen extends ConsumerWidget {
                                 (transaction) => StockTransactionTile(
                                   transaction: transaction,
                                   unit: item.unit,
+                                  onTap:
+                                      transaction.transactionType ==
+                                          TransactionType.purchaseReceipt
+                                      ? () => context.push(
+                                          '/inventory/receipts/${transaction.id}',
+                                        )
+                                      : null,
                                 ),
                               )
                               .toList(),

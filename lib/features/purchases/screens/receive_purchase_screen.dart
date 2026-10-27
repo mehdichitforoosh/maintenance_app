@@ -55,12 +55,15 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
         }
       }
 
-      if (lines.isNotEmpty) {
-        await actions.receiveItems(
-          purchaseOrderId: widget.purchaseOrderId,
-          receivedLines: lines,
+      if (lines.isEmpty) {
+        throw StateError(
+          'برای ثبت رسید، مقدار دریافتی حداقل یک قلم را وارد کنید.',
         );
       }
+      await actions.receiveItems(
+        purchaseOrderId: widget.purchaseOrderId,
+        receivedLines: lines,
+      );
 
       if (mounted) context.pop();
     } catch (e) {
@@ -79,84 +82,122 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
     final itemsAsync = ref.watch(
       purchaseOrderItemsProvider(widget.purchaseOrderId),
     );
+    final receivedQuantitiesAsync = ref.watch(
+      purchaseOrderReceivedQuantitiesProvider(widget.purchaseOrderId),
+    );
     final inventoryItemsAsync = ref.watch(inventoryItemsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('ثبت رسید دریافت کالا')),
       body: itemsAsync.when(
         data: (orderItems) {
-          for (final item in orderItems) {
-            _qtyControllers.putIfAbsent(
-              item.id,
-              () =>
-                  TextEditingController(text: item.orderedQuantity.toString()),
-            );
-          }
+          return receivedQuantitiesAsync.when(
+            data: (receivedQuantities) {
+              for (final item in orderItems) {
+                final received = receivedQuantities[item.id] ?? 0;
+                final remaining = (item.orderedQuantity - received).clamp(
+                  0,
+                  double.infinity,
+                );
+                _qtyControllers.putIfAbsent(
+                  item.id,
+                  () => TextEditingController(text: remaining.toString()),
+                );
+              }
 
-          return inventoryItemsAsync.when(
-            data: (invItems) {
-              return AppFormBody(
-                formKey: _formKey,
-                children: [
-                  const Text(
-                    'مقادیر دریافتی اقلام را وارد کنید:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  ...orderItems.map((item) {
-                    final invItem = invItems
-                        .where((i) => i.id == item.itemId)
-                        .firstOrNull;
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              invItem?.name ?? 'کالا',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'مقدار سفارش‌داده شده: ${AppNumberFormat.decimal(item.orderedQuantity)} ${invItem?.unit ?? ''}',
-                            ),
-                            const SizedBox(height: 12),
-                            TextFormField(
-                              controller: _qtyControllers[item.id],
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: const InputDecoration(
-                                labelText: 'مقدار دریافتی *',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (v) => AppValidators.nonNegativeNumber(
-                                v,
-                                fieldName: 'مقدار دریافتی',
-                              ),
-                            ),
-                          ],
+              return inventoryItemsAsync.when(
+                data: (invItems) {
+                  return AppFormBody(
+                    formKey: _formKey,
+                    children: [
+                      const Text(
+                        'مقدار دریافتی جدید هر قلم را وارد کنید:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                    );
-                  }),
-                  const SizedBox(height: 24),
-                  AppFormSubmitButton(
-                    icon: const Icon(Icons.inventory_2_outlined),
-                    isSubmitting: _isSubmitting,
-                    onPressed: () => _receive(orderItems),
-                    label: 'ثبت و به‌روزرسانی موجودی انبار',
-                  ),
-                ],
+                      const SizedBox(height: 16),
+                      ...orderItems.map((item) {
+                        final invItem = invItems
+                            .where((i) => i.id == item.itemId)
+                            .firstOrNull;
+                        final received = receivedQuantities[item.id] ?? 0;
+                        final remaining = (item.orderedQuantity - received)
+                            .clamp(0, double.infinity);
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  invItem?.name ?? 'کالا',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'سفارش: ${AppNumberFormat.decimal(item.orderedQuantity)} ${invItem?.unit ?? ''} · دریافت‌شده: ${AppNumberFormat.decimal(received)} · باقی‌مانده: ${AppNumberFormat.decimal(remaining)}',
+                                ),
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _qtyControllers[item.id],
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                        decimal: true,
+                                      ),
+                                  decoration: const InputDecoration(
+                                    labelText: 'مقدار دریافتی این نوبت',
+                                    border: OutlineInputBorder(),
+                                    helperText:
+                                        'برای قلمی که دریافت نمی‌شود، مقدار را صفر وارد کنید.',
+                                  ),
+                                  validator: (value) {
+                                    final error =
+                                        AppValidators.nonNegativeNumber(
+                                          value,
+                                          fieldName: 'مقدار دریافتی',
+                                        );
+                                    if (error != null) return error;
+                                    final quantity = double.parse(
+                                      value!.trim(),
+                                    );
+                                    if (quantity > remaining) {
+                                      return 'حداکثر مقدار قابل دریافت ${AppNumberFormat.decimal(remaining)} است.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 24),
+                      AppFormSubmitButton(
+                        icon: const Icon(Icons.inventory_2_outlined),
+                        isSubmitting: _isSubmitting,
+                        onPressed: () => _receive(orderItems),
+                        label: 'ثبت و به‌روزرسانی موجودی انبار',
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const AppLoading(),
+                error: (e, _) => AppErrorState(
+                  message: 'بارگذاری کالاهای انبار ناموفق بود: $e',
+                  onRetry: () => ref.invalidate(inventoryItemsProvider),
+                ),
               );
             },
             loading: () => const AppLoading(),
             error: (e, _) => AppErrorState(
-              message: 'بارگذاری کالاهای انبار ناموفق بود: $e',
-              onRetry: () => ref.invalidate(inventoryItemsProvider),
+              message: 'بارگذاری مقادیر دریافتی ناموفق بود: $e',
+              onRetry: () => ref.invalidate(
+                purchaseOrderReceivedQuantitiesProvider(widget.purchaseOrderId),
+              ),
             ),
           );
         },

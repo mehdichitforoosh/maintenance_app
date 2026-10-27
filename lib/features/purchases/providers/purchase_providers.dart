@@ -20,6 +20,13 @@ final purchaseOrdersProvider =
       return repo.getPurchaseOrders(facilityId);
     });
 
+final purchaseSupplierNamesProvider = FutureProvider<List<String>>((ref) async {
+  final facility = await ref.watch(primaryFacilityProvider.future);
+  if (facility == null) return const [];
+  final repository = ref.watch(purchaseRepositoryProvider);
+  return repository.getSupplierNames(facility.id);
+});
+
 final purchaseOrderItemsProvider =
     FutureProvider.family<List<PurchaseOrderItem>, String>((
       ref,
@@ -27,6 +34,15 @@ final purchaseOrderItemsProvider =
     ) async {
       final repo = ref.watch(purchaseRepositoryProvider);
       return repo.getOrderItems(purchaseOrderId);
+    });
+
+final purchaseOrderReceivedQuantitiesProvider =
+    FutureProvider.family<Map<String, double>, String>((
+      ref,
+      purchaseOrderId,
+    ) async {
+      final repo = ref.watch(purchaseRepositoryProvider);
+      return repo.getReceivedQuantities(purchaseOrderId);
     });
 
 final purchaseActionsProvider = Provider<PurchaseActions>((ref) {
@@ -61,11 +77,14 @@ class PurchaseActions {
     return order;
   }
 
-  Future<PurchaseOrder> updatePurchaseOrder(PurchaseOrder order) async {
+  Future<PurchaseOrder> updatePurchaseOrder(
+    PurchaseOrder order, {
+    required List<Map<String, dynamic>> items,
+  }) async {
     await _requireWriteAccess();
     final updated = await _ref
         .read(purchaseRepositoryProvider)
-        .updatePurchaseOrder(order);
+        .updatePurchaseOrder(order: order, items: items);
     _refreshAfterWrite(facilityId: order.facilityId, orderId: order.id);
     return updated;
   }
@@ -109,10 +128,13 @@ class PurchaseActions {
     Iterable<String> itemIds = const [],
   }) {
     _ref.invalidate(purchaseOrdersProvider(facilityId));
+    _ref.invalidate(purchaseSupplierNamesProvider);
     _ref.invalidate(purchaseOrderItemsProvider(orderId));
+    _ref.invalidate(purchaseOrderReceivedQuantitiesProvider(orderId));
     _ref.invalidate(inventoryItemsProvider);
     _ref.invalidate(allInventoryItemsProvider);
     _ref.invalidate(lowStockItemsProvider);
+    _ref.invalidate(inventoryLedgerProvider);
     for (final itemId in itemIds) {
       _ref.invalidate(inventoryItemProvider(itemId));
       _ref.invalidate(inventoryCurrentStockProvider(itemId));
@@ -122,8 +144,8 @@ class PurchaseActions {
     _ref.invalidate(dashboardSummaryProvider(facilityId));
     _ref.invalidate(dashboardTodayTasksProvider(facilityId));
     _ref.invalidate(dashboardWorkOrderStatusProvider(facilityId));
-    _ref.invalidate(dashboardCompletedTaskTrendProvider(facilityId));
-    _ref.invalidate(dashboardMaterialConsumptionTrendProvider(facilityId));
+    _ref.invalidate(dashboardCompletedTaskTrendProvider);
+    _ref.invalidate(dashboardMaterialConsumptionTrendProvider);
     _ref.invalidate(dashboardTopConsumedMaterialsProvider(facilityId));
   }
 }

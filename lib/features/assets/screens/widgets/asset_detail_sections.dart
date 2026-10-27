@@ -226,7 +226,7 @@ class _AssetMeterTile extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: theme.colorScheme.primaryContainer,
           foregroundColor: theme.colorScheme.onPrimaryContainer,
-          child: const Icon(Icons.speed_outlined),
+          child: const Icon(EneftyIcons.speedometer_outline),
         ),
         title: Text(
           _metricName(reading.metricName),
@@ -237,10 +237,16 @@ class _AssetMeterTile extends StatelessWidget {
           '${AppDateUtils.formatDisplay(reading.recordedAt)}',
         ),
         isThreeLine: true,
-        trailing: Icon(
-          EneftyIcons.chart_2_outline,
-          color: theme.colorScheme.primary,
-          semanticLabel: 'نمایش روند',
+        trailing: SizedBox(
+          width: 32,
+          child: Align(
+            alignment: Alignment.center,
+            child: Icon(
+              EneftyIcons.chart_2_outline,
+              color: theme.colorScheme.primary,
+              semanticLabel: 'نمایش روند',
+            ),
+          ),
         ),
         onTap: () {
           final uri = Uri(

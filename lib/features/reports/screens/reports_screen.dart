@@ -26,6 +26,8 @@ enum _TrendBucket { daily, weekly, monthly, quarterly }
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   ReportPeriod _period = ReportPeriod.week;
   ReportCategory _category = ReportCategory.workOrders;
+  ReportWorkOrderMetric _workOrderMetric = ReportWorkOrderMetric.tasks;
+  ReportPurchaseMetric _purchaseMetric = ReportPurchaseMetric.value;
   DateTime? _customStart;
   DateTime? _customEnd;
 
@@ -55,54 +57,70 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
               children: [
-              Text(
-                'بازه گزارش',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              _periodControls(context),
-              const SizedBox(height: 4),
-              _dateRangeLabel(context, range),
-              const SizedBox(height: 14),
-              Text(
-                'دسته گزارش',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 6),
-              ReportCategoryPicker(
-                selected: _category,
-                onSelected: (category) => setState(() => _category = category),
-              ),
-              const SizedBox(height: 12),
-              reportAsync.when(
-                data: (report) => ReportCategorySections(
-                  category: _category,
-                  report: report,
-                  taskTrend: _trendValues(
-                    report.taskTrend,
-                    range.start,
-                    range.endExclusive,
-                    (point) => point.taskCount.toDouble(),
-                  ),
-                  receiptTrend: _trendValues(
-                    report.receiptTrend,
-                    range.start,
-                    range.endExclusive,
-                    (point) => point.receivedCost,
-                  ),
+                Text(
+                  'بازه گزارش',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                loading: () => const Padding(
-                  padding: EdgeInsets.only(top: 48),
-                  child: AppLoading(),
+                const SizedBox(height: 6),
+                _periodControls(context),
+                const SizedBox(height: 4),
+                _dateRangeLabel(context, range),
+                const SizedBox(height: 14),
+                Text(
+                  'دسته گزارش',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                error: (error, _) => AppErrorState(message: error.toString()),
-              ),
-            ],
-          ),
+                const SizedBox(height: 6),
+                ReportCategoryPicker(
+                  selected: _category,
+                  onSelected: (category) =>
+                      setState(() => _category = category),
+                ),
+                const SizedBox(height: 12),
+                reportAsync.when(
+                  data: (report) => ReportCategorySections(
+                    category: _category,
+                    report: report,
+                    taskTrend: _trendValues(
+                      report.taskTrend,
+                      range.start,
+                      range.endExclusive,
+                      (point) => switch (_workOrderMetric) {
+                        ReportWorkOrderMetric.tasks =>
+                          point.taskCount.toDouble(),
+                        ReportWorkOrderMetric.labor => point.laborHours,
+                        ReportWorkOrderMetric.downtime => point.downtimeHours,
+                      },
+                    ),
+                    receiptTrend: _trendValues(
+                      report.receiptTrend,
+                      range.start,
+                      range.endExclusive,
+                      (point) => switch (_purchaseMetric) {
+                        ReportPurchaseMetric.value => point.receivedCost,
+                        ReportPurchaseMetric.receipts =>
+                          point.receiptCount.toDouble(),
+                      },
+                    ),
+                    workOrderMetric: _workOrderMetric,
+                    onWorkOrderMetricChanged: (metric) =>
+                        setState(() => _workOrderMetric = metric),
+                    purchaseMetric: _purchaseMetric,
+                    onPurchaseMetricChanged: (metric) =>
+                        setState(() => _purchaseMetric = metric),
+                  ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.only(top: 48),
+                    child: AppLoading(),
+                  ),
+                  error: (error, _) => AppErrorState(message: error.toString()),
+                ),
+              ],
+            ),
           );
         },
         loading: () => const AppLoading(),

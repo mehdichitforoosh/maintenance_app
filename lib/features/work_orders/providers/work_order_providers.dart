@@ -289,14 +289,15 @@ class WorkOrderActions {
     _ref.invalidate(lowStockItemsProvider);
     _ref.invalidate(inventoryCurrentStockProvider);
     _ref.invalidate(stockTransactionsProvider);
+    _ref.invalidate(inventoryLedgerProvider);
   }
 
   void _invalidateDashboard(String facilityId) {
     _ref.invalidate(dashboardSummaryProvider(facilityId));
     _ref.invalidate(dashboardTodayTasksProvider(facilityId));
     _ref.invalidate(dashboardWorkOrderStatusProvider(facilityId));
-    _ref.invalidate(dashboardCompletedTaskTrendProvider(facilityId));
-    _ref.invalidate(dashboardMaterialConsumptionTrendProvider(facilityId));
+    _ref.invalidate(dashboardCompletedTaskTrendProvider);
+    _ref.invalidate(dashboardMaterialConsumptionTrendProvider);
     _ref.invalidate(dashboardTopConsumedMaterialsProvider(facilityId));
   }
 }

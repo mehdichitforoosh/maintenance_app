@@ -71,11 +71,13 @@ class InventoryItemSpecificationsCard extends StatelessWidget {
 class StockTransactionTile extends StatelessWidget {
   final StockTransaction transaction;
   final String unit;
+  final VoidCallback? onTap;
 
   const StockTransactionTile({
     super.key,
     required this.transaction,
     required this.unit,
+    this.onTap,
   });
 
   @override
@@ -85,6 +87,8 @@ class StockTransactionTile extends StatelessWidget {
     return Card(
       elevation: 0,
       child: ListTile(
+        onTap: onTap,
+        trailing: onTap == null ? null : const Icon(Icons.chevron_right),
         leading: CircleAvatar(
           backgroundColor: colors.secondaryContainer,
           foregroundColor: colors.onSecondaryContainer,

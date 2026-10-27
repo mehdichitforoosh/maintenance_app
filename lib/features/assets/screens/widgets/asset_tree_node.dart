@@ -54,12 +54,7 @@ class _AssetTreeNodeState extends State<AssetTreeNode> {
             onTap: () => context.push('/assets/${widget.asset.id}'),
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: colorScheme.outlineVariant),
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
               child: Row(
                 children: [
                   if (hasChildren)

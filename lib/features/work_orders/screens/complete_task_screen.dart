@@ -384,7 +384,7 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
                       'مقدار مصرفی: ${AppNumberFormat.decimal(mat['quantity'] as num)}',
                     ),
                     trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
+                      icon: const Icon(EneftyIcons.trash_outline, color: Colors.red),
                       onPressed: () =>
                           setState(() => _consumedMaterials.removeAt(index)),
                     ),

@@ -5,6 +5,8 @@ import '../../../core/subscription/domain/app_feature.dart';
 import '../../../core/subscription/providers/subscription_providers.dart';
 import '../../facilities/providers/facility_providers.dart';
 import '../models/inventory_item.dart';
+import '../models/inventory_ledger_entry.dart';
+import '../models/purchase_receipt_detail.dart';
 import '../models/stock_transaction.dart';
 import '../repositories/inventory_repository.dart';
 
@@ -55,6 +57,22 @@ final stockTransactionsProvider =
     FutureProvider.family<List<StockTransaction>, String>((ref, itemId) async {
       final repo = ref.watch(inventoryRepositoryProvider);
       return repo.getStockTransactions(itemId);
+    });
+
+final inventoryLedgerProvider = FutureProvider<List<InventoryLedgerEntry>>((
+  ref,
+) async {
+  final repository = ref.watch(inventoryRepositoryProvider);
+  return repository.getStockLedger();
+});
+
+final purchaseReceiptDetailProvider =
+    FutureProvider.family<PurchaseReceiptDetail?, String>((
+      ref,
+      receiptId,
+    ) async {
+      final repository = ref.watch(inventoryRepositoryProvider);
+      return repository.getPurchaseReceiptDetail(receiptId);
     });
 
 class InventoryActions {
@@ -118,6 +136,7 @@ class InventoryActions {
         );
     _ref.invalidate(inventoryCurrentStockProvider(itemId));
     _ref.invalidate(stockTransactionsProvider(itemId));
+    _ref.invalidate(inventoryLedgerProvider);
     _refreshLists();
   }
 
@@ -134,5 +153,6 @@ class InventoryActions {
     _ref.invalidate(inventoryItemsProvider);
     _ref.invalidate(allInventoryItemsProvider);
     _ref.invalidate(lowStockItemsProvider);
+    _ref.invalidate(inventoryLedgerProvider);
   }
 }

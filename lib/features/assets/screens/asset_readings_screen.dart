@@ -1,3 +1,4 @@
+import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
@@ -223,7 +224,7 @@ class _AssetReadingsScreenState extends ConsumerState<AssetReadingsScreen> {
                       title: 'خوانشی ثبت نشده است',
                       message:
                           'پس از ثبت اولین خوانش، تاریخچه آن در این بخش نمایش داده می‌شود.',
-                      icon: Icons.speed_outlined,
+                      icon: EneftyIcons.speedometer_outline,
                     );
                   }
                   return Column(

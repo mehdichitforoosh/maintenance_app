@@ -10,7 +10,8 @@ import '../../maintenance/services/maintenance_scheduler.dart';
 class DashboardRepository {
   final DatabaseHelper _dbHelper;
 
-  DashboardRepository({DatabaseHelper? dbHelper}) : _dbHelper = dbHelper ?? DatabaseHelper.instance;
+  DashboardRepository({DatabaseHelper? dbHelper})
+    : _dbHelper = dbHelper ?? DatabaseHelper.instance;
 
   Future<Map<String, int>> getSummaryCounts(String facilityId) async {
     final db = await _dbHelper.db;
@@ -19,29 +20,38 @@ class DashboardRepository {
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
 
     // 1. Due today tasks
-    final dueTodayRes = await db.rawQuery('''
+    final dueTodayRes = await db.rawQuery(
+      '''
       SELECT COUNT(t.${WorkOrderTaskTable.id}) as count
       FROM ${WorkOrderTaskTable.tableName} t
       JOIN ${WorkOrderTable.tableName} w ON t.${WorkOrderTaskTable.workOrderId} = w.${WorkOrderTable.id}
       WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} LIKE ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTable.deletedAt} IS NULL
-    ''', [facilityId, '$todayStr%']);
+    ''',
+      [facilityId, '$todayStr%'],
+    );
     final dueToday = (dueTodayRes.first['count'] as num).toInt();
 
     // 2. Overdue tasks
-    final overdueRes = await db.rawQuery('''
+    final overdueRes = await db.rawQuery(
+      '''
       SELECT COUNT(t.${WorkOrderTaskTable.id}) as count
       FROM ${WorkOrderTaskTable.tableName} t
       JOIN ${WorkOrderTable.tableName} w ON t.${WorkOrderTaskTable.workOrderId} = w.${WorkOrderTable.id}
       WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} < ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTable.deletedAt} IS NULL
-    ''', [facilityId, todayStr]);
+    ''',
+      [facilityId, todayStr],
+    );
     final overdue = (overdueRes.first['count'] as num).toInt();
 
     // 3. Open work orders
-    final openWoRes = await db.rawQuery('''
+    final openWoRes = await db.rawQuery(
+      '''
       SELECT COUNT(${WorkOrderTable.id}) as count
       FROM ${WorkOrderTable.tableName}
       WHERE ${WorkOrderTable.facilityId} = ? AND ${WorkOrderTable.status} IN ('OPEN', 'IN_PROGRESS', 'ON_HOLD') AND ${WorkOrderTable.deletedAt} IS NULL
-    ''', [facilityId]);
+    ''',
+      [facilityId],
+    );
     final openWorkOrders = (openWoRes.first['count'] as num).toInt();
 
     // 4. Low-stock items
@@ -76,14 +86,19 @@ class DashboardRepository {
     };
   }
 
-  Future<Map<String, int>> getWorkOrderStatusDistribution(String facilityId) async {
+  Future<Map<String, int>> getWorkOrderStatusDistribution(
+    String facilityId,
+  ) async {
     final db = await _dbHelper.db;
-    final results = await db.rawQuery('''
+    final results = await db.rawQuery(
+      '''
       SELECT ${WorkOrderTable.status}, COUNT(*) as count
       FROM ${WorkOrderTable.tableName}
       WHERE ${WorkOrderTable.facilityId} = ? AND ${WorkOrderTable.deletedAt} IS NULL
       GROUP BY ${WorkOrderTable.status}
-    ''', [facilityId]);
+    ''',
+      [facilityId],
+    );
 
     final map = <String, int>{};
     for (final r in results) {
@@ -92,14 +107,18 @@ class DashboardRepository {
     return map;
   }
 
-  Future<List<Map<String, dynamic>>> getCompletedTaskTrend(String facilityId, {int days = 7}) async {
+  Future<List<Map<String, dynamic>>> getCompletedTaskTrend(
+    String facilityId, {
+    int days = 7,
+  }) async {
     final db = await _dbHelper.db;
     final end = DateTime.now();
     final start = end.subtract(Duration(days: days - 1));
     final startDay = start.toIso8601String().substring(0, 10);
     final endDay = end.toIso8601String().substring(0, 10);
 
-    final results = await db.rawQuery('''
+    final results = await db.rawQuery(
+      '''
       WITH RECURSIVE day_series(day) AS (
         SELECT ?
         UNION ALL
@@ -108,10 +127,10 @@ class DashboardRepository {
         WHERE day < ?
       )
       SELECT d.day AS day_label,
-             COALESCE(COUNT(t.${WorkOrderTaskTable.id}), 0) AS task_count
+             COALESCE(COUNT(w.${WorkOrderTable.id}), 0) AS task_count
       FROM day_series d
       LEFT JOIN ${WorkOrderTaskTable.tableName} t
-        ON date(t.${WorkOrderTaskTable.completedAt}) = d.day
+        ON date(t.${WorkOrderTaskTable.completedAt}, 'localtime') = d.day
        AND t.${WorkOrderTaskTable.status} = 'COMPLETED'
        AND t.${WorkOrderTaskTable.deletedAt} IS NULL
       LEFT JOIN ${WorkOrderTable.tableName} w
@@ -120,24 +139,32 @@ class DashboardRepository {
        AND w.${WorkOrderTable.deletedAt} IS NULL
       GROUP BY d.day
       ORDER BY d.day ASC
-    ''', [startDay, endDay, facilityId]);
+    ''',
+      [startDay, endDay, facilityId],
+    );
 
     return results
-        .map((row) => {
-              'day': row['day_label'] as String,
-              'count': (row['task_count'] as num?)?.toInt() ?? 0,
-            })
+        .map(
+          (row) => {
+            'day': row['day_label'] as String,
+            'count': (row['task_count'] as num?)?.toInt() ?? 0,
+          },
+        )
         .toList();
   }
 
-  Future<List<Map<String, dynamic>>> getMaterialConsumptionTrend(String facilityId, {int days = 7}) async {
+  Future<List<Map<String, dynamic>>> getMaterialConsumptionTrend(
+    String facilityId, {
+    int days = 7,
+  }) async {
     final db = await _dbHelper.db;
     final end = DateTime.now();
     final start = end.subtract(Duration(days: days - 1));
     final startDay = start.toIso8601String().substring(0, 10);
     final endDay = end.toIso8601String().substring(0, 10);
 
-    final results = await db.rawQuery('''
+    final results = await db.rawQuery(
+      '''
       WITH RECURSIVE day_series(day) AS (
         SELECT ?
         UNION ALL
@@ -146,10 +173,15 @@ class DashboardRepository {
         WHERE day < ?
       )
       SELECT d.day AS day_label,
-             COALESCE(SUM(st.${StockTransactionTable.quantity}), 0) AS consumed_qty
+             COALESCE(SUM(
+               CASE WHEN w.${WorkOrderTable.id} IS NOT NULL
+                 THEN st.${StockTransactionTable.quantity}
+                 ELSE 0
+               END
+             ), 0) AS consumed_qty
       FROM day_series d
       LEFT JOIN ${StockTransactionTable.tableName} st
-        ON date(st.${StockTransactionTable.transactionDate}) = d.day
+        ON date(st.${StockTransactionTable.transactionDate}, 'localtime') = d.day
        AND st.${StockTransactionTable.transactionType} = 'MAINTENANCE_CONSUMPTION'
        AND st.${StockTransactionTable.deletedAt} IS NULL
       LEFT JOIN ${WorkOrderMaterialTable.tableName} wom
@@ -164,19 +196,27 @@ class DashboardRepository {
        AND w.${WorkOrderTable.deletedAt} IS NULL
       GROUP BY d.day
       ORDER BY d.day ASC
-    ''', [startDay, endDay, facilityId]);
+    ''',
+      [startDay, endDay, facilityId],
+    );
 
     return results
-        .map((row) => {
-              'day': row['day_label'] as String,
-              'quantity': (row['consumed_qty'] as num?)?.toDouble() ?? 0.0,
-            })
+        .map(
+          (row) => {
+            'day': row['day_label'] as String,
+            'quantity': (row['consumed_qty'] as num?)?.toDouble() ?? 0.0,
+          },
+        )
         .toList();
   }
 
-  Future<List<Map<String, dynamic>>> getTopConsumedMaterials(String facilityId, {int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getTopConsumedMaterials(
+    String facilityId, {
+    int limit = 5,
+  }) async {
     final db = await _dbHelper.db;
-    final results = await db.rawQuery('''
+    final results = await db.rawQuery(
+      '''
       SELECT i.${InventoryItemTable.name},
              i.${InventoryItemTable.unit},
              SUM(st.${StockTransactionTable.quantity}) AS total_qty
@@ -199,14 +239,18 @@ class DashboardRepository {
       GROUP BY i.${InventoryItemTable.id}, i.${InventoryItemTable.name}, i.${InventoryItemTable.unit}
       ORDER BY total_qty DESC
       LIMIT ?
-    ''', [facilityId, limit]);
+    ''',
+      [facilityId, limit],
+    );
 
     return results
-        .map((row) => {
-              'name': row[InventoryItemTable.name] as String,
-              'unit': row[InventoryItemTable.unit] as String,
-              'quantity': (row['total_qty'] as num?)?.toDouble() ?? 0.0,
-            })
+        .map(
+          (row) => {
+            'name': row[InventoryItemTable.name] as String,
+            'unit': row[InventoryItemTable.unit] as String,
+            'quantity': (row['total_qty'] as num?)?.toDouble() ?? 0.0,
+          },
+        )
         .toList();
   }
 
@@ -214,13 +258,16 @@ class DashboardRepository {
     final db = await _dbHelper.db;
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
 
-    final results = await db.rawQuery('''
+    final results = await db.rawQuery(
+      '''
       SELECT t.*, a.${AssetTable.name} as asset_name, w.${WorkOrderTable.workOrderNumber}
       FROM ${WorkOrderTaskTable.tableName} t
       JOIN ${WorkOrderTable.tableName} w ON t.${WorkOrderTaskTable.workOrderId} = w.${WorkOrderTable.id}
       JOIN ${AssetTable.tableName} a ON t.${WorkOrderTaskTable.assetId} = a.${AssetTable.id}
       WHERE w.${WorkOrderTable.facilityId} = ? AND t.${WorkOrderTaskTable.status} = 'PENDING' AND t.${WorkOrderTaskTable.plannedDueAt} LIKE ? AND t.${WorkOrderTaskTable.deletedAt} IS NULL AND w.${WorkOrderTable.deletedAt} IS NULL
-    ''', [facilityId, '$todayStr%']);
+    ''',
+      [facilityId, '$todayStr%'],
+    );
     return results;
   }
 }

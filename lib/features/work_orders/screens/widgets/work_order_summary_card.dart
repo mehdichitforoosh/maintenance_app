@@ -57,10 +57,7 @@ class WorkOrderSummaryCard extends StatelessWidget {
             if (workOrder.scheduledAt != null)
               _WorkOrderInfoRow(
                 'زمان‌بندی',
-                AppDateUtils.formatJalali(
-                  workOrder.scheduledAt!,
-                  includeTime: true,
-                ),
+                AppDateUtils.formatDateOnlyAsJalali(workOrder.scheduledAt),
               ),
             if (workOrder.description?.isNotEmpty == true)
               _WorkOrderInfoRow('توضیحات', workOrder.description!),

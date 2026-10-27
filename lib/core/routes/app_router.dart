@@ -16,6 +16,7 @@ import '../../features/inventory/screens/inventory_item_detail_screen.dart';
 import '../../features/inventory/screens/inventory_item_form_screen.dart';
 import '../../features/inventory/screens/inventory_list_screen.dart';
 import '../../features/inventory/screens/stock_adjustment_screen.dart';
+import '../../features/inventory/screens/stock_ledger_screen.dart';
 import '../../features/maintenance/screens/maintenance_plan_detail_screen.dart';
 import '../../features/maintenance/screens/maintenance_plan_form_screen.dart';
 import '../../features/maintenance/screens/maintenance_plan_list_screen.dart';
@@ -23,6 +24,7 @@ import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/purchases/screens/purchase_order_detail_screen.dart';
 import '../../features/purchases/screens/purchase_order_form_screen.dart';
 import '../../features/purchases/screens/purchase_order_list_screen.dart';
+import '../../features/purchases/screens/purchase_receipt_detail_screen.dart';
 import '../../features/purchases/screens/receive_purchase_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
@@ -188,8 +190,18 @@ GoRouter createAppRouter({required String initialLocation}) => GoRouter(
           builder: (_, _) => const InventoryItemFormScreen(),
         ),
         GoRoute(
+          path: '/inventory/transactions',
+          builder: (_, _) => const StockLedgerScreen(),
+        ),
+        GoRoute(
           path: '/inventory/adjustment',
           builder: (_, _) => const StockAdjustmentScreen(),
+        ),
+        GoRoute(
+          path: '/inventory/receipts/:id',
+          builder: (_, state) => PurchaseReceiptDetailScreen(
+            receiptId: state.pathParameters['id']!,
+          ),
         ),
         GoRoute(
           path: '/inventory/:id',

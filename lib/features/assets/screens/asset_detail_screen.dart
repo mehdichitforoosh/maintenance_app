@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_error_state.dart';
-import '../../../core/widgets/app_form_submit_button.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../../core/widgets/app_responsive_container.dart';
 import '../../maintenance/providers/maintenance_providers.dart';
@@ -53,33 +52,40 @@ class AssetDetailScreen extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: AppFormSubmitButton(
-                        onPressed: () =>
-                            context.push('/assets/$assetId/readings'),
-                        icon: const Icon(
-                          EneftyIcons.speedometer_outline,
-                          size: 18,
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: FilledButton.icon(
+                          onPressed: () =>
+                              context.push('/assets/$assetId/readings'),
+                          icon: const Icon(
+                            EneftyIcons.speedometer_outline,
+                            size: 18,
+                          ),
+                          label: Text('خوانش‌های تجهیز'),
                         ),
-                        label: 'خوانش‌های تجهیز',
-                        isSubmitting: false,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: AppFormSubmitButton(
-                        onPressed: () => context.push(
-                          '/maintenance-plans/new?assetId=$assetId',
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: FilledButton.icon(
+                          onPressed: () => context.push(
+                            '/maintenance-plans/new?assetId=$assetId',
+                          ),
+                          icon: const Icon(
+                            EneftyIcons.add_square_outline,
+                            size: 18,
+                          ),
+                          label: Text('برنامه PM جدید'),
                         ),
-                        icon: const Icon(
-                          EneftyIcons.add_square_outline,
-                          size: 18,
-                        ),
-                        label: 'برنامه PM جدید',
-                        isSubmitting: false,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
                 taskHistoryAsync.when(
                   data: (tasks) => AssetWorkOrderCharts(tasks: tasks),
                   loading: () => const AppLoading(),

@@ -140,6 +140,11 @@ class MaintenancePlanAssetCard extends StatelessWidget {
         ),
         title: Text(asset?.name ?? 'تجهیز مرتبط در دسترس نیست'),
         subtitle: Text(asset == null ? '' : 'کد تجهیز: ${asset!.code}'),
+        trailing: Icon(
+          Directionality.of(context) == TextDirection.rtl
+              ? Icons.chevron_right
+              : Icons.chevron_left,
+        ),
         onTap: asset == null
             ? null
             : () => context.push('/assets/${asset!.id}'),
@@ -221,8 +226,11 @@ class MaintenancePlanTaskHistory extends StatelessWidget {
                 ),
                 title: Text(task.title),
                 subtitle: Text(_taskSubtitle(task)),
-                isThreeLine: true,
-                trailing: const Icon(Icons.chevron_left),
+                trailing: Icon(
+                  Directionality.of(context) == TextDirection.rtl
+                      ? Icons.chevron_right
+                      : Icons.chevron_left,
+                ),
                 onTap: () => context.push('/work-orders/${task.workOrderId}'),
               ),
             ),

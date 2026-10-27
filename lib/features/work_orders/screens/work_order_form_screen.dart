@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/app_form_body.dart';
 import '../../../core/widgets/app_form_submit_button.dart';
 import '../../../core/utils/validators.dart';
@@ -28,6 +29,7 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
   final _scheduledAtController = TextEditingController();
   final _notesController = TextEditingController();
 
+  String? _selectedScheduledAt;
   WorkOrderType _workOrderType = WorkOrderType.corrective;
   Priority _priority = Priority.medium;
   bool _isLoading = false;
@@ -58,7 +60,10 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
         _existingWorkOrder = wo;
         _titleController.text = wo.title;
         _descController.text = wo.description ?? '';
-        _scheduledAtController.text = wo.scheduledAt ?? '';
+        _selectedScheduledAt = wo.scheduledAt;
+        _scheduledAtController.text = wo.scheduledAt == null
+            ? ''
+            : AppDateUtils.formatDateOnlyAsJalali(wo.scheduledAt);
         _notesController.text = wo.notes ?? '';
         _workOrderType = wo.workOrderType;
         _priority = wo.priority;
@@ -80,16 +85,22 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
   }
 
   Future<void> _selectScheduledDate() async {
+    final selectedDate = AppDateUtils.parseDateOnlyAsJalali(
+      _scheduledAtController.text,
+    );
     final picked = await showPersianDatePicker(
       context: context,
-      initialDate: Jalali.now(),
-      firstDate: Jalali.now(),
+      initialDate: selectedDate ?? Jalali.now(),
+      firstDate: Jalali(1370, 1),
       lastDate: Jalali(1450, 12),
     );
     if (picked != null) {
-      final formatted =
-          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      setState(() => _scheduledAtController.text = formatted);
+      setState(() {
+        _selectedScheduledAt = AppDateUtils.formatDateOnly(picked.toDateTime());
+        _scheduledAtController.text = AppDateUtils.formatDateOnlyAsJalali(
+          _selectedScheduledAt,
+        );
+      });
     }
   }
 
@@ -109,9 +120,7 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
           description: _descController.text.trim().isEmpty
               ? null
               : _descController.text.trim(),
-          scheduledAt: _scheduledAtController.text.trim().isEmpty
-              ? null
-              : _scheduledAtController.text.trim(),
+          scheduledAt: _selectedScheduledAt,
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
@@ -128,9 +137,7 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
               description: _descController.text.trim().isEmpty
                   ? null
                   : _descController.text.trim(),
-              scheduledAt: _scheduledAtController.text.trim().isEmpty
-                  ? null
-                  : _scheduledAtController.text.trim(),
+              scheduledAt: _selectedScheduledAt,
               notes: _notesController.text.trim().isEmpty
                   ? null
                   : _notesController.text.trim(),

@@ -5,6 +5,7 @@ import 'package:maintenance_app/core/utils/date_utils.dart';
 import 'package:maintenance_app/features/alerts/repositories/alert_repository.dart';
 import 'package:maintenance_app/features/assets/repositories/asset_reading_repository.dart';
 import 'package:maintenance_app/features/assets/repositories/asset_repository.dart';
+import 'package:maintenance_app/features/dashboard/repositories/dashboard_repository.dart';
 import 'package:maintenance_app/features/facilities/repositories/facility_repository.dart';
 import 'package:maintenance_app/features/inventory/repositories/inventory_repository.dart';
 import 'package:maintenance_app/features/maintenance/repositories/maintenance_plan_repository.dart';
@@ -24,6 +25,300 @@ void main() {
   });
 
   group('Purchase receiving and inventory ledger', () {
+    test(
+      'supplier suggestions and receipt details use stored order data',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه رسید');
+        final inventory = InventoryRepository(dbHelper: dbHelper);
+        final item = await inventory.createItem(
+          name: 'فیلتر روغن',
+          code: 'FLT-01',
+          unit: 'عدد',
+        );
+        final purchases = PurchaseRepository(dbHelper: dbHelper);
+        final order = await purchases.createPurchaseOrder(
+          facilityId: facility.id,
+          supplierName: 'تأمین‌کننده الف',
+          orderDate: '2026-10-28',
+          items: [
+            {'item_id': item.id, 'ordered_quantity': 5, 'unit_price': 125},
+          ],
+        );
+        final orderItem = (await purchases.getOrderItems(order.id)).single;
+
+        await purchases.receiveItems(
+          purchaseOrderId: order.id,
+          receivedLines: [
+            {'purchase_order_item_id': orderItem.id, 'received_quantity': 2},
+          ],
+        );
+
+        final receipt = (await inventory.getStockTransactions(item.id)).single;
+        final receiptDetail = await inventory.getPurchaseReceiptDetail(
+          receipt.id,
+        );
+        expect(await purchases.getSupplierNames(facility.id), [
+          'تأمین‌کننده الف',
+        ]);
+        expect(await purchases.getReceivedQuantities(order.id), {
+          orderItem.id: 2,
+        });
+        expect(receiptDetail?.purchaseOrderId, order.id);
+        expect(receiptDetail?.purchaseOrderNumber, order.purchaseOrderNumber);
+        expect(receiptDetail?.itemName, item.name);
+        expect(receiptDetail?.quantity, 2);
+        expect(receiptDetail?.unitCost, 125);
+        final ledger = await inventory.getStockLedger(
+          transactionType: TransactionType.purchaseReceipt,
+          itemId: item.id,
+          fromDate: DateTime.now().subtract(const Duration(days: 1)),
+          toDate: DateTime.now().add(const Duration(days: 1)),
+        );
+        expect(ledger, hasLength(1));
+        expect(ledger.single.itemCode, item.code);
+        expect(ledger.single.transaction.id, receipt.id);
+        expect(
+          await inventory.getStockLedger(
+            transactionType: TransactionType.adjustmentIn,
+            itemId: item.id,
+          ),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      'purchase lines preserve received history and allow safe changes',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه ویرایش سفارش');
+        final inventory = InventoryRepository(dbHelper: dbHelper);
+        final firstItem = await inventory.createItem(
+          name: 'بلبرینگ',
+          code: 'BRG-EDIT-1',
+          unit: 'عدد',
+        );
+        final secondItem = await inventory.createItem(
+          name: 'فیلتر',
+          code: 'FLT-EDIT-1',
+          unit: 'عدد',
+        );
+        final purchases = PurchaseRepository(dbHelper: dbHelper);
+        final order = await purchases.createPurchaseOrder(
+          facilityId: facility.id,
+          supplierName: 'تأمین‌کننده',
+          orderDate: '2026-10-28',
+          items: [
+            {'item_id': firstItem.id, 'ordered_quantity': 4, 'unit_price': 20},
+          ],
+        );
+
+        await purchases.updatePurchaseOrder(
+          order: order,
+          items: [
+            {'item_id': firstItem.id, 'ordered_quantity': 6, 'unit_price': 25},
+            {'item_id': secondItem.id, 'ordered_quantity': 3, 'unit_price': 10},
+          ],
+        );
+        var lines = await purchases.getOrderItems(order.id);
+        expect(lines, hasLength(2));
+        expect(
+          lines
+              .firstWhere((line) => line.itemId == firstItem.id)
+              .orderedQuantity,
+          6,
+        );
+
+        await purchases.receiveItems(
+          purchaseOrderId: order.id,
+          receivedLines: [
+            {
+              'purchase_order_item_id': lines
+                  .firstWhere((line) => line.itemId == firstItem.id)
+                  .id,
+              'received_quantity': 1,
+            },
+          ],
+        );
+
+        final updatedOrder = await purchases.updatePurchaseOrder(
+          order: order,
+          items: [
+            {'item_id': firstItem.id, 'ordered_quantity': 8, 'unit_price': 30},
+            {'item_id': secondItem.id, 'ordered_quantity': 3, 'unit_price': 10},
+          ],
+        );
+        lines = await purchases.getOrderItems(order.id);
+        expect(lines, hasLength(2));
+        expect(
+          lines
+              .firstWhere((line) => line.itemId == firstItem.id)
+              .orderedQuantity,
+          8,
+        );
+        expect(updatedOrder.status, PurchaseOrderStatus.partiallyReceived);
+        final receipts = (await inventory.getStockTransactions(firstItem.id))
+            .where(
+              (transaction) =>
+                  transaction.transactionType ==
+                  TransactionType.purchaseReceipt,
+            );
+        expect(receipts.single.unitCost, 25);
+
+        await expectLater(
+          purchases.updatePurchaseOrder(
+            order: updatedOrder,
+            items: [
+              {
+                'item_id': firstItem.id,
+                'ordered_quantity': 0.5,
+                'unit_price': 30,
+              },
+              {
+                'item_id': secondItem.id,
+                'ordered_quantity': 3,
+                'unit_price': 10,
+              },
+            ],
+          ),
+          throwsA(isA<StateError>()),
+        );
+        await expectLater(
+          purchases.updatePurchaseOrder(
+            order: updatedOrder,
+            items: [
+              {
+                'item_id': secondItem.id,
+                'ordered_quantity': 3,
+                'unit_price': 10,
+              },
+            ],
+          ),
+          throwsA(isA<StateError>()),
+        );
+        expect(await purchases.getOrderItems(order.id), hasLength(2));
+
+        final completedByAdjustment = await purchases.updatePurchaseOrder(
+          order: updatedOrder,
+          items: [
+            {'item_id': firstItem.id, 'ordered_quantity': 1, 'unit_price': 30},
+          ],
+        );
+        expect(completedByAdjustment.status, PurchaseOrderStatus.received);
+        await expectLater(
+          purchases.updatePurchaseOrder(
+            order: completedByAdjustment,
+            items: [
+              {
+                'item_id': firstItem.id,
+                'ordered_quantity': 2,
+                'unit_price': 30,
+              },
+              {
+                'item_id': secondItem.id,
+                'ordered_quantity': 3,
+                'unit_price': 10,
+              },
+            ],
+          ),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
+    test(
+      'fully received and cancelled orders reject changes and receipts',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه سفارش بسته');
+        final inventory = InventoryRepository(dbHelper: dbHelper);
+        final item = await inventory.createItem(
+          name: 'مهره',
+          code: 'NUT-CLOSED',
+          unit: 'عدد',
+        );
+        final purchases = PurchaseRepository(dbHelper: dbHelper);
+        final order = await purchases.createPurchaseOrder(
+          facilityId: facility.id,
+          supplierName: 'تأمین‌کننده',
+          orderDate: '2026-10-28',
+          items: [
+            {'item_id': item.id, 'ordered_quantity': 2, 'unit_price': 5},
+          ],
+        );
+        final orderItem = (await purchases.getOrderItems(order.id)).single;
+        await purchases.receiveItems(
+          purchaseOrderId: order.id,
+          receivedLines: [
+            {'purchase_order_item_id': orderItem.id, 'received_quantity': 2},
+          ],
+        );
+        final receivedOrder = (await purchases.getPurchaseOrderById(order.id))!;
+        expect(receivedOrder.status, PurchaseOrderStatus.received);
+        await expectLater(
+          purchases.updatePurchaseOrder(
+            order: receivedOrder,
+            items: [
+              {'item_id': item.id, 'ordered_quantity': 3, 'unit_price': 5},
+            ],
+          ),
+          throwsA(isA<StateError>()),
+        );
+        await expectLater(
+          purchases.receiveItems(
+            purchaseOrderId: order.id,
+            receivedLines: [
+              {'purchase_order_item_id': orderItem.id, 'received_quantity': 1},
+            ],
+          ),
+          throwsA(isA<StateError>()),
+        );
+
+        final cancelledOrder = await purchases.createPurchaseOrder(
+          facilityId: facility.id,
+          supplierName: 'تأمین‌کننده',
+          orderDate: '2026-10-28',
+          items: [
+            {'item_id': item.id, 'ordered_quantity': 2, 'unit_price': 5},
+          ],
+        );
+        final cancelledOrderItem = (await purchases.getOrderItems(
+          cancelledOrder.id,
+        )).single;
+        await (await dbHelper.db).update(
+          'purchase_orders',
+          {'status': 'CANCELLED'},
+          where: 'id = ?',
+          whereArgs: [cancelledOrder.id],
+        );
+        await expectLater(
+          purchases.receiveItems(
+            purchaseOrderId: cancelledOrder.id,
+            receivedLines: [
+              {
+                'purchase_order_item_id': cancelledOrderItem.id,
+                'received_quantity': 1,
+              },
+            ],
+          ),
+          throwsA(isA<StateError>()),
+        );
+        await expectLater(
+          purchases.updatePurchaseOrder(
+            order: (await purchases.getPurchaseOrderById(cancelledOrder.id))!,
+            items: [
+              {'item_id': item.id, 'ordered_quantity': 3, 'unit_price': 5},
+            ],
+          ),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
     test('partial and full receipts update stock and order status', () async {
       final facility = await FacilityRepository(
         dbHelper: dbHelper,
@@ -224,7 +519,126 @@ void main() {
         expect(report.materialUsage.single.quantity, 2);
         expect(report.receiptCount, 1);
         expect(report.receivedCost, 45);
+        expect(report.receiptTrend.single.receiptCount, 1);
         expect(report.receipts.single.itemName, 'فیلتر');
+      },
+    );
+
+    test(
+      'dashboard trends are range-aware and scoped to their facility',
+      () async {
+        final facilities = FacilityRepository(dbHelper: dbHelper);
+        final firstFacility = await facilities.createFacility(
+          name: 'کارگاه نمودار اول',
+        );
+        final secondFacility = await facilities.createFacility(
+          name: 'کارگاه نمودار دوم',
+        );
+        final assets = AssetRepository(dbHelper: dbHelper);
+        final firstAsset = await assets.createAsset(
+          facilityId: firstFacility.id,
+          name: 'پمپ اول',
+          code: 'P-DASH-1',
+        );
+        final secondAsset = await assets.createAsset(
+          facilityId: secondFacility.id,
+          name: 'پمپ دوم',
+          code: 'P-DASH-2',
+        );
+        final inventory = InventoryRepository(dbHelper: dbHelper);
+        final item = await inventory.createItem(
+          name: 'روغن نمودار',
+          code: 'OIL-DASH',
+          unit: 'لیتر',
+        );
+        await inventory.adjustStock(
+          itemId: item.id,
+          type: TransactionType.adjustmentIn,
+          quantity: 5,
+        );
+
+        final workOrders = WorkOrderRepository(dbHelper: dbHelper);
+        final firstOrder = await workOrders.createWorkOrder(
+          facilityId: firstFacility.id,
+          title: 'کار اول',
+          workOrderType: WorkOrderType.corrective,
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: firstOrder.id,
+          assetId: firstAsset.id,
+          title: 'تعمیر اول',
+        );
+        final firstTask = (await workOrders.getTasksForWorkOrder(
+          firstOrder.id,
+        )).single;
+        await workOrders.completeTask(
+          taskId: firstTask.id,
+          result: TaskResult.success,
+          findings: null,
+          laborMinutes: null,
+          downtimeMinutes: null,
+          consumedMaterials: [
+            {'item_id': item.id, 'quantity': 2},
+          ],
+        );
+
+        final secondOrder = await workOrders.createWorkOrder(
+          facilityId: secondFacility.id,
+          title: 'کار دوم',
+          workOrderType: WorkOrderType.corrective,
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: secondOrder.id,
+          assetId: secondAsset.id,
+          title: 'تعمیر دوم',
+        );
+        final secondTask = (await workOrders.getTasksForWorkOrder(
+          secondOrder.id,
+        )).single;
+        await workOrders.completeTask(
+          taskId: secondTask.id,
+          result: TaskResult.success,
+          findings: null,
+          laborMinutes: null,
+          downtimeMinutes: null,
+        );
+
+        final dashboard = DashboardRepository(dbHelper: dbHelper);
+        final firstTaskTrend = await dashboard.getCompletedTaskTrend(
+          firstFacility.id,
+          days: 30,
+        );
+        final firstMaterialTrend = await dashboard.getMaterialConsumptionTrend(
+          firstFacility.id,
+          days: 30,
+        );
+        final secondMaterialTrend = await dashboard.getMaterialConsumptionTrend(
+          secondFacility.id,
+          days: 7,
+        );
+
+        expect(firstTaskTrend, hasLength(30));
+        expect(
+          firstTaskTrend.fold<int>(
+            0,
+            (sum, point) => sum + (point['count'] as int),
+          ),
+          1,
+        );
+        expect(
+          firstMaterialTrend.fold<double>(
+            0,
+            (sum, point) => sum + (point['quantity'] as double),
+          ),
+          2,
+        );
+        expect(
+          secondMaterialTrend.fold<double>(
+            0,
+            (sum, point) => sum + (point['quantity'] as double),
+          ),
+          0,
+        );
       },
     );
 
@@ -1105,35 +1519,53 @@ void main() {
       },
     );
 
-    test('AlertRepository reconcileAndGetAlerts generates low stock and overdue task alerts', () async {
-      final facilityRepo = FacilityRepository(dbHelper: dbHelper);
-      final inventoryRepo = InventoryRepository(dbHelper: dbHelper);
-      final alertRepo = AlertRepository(dbHelper: dbHelper);
+    test(
+      'AlertRepository reconcileAndGetAlerts generates low stock and overdue task alerts',
+      () async {
+        final facilityRepo = FacilityRepository(dbHelper: dbHelper);
+        final inventoryRepo = InventoryRepository(dbHelper: dbHelper);
+        final alertRepo = AlertRepository(dbHelper: dbHelper);
 
-      final facility = await facilityRepo.createFacility(name: 'کارگاه هشدارها');
+        final facility = await facilityRepo.createFacility(
+          name: 'کارگاه هشدارها',
+        );
 
-      // Create an inventory item with 0 stock and min stock = 10
-      final item = await inventoryRepo.createItem(
-        name: 'روغن هیدرولیک V46',
-        code: 'OIL-46',
-        unit: 'لیتر',
-        minimumStock: 10,
-      );
+        // Create an inventory item with 0 stock and min stock = 10
+        final item = await inventoryRepo.createItem(
+          name: 'روغن هیدرولیک V46',
+          code: 'OIL-46',
+          unit: 'لیتر',
+          minimumStock: 10,
+        );
 
-      // Reconcile alerts
-      var alerts = await alertRepo.reconcileAndGetAlerts(facility.id);
-      expect(alerts.any((a) => a.inventoryItemId == item.id && a.alertType == AlertType.lowStock), isTrue);
+        // Reconcile alerts
+        var alerts = await alertRepo.reconcileAndGetAlerts(facility.id);
+        expect(
+          alerts.any(
+            (a) =>
+                a.inventoryItemId == item.id &&
+                a.alertType == AlertType.lowStock,
+          ),
+          isTrue,
+        );
 
-      // Replenish stock via adjustment
-      await inventoryRepo.adjustStock(
-        itemId: item.id,
-        type: TransactionType.adjustmentIn,
-        quantity: 50,
-      );
+        // Replenish stock via adjustment
+        await inventoryRepo.adjustStock(
+          itemId: item.id,
+          type: TransactionType.adjustmentIn,
+          quantity: 50,
+        );
 
-      // Reconcile alerts again
-      alerts = await alertRepo.reconcileAndGetAlerts(facility.id);
-      expect(alerts.any((a) => a.inventoryItemId == item.id && a.status == AlertStatus.active), isFalse);
-    });
+        // Reconcile alerts again
+        alerts = await alertRepo.reconcileAndGetAlerts(facility.id);
+        expect(
+          alerts.any(
+            (a) =>
+                a.inventoryItemId == item.id && a.status == AlertStatus.active,
+          ),
+          isFalse,
+        );
+      },
+    );
   });
 }

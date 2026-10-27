@@ -179,6 +179,7 @@ class ReportRepository {
     final receiptTrendRows = await db.rawQuery(
       '''
         SELECT date(st.${StockTransactionTable.transactionDate}, 'localtime') AS day,
+               COUNT(*) AS receipt_count,
                COALESCE(SUM(
                  st.${StockTransactionTable.quantity} *
                  COALESCE(st.${StockTransactionTable.unitCost}, poi.${PurchaseOrderItemTable.unitPrice})
@@ -285,6 +286,7 @@ class ReportRepository {
             (row) => ReportTrendPoint(
               date: row['day'] as String,
               receivedCost: (row['received_cost'] as num).toDouble(),
+              receiptCount: (row['receipt_count'] as num).toInt(),
             ),
           )
           .toList(),
