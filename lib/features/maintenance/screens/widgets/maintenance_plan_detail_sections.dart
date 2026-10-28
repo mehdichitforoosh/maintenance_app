@@ -265,7 +265,7 @@ class MaintenancePlanTaskHistory extends StatelessWidget {
             .trim(),
       );
     }
-    return '${AppDateUtils.formatDisplay(date)}\n${details.join(' • ')}';
+    return '${AppDateUtils.formatDisplay(date)}\n${details.join(' - ')}';
   }
 
   IconData _statusIcon(TaskStatus status) => switch (status) {

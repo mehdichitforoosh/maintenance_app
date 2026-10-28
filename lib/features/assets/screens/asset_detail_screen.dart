@@ -55,7 +55,7 @@ class AssetDetailScreen extends ConsumerWidget {
                       child: SizedBox(
                         width: double.infinity,
                         height: 50,
-                        child: FilledButton.icon(
+                        child: FilledButton.tonalIcon(
                           onPressed: () =>
                               context.push('/assets/$assetId/readings'),
                           icon: const Icon(
@@ -71,7 +71,7 @@ class AssetDetailScreen extends ConsumerWidget {
                       child: SizedBox(
                         width: double.infinity,
                         height: 50,
-                        child: FilledButton.icon(
+                        child: FilledButton.tonalIcon(
                           onPressed: () => context.push(
                             '/maintenance-plans/new?assetId=$assetId',
                           ),

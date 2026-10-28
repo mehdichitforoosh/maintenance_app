@@ -874,9 +874,6 @@ class _MaintenancePlanFormScreenState
           ),
           const SizedBox(height: 24),
           AppFormSubmitButton(
-            icon: Icon(
-              isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-            ),
             isSubmitting: _isSubmitting,
             onPressed: _save,
             label: isEditing ? 'بروزرسانی برنامه PM' : 'ذخیره برنامه PM',
@@ -989,7 +986,7 @@ class _PlanMaterialsEditor extends ConsumerWidget {
           error: (error, _) => Text('خطا در دریافت کالاهای انبار: $error'),
         ),
         const SizedBox(height: 8),
-        OutlinedButton.icon(
+        FilledButton.tonalIcon(
           onPressed: itemsAsync.asData == null
               ? null
               : () => _addMaterial(context, itemsAsync.asData!.value),
@@ -1124,6 +1121,7 @@ class _MaterialDraftDialogState extends State<_MaterialDraftDialog> {
                   ),
                 ),
               ),
+            const SizedBox(height: 16,),
             TextFormField(
               controller: _quantityController,
               keyboardType: const TextInputType.numberWithOptions(
@@ -1137,9 +1135,12 @@ class _MaterialDraftDialogState extends State<_MaterialDraftDialog> {
                     : null;
               },
             ),
+            const SizedBox(height: 16,),
             TextFormField(
               controller: _notesController,
               decoration: const InputDecoration(labelText: 'توضیحات'),
+              minLines: 3,
+              maxLines: 4,
             ),
           ],
         ),

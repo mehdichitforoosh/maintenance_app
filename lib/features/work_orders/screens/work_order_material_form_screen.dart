@@ -212,7 +212,7 @@ class _WorkOrderMaterialFormScreenState
             labelText: 'کالای انبار / قطعه یدکی *',
             helperText:
                 'می‌توانید هر کالای فعال انبار را انتخاب کنید؛ کالاهای ثبت‌شده برای این وظیفه نمایش داده نمی‌شوند.',
-            prefixIcon: Icon(EneftyIcons.box_bold),
+            prefixIcon: Icon(EneftyIcons.box_outline),
             border: OutlineInputBorder(),
           ),
           items: items
@@ -253,7 +253,7 @@ class _WorkOrderMaterialFormScreenState
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             labelText: 'مقدار برنامه‌ریزی‌شده',
-            prefixIcon: const Icon(EneftyIcons.ruler_bold),
+            prefixIcon: const Icon(EneftyIcons.ruler_outline),
             suffixText: selectedItem.unit,
             border: const OutlineInputBorder(),
           ),
@@ -278,7 +278,7 @@ class _WorkOrderMaterialFormScreenState
           decoration: InputDecoration(
             labelText: 'مقدار مصرف واقعی',
             helperText: 'موجودی پس از تکمیل وظیفه به‌صورت اتمی کسر می‌شود.',
-            prefixIcon: const Icon(EneftyIcons.box_bold),
+            prefixIcon: const Icon(EneftyIcons.ruler_pen_outline),
             suffixText: selectedItem.unit,
             border: const OutlineInputBorder(),
           ),
@@ -293,7 +293,7 @@ class _WorkOrderMaterialFormScreenState
           decoration: const InputDecoration(
             labelText: 'بهای واحد هنگام مصرف',
             helperText: 'به‌صورت پیش‌فرض از بهای پیش‌فرض کالا استفاده می‌شود.',
-            prefixIcon: Icon(EneftyIcons.money_bold),
+            prefixIcon: Icon(EneftyIcons.money_outline),
             suffixText: 'تومان',
             border: OutlineInputBorder(),
           ),
@@ -306,7 +306,6 @@ class _WorkOrderMaterialFormScreenState
           enabled: !_isSubmitting,
           decoration: const InputDecoration(
             labelText: 'یادداشت',
-            prefixIcon: Icon(EneftyIcons.note_2_bold),
             border: OutlineInputBorder(),
             alignLabelWithHint: true,
           ),
@@ -316,7 +315,6 @@ class _WorkOrderMaterialFormScreenState
         ),
         const SizedBox(height: 24),
         AppFormSubmitButton(
-          icon: const Icon(EneftyIcons.add_bold),
           isSubmitting: _isSubmitting,
           onPressed: _save,
           label: 'ثبت متریال برای وظیفه',

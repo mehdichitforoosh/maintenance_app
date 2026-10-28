@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/extensions/jalali_extensions.dart';
 import '../../../core/subscription/application/subscription_policy.dart';
 import '../../../core/subscription/domain/access_mode.dart';
+import '../../../core/subscription/domain/plan_definition.dart';
 import '../../../core/subscription/domain/subscription_state.dart';
 import '../../../core/subscription/providers/subscription_providers.dart';
 
@@ -112,9 +113,42 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
             ),
           ),
         const SizedBox(height: 16),
-        Text(
-          'پرداخت و بازیابی خرید درون‌برنامه‌ای هنوز پشتیبانی نمی‌شود.',
-          style: Theme.of(context).textTheme.bodySmall,
+        const Text(
+          'اشتراک‌ها',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...PlanDefinition.builtIn.map((plan) {
+          final isTrial = plan.id.name == 'trial';
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: isTrial
+                    ? Colors.green.withAlpha(25)
+                    : Theme.of(context).colorScheme.primary.withAlpha(25),
+                child: Icon(
+                  isTrial ? Icons.workspace_premium : Icons.card_membership,
+                  color: isTrial
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              title: Text(plan.title),
+              subtitle: Text(plan.description),
+              trailing: isTrial
+                  ? const Icon(Icons.check_circle_outline)
+                  : const Text('به زودی'),
+            ),
+          );
+        }),
+        const SizedBox(height: 16),
+        const Text(
+          'پرداخت‌های درون‌برنامه‌ای به زودی در دسترس خواهند بود.',
+          style: TextStyle(color: Colors.grey),
         ),
       ],
     );

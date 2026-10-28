@@ -40,7 +40,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
               IconButton(
                 tooltip: 'به‌روزرسانی هشدارها',
                 onPressed: () => ref.invalidate(alertsProvider(facility.id)),
-                icon: const Icon(EneftyIcons.refresh_outline),
+                icon: const Icon(Icons.refresh),
               ),
             ],
           ),
@@ -64,7 +64,7 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                       child: Wrap(
                         spacing: 24,
                         runSpacing: 8,

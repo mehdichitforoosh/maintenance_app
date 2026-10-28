@@ -127,7 +127,7 @@ class _StockLedgerScreenState extends ConsumerState<StockLedgerScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Column(
                 children: [
                   TextField(
@@ -148,7 +148,7 @@ class _StockLedgerScreenState extends ConsumerState<StockLedgerScreen> {
                       border: const OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
@@ -220,11 +220,11 @@ class _StockLedgerScreenState extends ConsumerState<StockLedgerScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: FilledButton.tonalIcon(
                           onPressed: () => _selectDate(isStartDate: true),
                           icon: const Icon(EneftyIcons.calendar_2_outline, size: 18),
                           label: Text(
@@ -238,7 +238,7 @@ class _StockLedgerScreenState extends ConsumerState<StockLedgerScreen> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: FilledButton.tonalIcon(
                           onPressed: () => _selectDate(isStartDate: false),
                           icon: const Icon(EneftyIcons.calendar_2_outline, size: 18),
                           label: Text(
@@ -253,7 +253,7 @@ class _StockLedgerScreenState extends ConsumerState<StockLedgerScreen> {
                       IconButton(
                         tooltip: 'پاک‌کردن فیلترها',
                         onPressed: _clearFilters,
-                        icon: const Icon(EneftyIcons.filter_remove_outline),
+                        icon: const Icon(EneftyIcons.filter_remove_bold),
                       ),
                     ],
                   ),

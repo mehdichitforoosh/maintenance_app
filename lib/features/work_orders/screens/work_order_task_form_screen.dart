@@ -150,7 +150,7 @@ class _WorkOrderTaskFormScreenState
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'تجهیز هدف *',
-                        prefixIcon: Icon(EneftyIcons.cpu_bold),
+                        prefixIcon: Icon(EneftyIcons.cpu_outline),
                         border: OutlineInputBorder(),
                       ),
                       items: assets
@@ -190,7 +190,7 @@ class _WorkOrderTaskFormScreenState
                     initialValue: _activityType,
                     decoration: const InputDecoration(
                       labelText: 'نوع فعالیت',
-                      prefixIcon: Icon(EneftyIcons.setting_bold),
+                      prefixIcon: Icon(EneftyIcons.setting_outline),
                       border: OutlineInputBorder(),
                     ),
                     items: ActivityType.values
@@ -212,7 +212,7 @@ class _WorkOrderTaskFormScreenState
                     onTap: _selectDueDate,
                     decoration: const InputDecoration(
                       labelText: 'تاریخ سررسید برنامه (شمسی)',
-                      prefixIcon: Icon(EneftyIcons.calendar_2_bold),
+                      prefixIcon: Icon(EneftyIcons.calendar_2_outline),
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -227,7 +227,6 @@ class _WorkOrderTaskFormScreenState
                   ),
                   const SizedBox(height: 24),
                   AppFormSubmitButton(
-                    icon: const Icon(EneftyIcons.add_bold),
                     isSubmitting: _isSubmitting,
                     onPressed: _save,
                     label: 'افزودن وظیفه به دستورکار',
@@ -309,7 +308,7 @@ class _WorkOrderTaskFormScreenState
                     : assetPlans.isEmpty
                     ? 'برای این تجهیز برنامه‌ای نیست؛ عنوان را دستی وارد کنید.'
                     : 'عنوان برنامه را جست‌وجو و انتخاب کنید تا وظیفه به آن پیوند بخورد.',
-                prefixIcon: const Icon(EneftyIcons.task_bold),
+                prefixIcon: const Icon(EneftyIcons.task_outline),
                 border: const OutlineInputBorder(),
                 suffixIcon: isLoading
                     ? const Padding(

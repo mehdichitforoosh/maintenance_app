@@ -89,7 +89,13 @@ class StockTransactionTile extends StatelessWidget {
       elevation: 0,
       child: ListTile(
         onTap: onTap,
-        trailing: onTap == null ? null : const Icon(Icons.chevron_right),
+        trailing: onTap == null
+            ? null
+            : Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.chevron_right
+                    : Icons.chevron_left,
+              ),
         leading: CircleAvatar(
           backgroundColor: colors.secondaryContainer,
           foregroundColor: colors.onSecondaryContainer,

@@ -249,7 +249,6 @@ class AssetReadingForm extends StatelessWidget {
           ],
           const SizedBox(height: 16),
           AppFormSubmitButton(
-            icon: const Icon(EneftyIcons.add_bold),
             isSubmitting: isSubmitting,
             onPressed: onSubmit,
             label: isEditing ? 'ذخیره اصلاح' : 'ثبت خوانش',

@@ -191,11 +191,6 @@ class _FacilitySetupScreenState extends ConsumerState<FacilitySetupScreen> {
           ),
           const SizedBox(height: 32),
           AppFormSubmitButton(
-            icon: Icon(
-              isEditing
-                  ? EneftyIcons.edit_2_bold
-                  : EneftyIcons.tick_circle_bold,
-            ),
             isSubmitting: _isSubmitting,
             onPressed: _submit,
             label: isEditing ? 'بروزرسانی کارگاه' : 'ذخیره و ورود به سیستم',

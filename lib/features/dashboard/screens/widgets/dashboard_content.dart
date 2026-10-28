@@ -192,7 +192,7 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
               builder: (context, constraints) {
                 final taskCard = _TrendCard(
                   title: 'وظایف تکمیل‌شده',
-                  subtitle: '$_trendDays روز اخیر',
+                  subtitle: '${AppNumberFormat.decimal(_trendDays)} روز اخیر',
                   dataAsync: completedTaskTrendAsync,
                   valueKey: 'count',
                   color: const Color(0xFF10B981),
@@ -200,7 +200,7 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
                 );
                 final materialCard = _TrendCard(
                   title: 'مصرف مواد',
-                  subtitle: '$_trendDays روز اخیر',
+                  subtitle: '${AppNumberFormat.decimal(_trendDays)} روز اخیر',
                   dataAsync: materialTrendAsync,
                   valueKey: 'quantity',
                   color: const Color(0xFF8B5CF6),
@@ -283,22 +283,22 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _ShortcutButton(
-                      icon: EneftyIcons.cpu_bold,
+                      icon: EneftyIcons.cpu_outline,
                       label: 'تجهیز جدید',
                       onTap: () => context.push('/assets/new'),
                     ),
                     _ShortcutButton(
-                      icon: EneftyIcons.document_bold,
+                      icon: EneftyIcons.document_outline,
                       label: 'دستورکار جدید',
                       onTap: () => context.push('/work-orders/new'),
                     ),
                     _ShortcutButton(
-                      icon: EneftyIcons.task_bold,
+                      icon: EneftyIcons.task_outline,
                       label: 'برنامه PM',
                       onTap: () => context.push('/maintenance-plans'),
                     ),
                     _ShortcutButton(
-                      icon: EneftyIcons.box_add_bold,
+                      icon: EneftyIcons.box_add_outline,
                       label: 'کالای انبار',
                       onTap: () => context.push('/inventory/new'),
                     ),
@@ -342,7 +342,7 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
                     return Card(
                       child: ListTile(
                         leading: const Icon(
-                          EneftyIcons.task_square_bold,
+                          EneftyIcons.task_square_outline,
                           color: Color(0xFF2563EB),
                         ),
                         title: Text(
@@ -350,9 +350,13 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          'تجهیز: ${t['asset_name']} | کد: ${t['work_order_number']}',
+                          'تجهیز: ${t['asset_name']}\nکد: ${t['work_order_number']}',
                         ),
-                        trailing: const Icon(EneftyIcons.arrow_left_3_outline),
+                        trailing: Icon(
+                          Directionality.of(context) == TextDirection.rtl
+                              ? Icons.chevron_right
+                              : Icons.chevron_left,
+                        ),
                         onTap: () =>
                             context.push('/work-orders/${t['work_order_id']}'),
                       ),
@@ -404,11 +408,11 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          'موجودی: ${AppNumberFormat.decimal(item['calculated_stock'] as num)} ${item['unit']} (حداقل: ${AppNumberFormat.decimal(item['minimum_stock'] as num)})',
+                          'موجودی: ${AppNumberFormat.decimal(item['calculated_stock'] as num)} ${item['unit']}\nحداقل: ${AppNumberFormat.decimal(item['minimum_stock'] as num)} ${item['unit']}',
                         ),
-                        trailing: OutlinedButton.icon(
+                        trailing: FilledButton.tonalIcon(
                           icon: const Icon(
-                            EneftyIcons.shopping_cart_bold,
+                            EneftyIcons.shopping_cart_outline,
                             size: 16,
                           ),
                           label: const Text('سفارش خرید'),

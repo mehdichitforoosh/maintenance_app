@@ -249,9 +249,6 @@ class _LocationFormScreenState extends ConsumerState<LocationFormScreen> {
           ),
           const SizedBox(height: 24),
           AppFormSubmitButton(
-            icon: Icon(
-              isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-            ),
             isSubmitting: _isSubmitting,
             onPressed: _save,
             label: isEditing ? 'بروزرسانی موقعیت' : 'ذخیره موقعیت',

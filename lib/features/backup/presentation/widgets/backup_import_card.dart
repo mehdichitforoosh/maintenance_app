@@ -105,9 +105,6 @@ class BackupImportCard extends StatelessWidget {
             height: 48,
             child: FilledButton.icon(
               onPressed: isProcessing ? null : onPickAndImportFilePressed,
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.orange.shade800,
-              ),
               icon: const Icon(EneftyIcons.folder_connection_outline),
               label: const Text(
                 'انتخاب و بازیابی فایل پشتیبان',

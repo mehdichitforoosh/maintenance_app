@@ -70,7 +70,7 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(EneftyIcons.hierarchy_square_2_outline),
+                icon: const Icon(EneftyIcons.hierarchy_outline),
                 tooltip: 'نمایش درختی موقعیت‌ها',
                 onPressed: () => context.push('/locations/tree'),
               ),
@@ -210,7 +210,7 @@ class _LocationListScreenState extends ConsumerState<LocationListScreen> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/locations/new'),
-            child: const Icon(EneftyIcons.add_bold),
+            child: const Icon(EneftyIcons.add_outline),
           ),
         );
       },

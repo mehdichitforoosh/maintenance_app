@@ -109,7 +109,7 @@ class BackupExportCard extends StatelessWidget {
               onPressed: isProcessing ? null : onShareBackupFilePressed,
               icon: const Icon(EneftyIcons.export_outline),
               label: const Text(
-                'اشتراک‌گذاری فایل پشتیبان (ایمیل، تلگرام و...)',
+                'اشتراک‌گذاری فایل پشتیبان',
                 style: TextStyle(fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis,
               ),
