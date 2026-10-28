@@ -66,7 +66,7 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
     final itemsAsync = ref.watch(inventoryItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('تعدیل موجودی انبار (Adjustment)')),
+      appBar: AppBar(title: const Text('تعدیل موجودی انبار')),
       body: itemsAsync.when(
         data: (items) {
           if (items.isEmpty) {
@@ -139,7 +139,6 @@ class _StockAdjustmentScreenState extends ConsumerState<StockAdjustmentScreen> {
               ),
               const SizedBox(height: 24),
               AppFormSubmitButton(
-                icon: const Icon(Icons.inventory_2_outlined),
                 isSubmitting: _isSubmitting,
                 onPressed: _adjust,
                 label: 'ثبت تعدیل موجودی',

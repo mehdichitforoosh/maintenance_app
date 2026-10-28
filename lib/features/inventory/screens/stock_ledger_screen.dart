@@ -117,11 +117,6 @@ class _StockLedgerScreenState extends ConsumerState<StockLedgerScreen> {
         title: const Text('گردش انبار'),
         actions: [
           IconButton(
-            tooltip: 'تعدیل موجودی',
-            onPressed: () => context.push('/inventory/adjustment'),
-            icon: const Icon(EneftyIcons.setting_4_outline),
-          ),
-          IconButton(
             tooltip: 'تازه‌سازی',
             onPressed: () => ref.invalidate(inventoryLedgerProvider),
             icon: const Icon(Icons.refresh),
@@ -258,7 +253,7 @@ class _StockLedgerScreenState extends ConsumerState<StockLedgerScreen> {
                       IconButton(
                         tooltip: 'پاک‌کردن فیلترها',
                         onPressed: _clearFilters,
-                        icon: const Icon(EneftyIcons.setting_4_outline),
+                        icon: const Icon(EneftyIcons.filter_remove_outline),
                       ),
                     ],
                   ),
