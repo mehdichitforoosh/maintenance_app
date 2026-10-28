@@ -165,7 +165,7 @@ class _MaintenancePlanListScreenState
                                     foregroundColor:
                                         colorScheme.onPrimaryContainer,
                                     child: const Icon(
-                                      EneftyIcons.calendar_2_bold,
+                                      EneftyIcons.calendar_2_outline,
                                       size: 22,
                                     ),
                                   ),
@@ -257,7 +257,7 @@ class _MaintenancePlanListScreenState
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/maintenance-plans/new'),
-            child: const Icon(EneftyIcons.add_bold),
+            child: const Icon(EneftyIcons.add_outline),
           ),
         );
       },

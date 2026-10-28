@@ -9,9 +9,11 @@ import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_form_body.dart';
 import '../../../core/widgets/app_form_submit_button.dart';
 import '../../../core/widgets/app_loading.dart';
+import '../../inventory/models/inventory_item.dart';
 import '../../inventory/providers/inventory_providers.dart';
 import '../../maintenance/models/maintenance_plan.dart';
 import '../../maintenance/providers/maintenance_providers.dart';
+import '../models/work_order_material.dart';
 import '../providers/work_order_providers.dart';
 
 class CompleteTaskScreen extends ConsumerStatefulWidget {
@@ -37,10 +39,11 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
   TaskResult _result = TaskResult.success;
   bool _isSubmitting = false;
 
-  // Selected consumed material
   String? _selectedItemId;
   final _qtyController = TextEditingController(text: '1');
-  final List<Map<String, dynamic>> _consumedMaterials = [];
+  final Map<String, TextEditingController> _materialQuantityControllers = {};
+  final Set<String> _additionalItemIds = {};
+  String? _initializedMaterialsTaskId;
 
   @override
   void dispose() {
@@ -49,12 +52,40 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
     _downtimeController.dispose();
     _completionMeterController.dispose();
     _qtyController.dispose();
+    for (final controller in _materialQuantityControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  void _initializeMaterialQuantities(
+    String taskId,
+    List<WorkOrderMaterial> materials,
+  ) {
+    if (_initializedMaterialsTaskId == taskId) return;
+    for (final controller in _materialQuantityControllers.values) {
+      controller.dispose();
+    }
+    _materialQuantityControllers.clear();
+    _additionalItemIds.clear();
+    for (final material in materials) {
+      _materialQuantityControllers[material.itemId] = TextEditingController();
+    }
+    _initializedMaterialsTaskId = taskId;
   }
 
   Future<void> _complete() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
+    final consumedMaterials = _materialQuantityControllers.entries
+        .map((entry) {
+          final quantity =
+              double.tryParse(entry.value.text.trim().replaceAll(',', '.')) ??
+              0;
+          return {'item_id': entry.key, 'quantity': quantity};
+        })
+        .where((material) => (material['quantity'] as double) > 0)
+        .toList();
     setState(() => _isSubmitting = true);
 
     try {
@@ -95,9 +126,9 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
                 : _findingsController.text.trim(),
             laborMinutes: int.tryParse(_laborController.text.trim()) ?? 0,
             downtimeMinutes: int.tryParse(_downtimeController.text.trim()) ?? 0,
-            consumedMaterials: _consumedMaterials.isEmpty
+            consumedMaterials: consumedMaterials.isEmpty
                 ? null
-                : _consumedMaterials,
+                : consumedMaterials,
             completionMeterValue: completionMeterValue,
             maintenancePlanId: task.maintenancePlanId,
             assetId: task.assetId,
@@ -115,6 +146,251 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
     }
   }
 
+  Widget _buildMaterialSection(
+    List<InventoryItem> items,
+    List<WorkOrderMaterial> taskMaterials,
+  ) {
+    final itemById = {for (final item in items) item.id: item};
+    final plannedItemIds = {
+      for (final material in taskMaterials) material.itemId,
+    };
+    final additionalItems = items
+        .where(
+          (item) =>
+              !plannedItemIds.contains(item.id) &&
+              !_additionalItemIds.contains(item.id),
+        )
+        .toList();
+    if (_selectedItemId != null &&
+        !additionalItems.any((item) => item.id == _selectedItemId)) {
+      _selectedItemId = null;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (taskMaterials.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'برای این وظیفه متریال برنامه‌ریزی‌شده‌ای وجود ندارد؛ در صورت نیاز می‌توانید اقلام مصرف‌شده را اضافه کنید.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ...taskMaterials.map((material) {
+          final item = itemById[material.itemId];
+          final controller = _materialQuantityControllers[material.itemId]!;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item?.name ?? 'کالای غیرفعال یا حذف‌شده',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (material.plannedQuantity != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, bottom: 8),
+                      child: Text(
+                        'مقدار برنامه‌ریزی‌شده: ${AppNumberFormat.decimal(material.plannedQuantity!)} ${item?.unit ?? ''}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  if ((material.actualQuantity ?? 0) > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'مصرف ثبت‌شده قبلی: ${AppNumberFormat.decimal(material.actualQuantity!)} ${item?.unit ?? ''}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  const SizedBox(height: 12,),
+                  TextFormField(
+                    controller: controller,
+                    enabled: !_isSubmitting && item != null,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'مقدار مصرف واقعی',
+                      suffixText: item?.unit,
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: _optionalQuantityValidator,
+                  ),
+                  if (item == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'این کالا در انبار فعال نیست و نمی‌توان مصرف جدیدی برای آن ثبت کرد.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        }),
+        ..._additionalItemIds.map((itemId) {
+          final item = itemById[itemId];
+          final controller = _materialQuantityControllers[itemId]!;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item?.name ?? 'کالای غیرفعال یا حذف‌شده',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12,),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: controller,
+                          enabled: !_isSubmitting,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: 'مقدار مصرف واقعی',
+                            suffixText: item?.unit,
+                            border: InputBorder.none,
+                          ),
+                          validator: _optionalQuantityValidator,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'حذف از فهرست مصرف',
+                        onPressed: _isSubmitting
+                            ? null
+                            : () {
+                                setState(() {
+                                  _additionalItemIds.remove(itemId);
+                                  _materialQuantityControllers
+                                      .remove(itemId)
+                                      ?.dispose();
+                                });
+                              },
+                        icon: const Icon(EneftyIcons.trash_outline),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        if (additionalItems.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedItemId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'افزودن کالای مصرف‌شده',
+              border: OutlineInputBorder(),
+            ),
+            items: additionalItems
+                .map(
+                  (item) => DropdownMenuItem(
+                    value: item.id,
+                    child: Text(
+                      '${item.name} (${item.code}) · ${item.unit}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: _isSubmitting
+                ? null
+                : (value) => setState(() => _selectedItemId = value),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _qtyController,
+                  enabled: !_isSubmitting,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'مقدار مصرف',
+                    suffixText: items
+                        .where((item) => item.id == _selectedItemId)
+                        .firstOrNull
+                        ?.unit,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              IconButton.filled(
+                tooltip: 'افزودن کالا به فهرست مصرف',
+                icon: const Icon(EneftyIcons.add_outline),
+                onPressed: _isSubmitting ? null : _addAdditionalMaterial,
+              ),
+            ],
+          ),
+        ] else if (items.isEmpty && taskMaterials.isEmpty)
+          const Text('کالایی در انبار ثبت نشده است.'),
+      ],
+    );
+  }
+
+  void _addAdditionalMaterial() {
+    final itemId = _selectedItemId;
+    final quantity = double.tryParse(_qtyController.text.trim());
+    if (itemId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ابتدا کالای مصرف‌شده را انتخاب کنید.')),
+      );
+      return;
+    }
+    if (quantity == null || !quantity.isFinite || quantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('مقدار مصرف باید عددی بزرگ‌تر از صفر باشد.'),
+        ),
+      );
+      return;
+    }
+    if (_materialQuantityControllers.containsKey(itemId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('این کالا قبلاً در فهرست متریال وظیفه وجود دارد.'),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _additionalItemIds.add(itemId);
+      _materialQuantityControllers[itemId] = TextEditingController(
+        text: quantity.toString(),
+      );
+      _selectedItemId = null;
+      _qtyController.text = '1';
+    });
+  }
+
+  String? _optionalQuantityValidator(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    final quantity = double.tryParse(value.trim());
+    if (quantity == null || !quantity.isFinite || quantity < 0) {
+      return 'مقدار باید عددی صفر یا بیشتر باشد.';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final inventoryAsync = ref.watch(inventoryItemsProvider);
@@ -130,6 +406,9 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
         task != null &&
         (plan?.scheduleType == ScheduleType.meter ||
             task.plannedMeterValue != null);
+    final materialsAsync = task == null
+        ? null
+        : ref.watch(workOrderMaterialsProvider(task.id));
 
     if (task == null) {
       return Scaffold(
@@ -160,6 +439,24 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
         ),
       );
     }
+    if (materialsAsync == null || !materialsAsync.hasValue) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('تکمیل وظیفه تعمیراتی')),
+        body:
+            materialsAsync?.when(
+              loading: () => const AppLoading(),
+              error: (error, _) => AppErrorState(
+                message: 'بارگذاری متریال وظیفه ناموفق بود: $error',
+                onRetry: () =>
+                    ref.invalidate(workOrderMaterialsProvider(widget.taskId)),
+              ),
+              data: (_) => const SizedBox.shrink(),
+            ) ??
+            const AppLoading(),
+      );
+    }
+    final taskMaterials = materialsAsync.value!;
+    _initializeMaterialQuantities(task.id, taskMaterials);
 
     return Scaffold(
       appBar: AppBar(title: const Text('تکمیل وظیفه تعمیراتی و ثبت قطعات')),
@@ -254,110 +551,14 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'اگر مصرف قبلاً ثبت شده، در تکمیل اول آن را دوباره وارد نکنید. پس از بازگشایی، مقدار واردشده برای کالای قبلی به مصرف ثبت‌شده قبلی اضافه می‌شود.',
+            'اقلام برنامه‌ریزی‌شده در ادامه آمده‌اند. مقدار واقعی مصرف را وارد کنید؛ مقدار برنامه‌ریزی‌شده به‌تنهایی از موجودی کم نمی‌شود. پس از بازگشایی، فقط مصرف جدید این نوبت را وارد کنید.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
 
           inventoryAsync.when(
             data: (items) {
-              if (items.isEmpty) {
-                return const Text('کالایی در انبار ثبت نشده است.');
-              }
-              _selectedItemId ??= items.first.id;
-
-              final selectedItem = items.firstWhere(
-                (item) => item.id == _selectedItemId,
-              );
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedItemId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'انتخاب کالا',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: items
-                        .map(
-                          (i) => DropdownMenuItem(
-                            value: i.id,
-                            child: Text(
-                              '${i.name} (${i.code})',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedItemId = v),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _qtyController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: 'مقدار مصرف',
-                            suffixText: selectedItem.unit,
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      IconButton.filled(
-                        tooltip: 'افزودن کالا به فهرست مصرف',
-                        icon: const Icon(EneftyIcons.add_bold),
-                        onPressed: () {
-                          if (_selectedItemId != null) {
-                            final qty = double.tryParse(
-                              _qtyController.text.trim(),
-                            );
-                            if (qty == null || !qty.isFinite || qty <= 0) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'مقدار مصرف باید عددی بزرگ‌تر از صفر باشد.',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-                            if (_consumedMaterials.any(
-                              (material) =>
-                                  material['item_id'] == _selectedItemId,
-                            )) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'این کالا قبلاً به فهرست مصرف افزوده شده است.',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-                            final item = items.firstWhere(
-                              (i) => i.id == _selectedItemId,
-                            );
-                            setState(() {
-                              _consumedMaterials.add({
-                                'item_id': item.id,
-                                'item_name': item.name,
-                                'quantity': qty,
-                                'unit_cost': item.defaultUnitCost ?? 0.0,
-                              });
-                            });
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              );
+              return _buildMaterialSection(items, taskMaterials);
             },
             loading: () => const LinearProgressIndicator(),
             error: (error, _) => AppErrorState(
@@ -366,41 +567,14 @@ class _CompleteTaskScreenState extends ConsumerState<CompleteTaskScreen> {
             ),
           ),
 
-          if (_consumedMaterials.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _consumedMaterials.length,
-              itemBuilder: (context, index) {
-                final mat = _consumedMaterials[index];
-                return Card(
-                  child: ListTile(
-                    title: Text(
-                      mat['item_name'] as String,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'مقدار مصرفی: ${AppNumberFormat.decimal(mat['quantity'] as num)}',
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(EneftyIcons.trash_outline, color: Colors.red),
-                      onPressed: () =>
-                          setState(() => _consumedMaterials.removeAt(index)),
-                    ),
-                  ),
-                );
-              },
+          if (inventoryAsync.hasValue) ...[
+            const SizedBox(height: 32),
+            AppFormSubmitButton(
+              isSubmitting: _isSubmitting,
+              onPressed: _complete,
+              label: 'ثبت و تکمیل وظیفه',
             ),
           ],
-
-          const SizedBox(height: 32),
-          AppFormSubmitButton(
-            icon: const Icon(Icons.task_alt),
-            isSubmitting: _isSubmitting,
-            onPressed: _complete,
-            label: 'ثبت و تکمیل وظیفه',
-          ),
         ],
       ),
     );

@@ -34,7 +34,7 @@ class WorkOrderDetailScreen extends ConsumerWidget {
             ),
             actions: [
               PopupMenuButton<WorkOrderStatus>(
-                icon: const Icon(EneftyIcons.setting_4_outline),
+                icon: const Icon(EneftyIcons.setting_2_outline),
                 tooltip: 'تغییر وضعیت دستورکار',
                 onSelected: (newStatus) async {
                   try {

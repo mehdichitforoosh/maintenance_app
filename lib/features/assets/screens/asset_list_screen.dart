@@ -90,7 +90,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(EneftyIcons.hierarchy_square_2_outline),
+                icon: const Icon(EneftyIcons.hierarchy_outline),
                 tooltip: 'نمایش درختی',
                 onPressed: () => context.push('/assets/tree'),
               ),
@@ -263,7 +263,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/assets/new'),
-            child: const Icon(EneftyIcons.add_bold),
+            child: const Icon(EneftyIcons.add_outline),
           ),
         );
       },

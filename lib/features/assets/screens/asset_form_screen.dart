@@ -435,9 +435,6 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
           const SizedBox(height: 24),
           AppFormSubmitButton(
             label: isEditing ? 'بروزرسانی تجهیز' : 'ذخیره تجهیز',
-            icon: Icon(
-              isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-            ),
             isSubmitting: _isSubmitting,
             onPressed: _save,
           ),

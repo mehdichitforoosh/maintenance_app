@@ -1,3 +1,4 @@
+import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -78,7 +79,7 @@ class PurchaseReceiptDetailScreen extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () =>
                         context.push('/purchases/${receipt.purchaseOrderId}'),
-                    icon: const Icon(Icons.receipt_long_outlined),
+                    icon: const Icon(EneftyIcons.receipt_search_outline),
                     label: Text(
                       'مشاهده سفارش خرید ${receipt.purchaseOrderNumber}',
                     ),

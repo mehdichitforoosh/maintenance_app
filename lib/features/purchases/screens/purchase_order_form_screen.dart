@@ -110,7 +110,12 @@ class _PurchaseOrderFormScreenState
       return;
     }
     setState(() {
-      _lines.add(_PurchaseOrderLineDraft(itemId: availableItem.id));
+      _lines.add(
+        _PurchaseOrderLineDraft(
+          itemId: availableItem.id,
+          unitPrice: availableItem.defaultUnitCost?.toString() ?? '',
+        ),
+      );
     });
   }
 
@@ -139,6 +144,9 @@ class _PurchaseOrderFormScreenState
               (!otherSelectedIds.contains(item.id) || item.id == line.itemId),
         )
         .toList();
+    final selectedItem = items
+        .where((item) => item.id == line.itemId)
+        .firstOrNull;
     final canEditItem = enabled && line.receivedQuantity == 0;
     final canEditQuantity = enabled;
     final quantity =
@@ -152,7 +160,7 @@ class _PurchaseOrderFormScreenState
       color: line.receivedQuantity > 0
           ? Theme.of(
               context,
-            ).colorScheme.secondaryContainer.withValues(alpha: 0.28)
+            ).colorScheme.secondaryContainer
           : null,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -164,7 +172,7 @@ class _PurchaseOrderFormScreenState
               children: [
                 Expanded(
                   child: Text(
-                    'قلم ${index + 1}',
+                    'قلم انبار ${index + 1}',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -172,7 +180,7 @@ class _PurchaseOrderFormScreenState
                 ),
                 if (line.receivedQuantity > 0)
                   const Chip(
-                    avatar: Icon(Icons.check_circle_outline, size: 16),
+                    avatar: Icon(EneftyIcons.tick_circle_outline, size: 16),
                     label: Text('رسید ثبت شده'),
                     visualDensity: VisualDensity.compact,
                   ),
@@ -180,10 +188,11 @@ class _PurchaseOrderFormScreenState
                   IconButton(
                     tooltip: 'حذف این قلم',
                     onPressed: () => _removeLine(index),
-                    icon: const Icon(Icons.delete_outline),
+                    icon: const Icon(EneftyIcons.trash_outline),
                   ),
               ],
             ),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               key: ValueKey(line),
               initialValue:
@@ -193,7 +202,7 @@ class _PurchaseOrderFormScreenState
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'انتخاب کالا *',
-                prefixIcon: Icon(EneftyIcons.box_bold),
+                prefixIcon: Icon(EneftyIcons.box_outline),
                 border: OutlineInputBorder(),
               ),
               items: selectableItems
@@ -205,7 +214,16 @@ class _PurchaseOrderFormScreenState
                   )
                   .toList(),
               onChanged: canEditItem
-                  ? (value) => setState(() => line.itemId = value)
+                  ? (value) {
+                      final selected = items
+                          .where((item) => item.id == value)
+                          .firstOrNull;
+                      setState(() {
+                        line.itemId = value;
+                        line.unitPriceController.text =
+                            selected?.defaultUnitCost?.toString() ?? '';
+                      });
+                    }
                   : null,
               validator: (value) =>
                   value == null ? 'انتخاب کالا الزامی است.' : null,
@@ -215,7 +233,7 @@ class _PurchaseOrderFormScreenState
               Row(
                 children: [
                   Icon(
-                    Icons.lock_outline,
+                    EneftyIcons.lock_2_bold,
                     size: 16,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -231,7 +249,7 @@ class _PurchaseOrderFormScreenState
                 ],
               ),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -244,11 +262,9 @@ class _PurchaseOrderFormScreenState
                     ),
                     decoration: InputDecoration(
                       labelText: 'مقدار سفارش *',
-                      prefixIcon: const Icon(EneftyIcons.ruler_bold),
+                      prefixIcon: const Icon(EneftyIcons.ruler_outline),
+                      suffixText: selectedItem?.unit,
                       border: const OutlineInputBorder(),
-                      helperText: line.receivedQuantity > 0
-                          ? 'دریافت‌شده: ${AppNumberFormat.decimal(line.receivedQuantity)} · باقی‌مانده: ${AppNumberFormat.decimal(remainingQuantity)}'
-                          : null,
                     ),
                     validator: (value) {
                       final error = AppValidators.positiveNumber(
@@ -258,7 +274,7 @@ class _PurchaseOrderFormScreenState
                       if (error != null) return error;
                       final entered = double.parse(value!.trim());
                       if (entered < line.receivedQuantity) {
-                        return 'مقدار نمی‌تواند کمتر از ${line.receivedQuantity} دریافت‌شده باشد.';
+                        return 'مقدار نمی‌تواند کمتر از ${AppNumberFormat.decimal(line.receivedQuantity)} ${selectedItem?.unit ?? ''} دریافت‌شده باشد.';
                       }
                       return null;
                     },
@@ -274,11 +290,8 @@ class _PurchaseOrderFormScreenState
                     ),
                     decoration: InputDecoration(
                       labelText: 'قیمت واحد (تومان) *',
-                      prefixIcon: const Icon(EneftyIcons.money_bold),
+                      prefixIcon: const Icon(EneftyIcons.money_outline),
                       border: const OutlineInputBorder(),
-                      helperText: line.receivedQuantity > 0
-                          ? 'قیمت جدید فقط برای رسیدهای بعدی اعمال می‌شود.'
-                          : null,
                     ),
                     validator: (value) => AppValidators.nonNegativeNumber(
                       value,
@@ -286,6 +299,18 @@ class _PurchaseOrderFormScreenState
                     ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                if (line.receivedQuantity > 0)
+                  Text(
+                    'دریافت‌شده: ${AppNumberFormat.decimal(line.receivedQuantity)} ${selectedItem?.unit ?? ''} · باقی‌مانده: ${AppNumberFormat.decimal(remainingQuantity)} ${selectedItem?.unit ?? ''}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
               ],
             ),
           ],
@@ -362,7 +387,12 @@ class _PurchaseOrderFormScreenState
     if (_lines.isEmpty && !isEditing && items.isNotEmpty) {
       final firstActiveItem = items.where((item) => item.isActive).firstOrNull;
       if (firstActiveItem != null) {
-        _lines.add(_PurchaseOrderLineDraft(itemId: firstActiveItem.id));
+        _lines.add(
+          _PurchaseOrderLineDraft(
+            itemId: firstActiveItem.id,
+            unitPrice: firstActiveItem.defaultUnitCost?.toString() ?? '',
+          ),
+        );
       }
     }
 
@@ -416,7 +446,7 @@ class _PurchaseOrderFormScreenState
                         onFieldSubmitted: (_) => onFieldSubmitted(),
                         decoration: InputDecoration(
                           labelText: 'نام تأمین‌کننده *',
-                          prefixIcon: const Icon(EneftyIcons.user_bold),
+                          prefixIcon: const Icon(EneftyIcons.truck_outline),
                           border: const OutlineInputBorder(),
                           helperText: supplierNamesAsync.hasError
                               ? 'دریافت نام‌های قبلی ناموفق بود؛ نام تأمین‌کننده را دستی وارد کنید.'
@@ -444,7 +474,9 @@ class _PurchaseOrderFormScreenState
                               .map(
                                 (name) => ListTile(
                                   dense: true,
-                                  leading: const Icon(EneftyIcons.user_bold),
+                                  leading: const Icon(
+                                    EneftyIcons.truck_outline,
+                                  ),
                                   title: Text(name),
                                   onTap: () => onSelected(name),
                                 ),
@@ -502,9 +534,6 @@ class _PurchaseOrderFormScreenState
                 ),
                 const SizedBox(height: 24),
                 AppFormSubmitButton(
-                  icon: Icon(
-                    isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-                  ),
                   onPressed: _save,
                   isSubmitting: _isSubmitting,
                   label: isEditing ? 'بروزرسانی سفارش' : 'ثبت سفارش خرید',
@@ -524,7 +553,7 @@ class _PurchaseOrderLineDraft {
   _PurchaseOrderLineDraft({
     this.itemId,
     String quantity = '10',
-    String unitPrice = '100000',
+    String unitPrice = '',
     this.receivedQuantity = 0,
   }) : quantityController = TextEditingController(text: quantity),
        unitPriceController = TextEditingController(text: unitPrice);

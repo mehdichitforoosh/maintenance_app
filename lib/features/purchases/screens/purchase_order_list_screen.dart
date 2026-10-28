@@ -184,7 +184,7 @@ class _PurchaseOrderListScreenState
                                       context,
                                     ).colorScheme.onPrimaryContainer,
                                     child: const Icon(
-                                      EneftyIcons.shopping_cart_bold,
+                                      EneftyIcons.shopping_cart_outline,
                                       size: 22,
                                     ),
                                   ),
@@ -246,7 +246,7 @@ class _PurchaseOrderListScreenState
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/purchases/new'),
-            child: const Icon(EneftyIcons.add_bold),
+            child: const Icon(EneftyIcons.add_outline),
           ),
         );
       },

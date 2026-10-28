@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 class AppFormSubmitButton extends StatelessWidget {
   final String label;
-  final Widget icon;
+  final Widget? icon;
   final bool isSubmitting;
   final VoidCallback onPressed;
 
   const AppFormSubmitButton({
     super.key,
     required this.label,
-    required this.icon,
+    this.icon,
     required this.isSubmitting,
     required this.onPressed,
   });

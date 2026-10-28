@@ -247,9 +247,6 @@ class _WorkOrderFormScreenState extends ConsumerState<WorkOrderFormScreen> {
           ),
           const SizedBox(height: 24),
           AppFormSubmitButton(
-            icon: Icon(
-              isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-            ),
             isSubmitting: _isSubmitting,
             onPressed: _save,
             label: isEditing ? 'بروزرسانی دستورکار' : 'ثبت دستورکار',

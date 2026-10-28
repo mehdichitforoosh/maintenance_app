@@ -130,9 +130,14 @@ class PurchaseOrderDetailScreen extends ConsumerWidget {
                                 .firstOrNull;
                             return Card(
                               child: ListTile(
-                                leading: Icon(
-                                  EneftyIcons.box_bold,
-                                  color: Theme.of(context).colorScheme.primary,
+                                leading: CircleAvatar(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                  child: const Icon(EneftyIcons.box_outline),
                                 ),
                                 title: Text(
                                   invItem?.name ?? 'کالای نامشخص',

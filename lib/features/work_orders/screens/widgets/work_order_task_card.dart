@@ -35,7 +35,7 @@ class WorkOrderTaskCard extends ConsumerWidget {
                   child: Icon(
                     task.status == TaskStatus.completed
                         ? EneftyIcons.tick_circle_bold
-                        : EneftyIcons.task_square_bold,
+                        : EneftyIcons.task_square_outline,
                     color: task.status == TaskStatus.completed
                         ? Colors.green
                         : const Color(0xFF2563EB),
@@ -59,14 +59,15 @@ class WorkOrderTaskCard extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 12,),
             if (task.status == TaskStatus.pending ||
                 task.status == TaskStatus.inProgress)
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: FilledButton.icon(
-                    icon: const Icon(EneftyIcons.tick_square_bold, size: 16),
+                  child: FilledButton.tonalIcon(
+                    icon: const Icon(EneftyIcons.tick_square_outline, size: 16),
                     label: const Text('تکمیل وظیفه'),
                     onPressed: () => context.push(
                       '/work-orders/$workOrderId/tasks/${task.id}/complete',

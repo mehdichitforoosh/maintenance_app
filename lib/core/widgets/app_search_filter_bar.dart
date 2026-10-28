@@ -109,13 +109,6 @@ class AppSearchFilterBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Filter / Sort Button on Left (as in attached image)
-              IconButton.filledTonal(
-                icon: const Icon(EneftyIcons.setting_4_outline, size: 20),
-                tooltip: 'مرتب‌سازی و فیلتر',
-                onPressed: () => _showSortBottomSheet(context),
-              ),
-              const SizedBox(width: 8),
               // Search Input Field
               Expanded(
                 child: TextField(
@@ -133,12 +126,12 @@ class AppSearchFilterBar extends StatelessWidget {
                     ),
                     prefixIcon: searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              searchController.clear();
-                              onChanged();
-                            },
-                          )
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        searchController.clear();
+                        onChanged();
+                      },
+                    )
                         : null,
                     filled: true,
                     fillColor: colorScheme.surfaceContainerHighest,
@@ -152,6 +145,13 @@ class AppSearchFilterBar extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(width: 8),
+              // Filter / Sort Button on Left (as in attached image)
+              IconButton.filledTonal(
+                icon: const Icon(EneftyIcons.sort_outline, size: 20),
+                tooltip: 'مرتب‌سازی و فیلتر',
+                onPressed: () => _showSortBottomSheet(context),
               ),
             ],
           ),

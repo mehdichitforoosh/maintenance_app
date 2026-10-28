@@ -183,7 +183,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
                                       context,
                                     ).colorScheme.onPrimaryContainer,
                                     child: const Icon(
-                                      EneftyIcons.document_text_bold,
+                                      EneftyIcons.document_text_outline,
                                       size: 22,
                                     ),
                                   ),
@@ -268,7 +268,7 @@ class _WorkOrderListScreenState extends ConsumerState<WorkOrderListScreen> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.push('/work-orders/new'),
-            child: const Icon(EneftyIcons.add_bold),
+            child: const Icon(EneftyIcons.add_outline),
           ),
         );
       },

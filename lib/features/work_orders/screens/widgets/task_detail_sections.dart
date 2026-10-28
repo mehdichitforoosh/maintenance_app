@@ -213,14 +213,15 @@ class TaskMaterialsSection extends ConsumerWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(EneftyIcons.box_bold, size: 16),
+                          const Icon(EneftyIcons.box_outline, size: 16),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Text(itemName, style: Theme.of(context).textTheme.bodyMedium,),
                                 Text(
-                                  '$itemName · برنامه‌ریزی: ${_formatQuantity(material.plannedQuantity)} $unit · مصرف واقعی: ${_formatQuantity(material.actualQuantity)} $unit',
+                                  'برنامه‌ریزی: ${_formatQuantity(material.plannedQuantity)} $unit - مصرف واقعی: ${_formatQuantity(material.actualQuantity)} $unit',
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 if (cost != null ||

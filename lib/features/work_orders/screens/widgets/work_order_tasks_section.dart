@@ -25,27 +25,34 @@ class WorkOrderTasksSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SectionHeader(title: 'وظایف و فعالیت‌ها (Tasks)'),
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                icon: const Icon(EneftyIcons.box_bold, size: 16),
-                label: const Text('افزودن متریال'),
-                onPressed: () =>
-                    context.push('/work-orders/$workOrderId/materials/new'),
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton.icon(
+                  icon: const Icon(EneftyIcons.box_outline, size: 16),
+                  label: const Text('افزودن متریال'),
+                  onPressed: () =>
+                      context.push('/work-orders/$workOrderId/materials/new'),
+                ),
               ),
-              OutlinedButton.icon(
-                icon: const Icon(EneftyIcons.add_bold, size: 16),
-                label: const Text('افزودن وظیفه'),
-                onPressed: () =>
-                    context.push('/work-orders/$workOrderId/tasks/new'),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: FilledButton.icon(
+                  icon: const Icon(EneftyIcons.add_square_outline, size: 16),
+                  label: const Text('افزودن وظیفه'),
+                  onPressed: () =>
+                      context.push('/work-orders/$workOrderId/tasks/new'),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         tasksAsync.when(

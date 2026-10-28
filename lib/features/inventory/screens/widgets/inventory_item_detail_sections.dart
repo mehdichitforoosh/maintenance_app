@@ -1,3 +1,4 @@
+import 'package:enefty_icons/enefty_icons.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/number_format_utils.dart';
@@ -92,7 +93,7 @@ class StockTransactionTile extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: colors.secondaryContainer,
           foregroundColor: colors.onSecondaryContainer,
-          child: const Icon(Icons.inventory_2_outlined),
+          child: const Icon(EneftyIcons.receipt_3_outline),
         ),
         title: Text(
           transaction.transactionType.displayName,

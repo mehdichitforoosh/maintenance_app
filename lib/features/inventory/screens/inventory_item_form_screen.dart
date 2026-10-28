@@ -182,9 +182,6 @@ class _InventoryItemFormScreenState
           ),
           const SizedBox(height: 24),
           AppFormSubmitButton(
-            icon: Icon(
-              isEditing ? EneftyIcons.edit_2_bold : EneftyIcons.add_bold,
-            ),
             label: isEditing ? 'بروزرسانی قلم انبار' : 'ذخیره قلم انبار',
             isSubmitting: _isSubmitting,
             onPressed: _save,

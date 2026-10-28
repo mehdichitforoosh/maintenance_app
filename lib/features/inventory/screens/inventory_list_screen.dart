@@ -74,12 +74,12 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(EneftyIcons.receipt_item_outline),
+            icon: const Icon(EneftyIcons.receipt_search_outline),
             tooltip: 'گردش انبار',
             onPressed: () => context.push('/inventory/transactions'),
           ),
           IconButton(
-            icon: const Icon(EneftyIcons.setting_4_outline),
+            icon: const Icon(EneftyIcons.box_outline),
             tooltip: 'تعدیل موجودی',
             onPressed: () => context.push('/inventory/adjustment'),
           ),
@@ -145,7 +145,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/inventory/new'),
-        child: const Icon(EneftyIcons.add_bold),
+        child: const Icon(EneftyIcons.add_outline),
       ),
     );
   }

@@ -139,17 +139,18 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'سفارش: ${AppNumberFormat.decimal(item.orderedQuantity)} ${invItem?.unit ?? ''} · دریافت‌شده: ${AppNumberFormat.decimal(received)} · باقی‌مانده: ${AppNumberFormat.decimal(remaining)}',
+                                  'سفارش: ${AppNumberFormat.decimal(item.orderedQuantity)} ${invItem?.unit ?? ''}\nدریافت‌شده: ${AppNumberFormat.decimal(received)} ${invItem?.unit ?? ''}\nباقی‌مانده: ${AppNumberFormat.decimal(remaining)} ${invItem?.unit ?? ''}',
                                 ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 16),
                                 TextFormField(
                                   controller: _qtyControllers[item.id],
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                         decimal: true,
                                       ),
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     labelText: 'مقدار دریافتی این نوبت',
+                                    suffixText: invItem?.unit,
                                     border: OutlineInputBorder(),
                                     helperText:
                                         'برای قلمی که دریافت نمی‌شود، مقدار را صفر وارد کنید.',
@@ -165,7 +166,7 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
                                       value!.trim(),
                                     );
                                     if (quantity > remaining) {
-                                      return 'حداکثر مقدار قابل دریافت ${AppNumberFormat.decimal(remaining)} است.';
+                                      return 'حداکثر مقدار قابل دریافت ${AppNumberFormat.decimal(remaining)} ${invItem?.unit ?? ''} است.';
                                     }
                                     return null;
                                   },
@@ -177,7 +178,6 @@ class _ReceivePurchaseScreenState extends ConsumerState<ReceivePurchaseScreen> {
                       }),
                       const SizedBox(height: 24),
                       AppFormSubmitButton(
-                        icon: const Icon(Icons.inventory_2_outlined),
                         isSubmitting: _isSubmitting,
                         onPressed: () => _receive(orderItems),
                         label: 'ثبت و به‌روزرسانی موجودی انبار',
