@@ -1249,6 +1249,54 @@ void main() {
     );
 
     test(
+      'work-order tasks inherit planned materials from their maintenance plan',
+      () async {
+        final facility = await FacilityRepository(
+          dbHelper: dbHelper,
+        ).createFacility(name: 'کارگاه مواد وظیفه');
+        final asset = await AssetRepository(dbHelper: dbHelper).createAsset(
+          facilityId: facility.id,
+          name: 'پمپ وظیفه',
+          code: 'P-TASK-PLAN-MATERIAL',
+        );
+        final item = await InventoryRepository(dbHelper: dbHelper).createItem(
+          name: 'فیلتر وظیفه',
+          code: 'TASK-PLAN-FILTER',
+          unit: 'عدد',
+        );
+        final plan = await MaintenancePlanRepository(dbHelper: dbHelper)
+            .createPlan(
+              assetId: asset.id,
+              title: 'سرویس با فیلتر',
+              scheduleType: ScheduleType.manual,
+              materials: [
+                {'item_id': item.id, 'planned_quantity': 2},
+              ],
+            );
+        final workOrders = WorkOrderRepository(dbHelper: dbHelper);
+        final order = await workOrders.createWorkOrder(
+          facilityId: facility.id,
+          title: 'سرویس برنامه‌ای',
+          workOrderType: WorkOrderType.preventive,
+        );
+        await workOrders.addTaskToWorkOrder(
+          workOrderId: order.id,
+          assetId: asset.id,
+          maintenancePlanId: plan.id,
+          title: plan.title,
+        );
+
+        final task = (await workOrders.getTasksForWorkOrder(order.id)).single;
+        final taskMaterials = await workOrders.getMaterialsForTask(task.id);
+
+        expect(taskMaterials, hasLength(1));
+        expect(taskMaterials.single.itemId, item.id);
+        expect(taskMaterials.single.plannedQuantity, 2);
+        expect(taskMaterials.single.actualQuantity, isNull);
+      },
+    );
+
+    test(
       'failed plan material save rolls back plan create and plan updates',
       () async {
         final facility = await FacilityRepository(

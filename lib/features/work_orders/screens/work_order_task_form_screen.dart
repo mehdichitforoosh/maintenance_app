@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import '../../../core/enums/app_enums.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../core/widgets/app_error_state.dart';
 import '../../../core/widgets/app_form_body.dart';
 import '../../../core/widgets/app_form_submit_button.dart';
@@ -48,16 +49,23 @@ class _WorkOrderTaskFormScreenState
   }
 
   Future<void> _selectDueDate() async {
+    final initialDate =
+        AppDateUtils.parseDateOnlyAsJalali(_dueDateController.text) ??
+        Jalali.now();
     final picked = await showPersianDatePicker(
       context: context,
-      initialDate: Jalali.now(),
-      firstDate: Jalali.now(),
+      initialDate: initialDate,
+      firstDate: Jalali(1300, 1),
       lastDate: Jalali(1450, 12),
     );
     if (picked != null) {
       final formatted =
-          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      setState(() => _dueDateController.text = formatted);
+          '${picked.year}/${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}';
+      setState(() {
+        _dueDateController.text = AppDateUtils.formatDateOnlyAsJalali(
+          formatted,
+        );
+      });
     }
   }
 
@@ -87,9 +95,9 @@ class _WorkOrderTaskFormScreenState
                 ? null
                 : _descController.text.trim(),
             activityType: _activityType,
-            plannedDueAt: _dueDateController.text.trim().isEmpty
-                ? null
-                : _dueDateController.text.trim(),
+            plannedDueAt: AppDateUtils.jalaliDateToIsoDate(
+              _dueDateController.text,
+            ),
           );
 
       if (mounted) context.pop();
@@ -157,7 +165,10 @@ class _WorkOrderTaskFormScreenState
                         setState(() {
                           _selectedAssetId = value;
                           _selectedMaintenancePlanId = null;
+                          _activityType = ActivityType.inspection;
                           _titleController.clear();
+                          _descController.clear();
+                          _dueDateController.clear();
                         });
                       },
                     ),
@@ -265,6 +276,15 @@ class _WorkOrderTaskFormScreenState
           _selectedAssetId = plan.assetId;
           _activityType = plan.activityType;
           _titleController.text = plan.title;
+          _descController.text = plan.description ?? '';
+          final plannedDate = switch (plan.scheduleType) {
+            ScheduleType.calendar => plan.nextDueAt ?? plan.startDate,
+            ScheduleType.oneTime => plan.oneTimeDueAt,
+            _ => null,
+          };
+          _dueDateController.text = plannedDate == null
+              ? ''
+              : AppDateUtils.formatDateOnlyAsJalali(plannedDate);
         });
       },
       fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
