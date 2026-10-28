@@ -1,4 +1,4 @@
-package com.example.maintenance_app
+package ir.fixwork.maintenance_app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,6 +1,6 @@
 name: maintenance_app
-description: "A maintenance management system(CMMS) project."
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+description: "Paper-free workshop maintenance: equipment, service, work orders, inventory."
+publish_to: 'none'
 
 
 version: 1.0.0+1
