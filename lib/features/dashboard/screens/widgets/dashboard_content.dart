@@ -160,137 +160,8 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
                                   ),
                                 );
                               }
-                              final openCount = statusCounts['OPEN'] ?? 0;
-                              final inProgCount =
-                                  statusCounts['IN_PROGRESS'] ?? 0;
-                              final completedCount =
-                                  statusCounts['COMPLETED'] ?? 0;
-                              final cancelledCount =
-                                  statusCounts['CANCELLED'] ?? 0;
-                              final maxY = [
-                                openCount,
-                                inProgCount,
-                                completedCount,
-                                cancelledCount,
-                              ].reduce((a, b) => a > b ? a : b).toDouble();
-
-                              return BarChart(
-                                BarChartData(
-                                  alignment: BarChartAlignment.spaceAround,
-                                  maxY: maxY == 0 ? 5 : maxY + 2,
-                                  barTouchData: BarTouchData(enabled: true),
-                                  titlesData: FlTitlesData(
-                                    show: true,
-                                    bottomTitles: AxisTitles(
-                                      sideTitles: SideTitles(
-                                        showTitles: true,
-                                        getTitlesWidget: (value, meta) {
-                                          switch (value.toInt()) {
-                                            case 0:
-                                              return const Text(
-                                                'باز',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              );
-                                            case 1:
-                                              return const Text(
-                                                'جریان',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              );
-                                            case 2:
-                                              return const Text(
-                                                'تکمیل',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              );
-                                            case 3:
-                                              return const Text(
-                                                'لغو',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              );
-                                            default:
-                                              return const Text('');
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                    leftTitles: const AxisTitles(
-                                      sideTitles: SideTitles(showTitles: false),
-                                    ),
-                                    topTitles: const AxisTitles(
-                                      sideTitles: SideTitles(showTitles: false),
-                                    ),
-                                    rightTitles: const AxisTitles(
-                                      sideTitles: SideTitles(showTitles: false),
-                                    ),
-                                  ),
-                                  gridData: const FlGridData(show: false),
-                                  borderData: FlBorderData(show: false),
-                                  barGroups: [
-                                    BarChartGroupData(
-                                      x: 0,
-                                      barRods: [
-                                        BarChartRodData(
-                                          toY: openCount.toDouble(),
-                                          color: const Color(0xFF2563EB),
-                                          width: 24,
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    BarChartGroupData(
-                                      x: 1,
-                                      barRods: [
-                                        BarChartRodData(
-                                          toY: inProgCount.toDouble(),
-                                          color: const Color(0xFFD97706),
-                                          width: 24,
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    BarChartGroupData(
-                                      x: 2,
-                                      barRods: [
-                                        BarChartRodData(
-                                          toY: completedCount.toDouble(),
-                                          color: Colors.green,
-                                          width: 24,
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    BarChartGroupData(
-                                      x: 3,
-                                      barRods: [
-                                        BarChartRodData(
-                                          toY: cancelledCount.toDouble(),
-                                          color: Colors.red,
-                                          width: 24,
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+                              return _WorkOrderStatusChart(
+                                statusCounts: statusCounts,
                               );
                             },
                             loading: () => const AppLoading(),
@@ -558,6 +429,193 @@ class _DashboardContentState extends ConsumerState<DashboardContent> {
   }
 }
 
+class _WorkOrderStatusChart extends StatefulWidget {
+  final Map<String, int> statusCounts;
+
+  const _WorkOrderStatusChart({required this.statusCounts});
+
+  @override
+  State<_WorkOrderStatusChart> createState() => _WorkOrderStatusChartState();
+}
+
+class _WorkOrderStatusChartState extends State<_WorkOrderStatusChart> {
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final statuses = <({String key, String label, Color color})>[
+      (key: 'DRAFT', label: 'پیش‌نویس', color: Colors.blueGrey),
+      (key: 'OPEN', label: 'باز', color: const Color(0xFF2563EB)),
+      (
+        key: 'IN_PROGRESS',
+        label: 'در حال انجام',
+        color: const Color(0xFFD97706),
+      ),
+      (key: 'ON_HOLD', label: 'متوقف', color: const Color(0xFF9333EA)),
+      (key: 'COMPLETED', label: 'تکمیل‌شده', color: Colors.green),
+      (key: 'CANCELLED', label: 'لغوشده', color: Colors.red),
+    ];
+    final visibleStatuses = statuses
+        .where((status) => (widget.statusCounts[status.key] ?? 0) > 0)
+        .toList();
+    final total = visibleStatuses.fold<int>(
+      0,
+      (sum, status) => sum + widget.statusCounts[status.key]!,
+    );
+    if (_selectedIndex != null && _selectedIndex! >= visibleStatuses.length) {
+      _selectedIndex = null;
+    }
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 144,
+          child: Row(
+            children: [
+              Expanded(
+                flex: 5,
+                child: PieChart(
+                  PieChartData(
+                    centerSpaceRadius: 38,
+                    sectionsSpace: 3,
+                    pieTouchData: PieTouchData(
+                      touchCallback: (event, response) {
+                        if (!event.isInterestedForInteractions) return;
+                        final index =
+                            response?.touchedSection?.touchedSectionIndex;
+                        setState(() {
+                          _selectedIndex =
+                              index != null &&
+                                  index >= 0 &&
+                                  index < visibleStatuses.length
+                              ? index
+                              : null;
+                        });
+                      },
+                    ),
+                    sections: [
+                      for (
+                        var index = 0;
+                        index < visibleStatuses.length;
+                        index++
+                      )
+                        PieChartSectionData(
+                          value: widget
+                              .statusCounts[visibleStatuses[index].key]!
+                              .toDouble(),
+                          color: visibleStatuses[index].color,
+                          radius: _selectedIndex == index ? 26 : 21,
+                          showTitle: false,
+                        ),
+                    ],
+                  ),
+                  duration: const Duration(milliseconds: 250),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 6,
+                child: Center(
+                  child: _selectedIndex == null
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              AppNumberFormat.decimal(total),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text('دستورکار'),
+                          ],
+                        )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              visibleStatuses[_selectedIndex!].label,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: visibleStatuses[_selectedIndex!].color,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              AppNumberFormat.decimal(
+                                widget
+                                    .statusCounts[visibleStatuses[_selectedIndex!]
+                                    .key]!,
+                              ),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: visibleStatuses[_selectedIndex!].color,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${(widget.statusCounts[visibleStatuses[_selectedIndex!].key]! * 100 / total).round()}٪ از کل',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 36,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var index = 0; index < visibleStatuses.length; index++)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () => setState(
+                      () => _selectedIndex = _selectedIndex == index
+                          ? null
+                          : index,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 9,
+                            height: 9,
+                            decoration: BoxDecoration(
+                              color: visibleStatuses[index].color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${visibleStatuses[index].label} '
+                            '(${AppNumberFormat.decimal(widget.statusCounts[visibleStatuses[index].key]!)})',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: _selectedIndex == index
+                                  ? FontWeight.bold
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _TrendCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -594,7 +652,7 @@ class _TrendCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             SizedBox(
-              height: 120,
+              height: 150,
               child: dataAsync.when(
                 data: (data) {
                   if (data.isEmpty) {
@@ -605,98 +663,107 @@ class _TrendCard extends StatelessWidget {
                     final value = (item[valueKey] as num?)?.toDouble() ?? 0;
                     return value > prev ? value : prev;
                   });
-
-                  return LineChart(
-                    LineChartData(
-                      gridData: FlGridData(show: false),
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 4, 24, 6),
+                    child: LineChart(
+                      LineChartData(
+                        minX: 0,
+                        maxX: (data.length - 1)
+                            .clamp(1, double.infinity)
+                            .toDouble(),
+                        minY: 0,
+                        maxY: maxValue == 0 ? 1 : maxValue * 1.15,
+                        gridData: FlGridData(show: false),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 30,
+                              interval: (data.length / 4).ceilToDouble(),
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                if (index < 0 ||
+                                    index >= data.length ||
+                                    (index != data.length - 1 &&
+                                        index %
+                                                (data.length / 4).ceil().clamp(
+                                                  1,
+                                                  data.length,
+                                                ) !=
+                                            0)) {
+                                  return const SizedBox.shrink();
+                                }
+                                return SideTitleWidget(
+                                  meta: meta,
+                                  space: 6,
+                                  child: Text(
+                                    AppDateUtils.formatJalaliShort(
+                                      data[index]['day'] as String,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                        topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 24,
-                            interval: (data.length / 4).ceilToDouble(),
-                            getTitlesWidget: (value, meta) {
-                              final index = value.toInt();
-                              if (index < 0 ||
-                                  index >= data.length ||
-                                  (index != data.length - 1 &&
-                                      index %
-                                              (data.length / 4).ceil().clamp(
-                                                1,
-                                                data.length,
-                                              ) !=
-                                          0)) {
-                                return const SizedBox.shrink();
+                        lineTouchData: LineTouchData(
+                          touchTooltipData: LineTouchTooltipData(
+                            getTooltipItems: (spots) => spots.map((spot) {
+                              final index = spot.x.toInt();
+                              if (index < 0 || index >= data.length) {
+                                return null;
                               }
-                              return SideTitleWidget(
-                                meta: meta,
-                                child: Text(
-                                  AppDateUtils.formatJalaliShort(
-                                    data[index]['day'] as String,
-                                  ),
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
+                              return LineTooltipItem(
+                                '${AppDateUtils.formatJalaliShort(data[index]['day'] as String)}\n'
+                                '${formatter(spot.y)}',
+                                TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onInverseSurface,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               );
-                            },
+                            }).toList(),
                           ),
                         ),
-                      ),
-                      minY: 0,
-                      maxY: maxValue == 0 ? 1 : maxValue + 1,
-                      lineTouchData: LineTouchData(
-                        touchTooltipData: LineTouchTooltipData(
-                          getTooltipItems: (spots) => spots.map((spot) {
-                            final index = spot.x.toInt();
-                            if (index < 0 || index >= data.length) return null;
-                            return LineTooltipItem(
-                              '${AppDateUtils.formatJalaliShort(data[index]['day'] as String)}\n'
-                              '${formatter(spot.y)}',
-                              TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onInverseSurface,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: data.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final item = entry.value;
-                            final value =
-                                (item[valueKey] as num?)?.toDouble() ?? 0.0;
-                            return FlSpot(index.toDouble(), value);
-                          }).toList(),
-                          isCurved: true,
-                          color: color,
-                          barWidth: 3,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: color.withValues(alpha: 0.18),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: data.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final item = entry.value;
+                              final value =
+                                  (item[valueKey] as num?)?.toDouble() ?? 0.0;
+                              return FlSpot(index.toDouble(), value);
+                            }).toList(),
+                            isCurved: true,
+                            color: color,
+                            barWidth: 3,
+                            dotData: FlDotData(show: false),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: color.withValues(alpha: 0.18),
+                            ),
                           ),
-                        ),
-                      ],
-                      extraLinesData: ExtraLinesData(),
+                        ],
+                        extraLinesData: ExtraLinesData(),
+                      ),
                     ),
                   );
                 },
