@@ -11,6 +11,35 @@ flutter test
 flutter analyze
 ```
 
+## ساخت دستی با GitHub Actions
+
+در تب **Actions**، گردش‌کار **Manual Build Pipeline** را اجرا و هدف `android`، `ios`، `windows`، `linux` یا `all` را انتخاب کنید. خروجی هر پلتفرم به‌صورت artifact همان اجرا در دسترس است. نام برنامه در Android «فیکس‌ورک» است؛ نام پنجره/بسته در Windows، Linux و iOS همچنان `maintenance_app` می‌ماند.
+
+برای امضای نسخه Android، این مقادیر را در **Settings → Secrets and variables → Actions** مخزن به‌عنوان Repository secrets اضافه کنید:
+
+| Secret | مقدار |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | محتوای فایل keystore با Base64، بدون افزودن شکست خط |
+| `KEYSTORE_PASSWORD` | گذرواژه keystore |
+| `KEY_ALIAS` | alias کلید امضا |
+| `KEY_PASSWORD` | گذرواژه کلید |
+
+برای ساخت IPA امضاشده iOS، این Repository secrets نیز لازم‌اند:
+
+| Secret | مقدار |
+| --- | --- |
+| `APPLE_CERTIFICATE_BASE64` | گواهی توزیع Apple با فرمت `.p12`، کدگذاری‌شده با Base64 |
+| `APPLE_CERTIFICATE_PASSWORD` | گذرواژه فایل `.p12` |
+| `IOS_PROVISIONING_PROFILE_BASE64` | provisioning profile کدگذاری‌شده با Base64 |
+| `IOS_KEYCHAIN_PASSWORD` | گذرواژه موقت keychain ساخته‌شده در runner |
+| `APPLE_TEAM_ID` | شناسه تیم Apple |
+| `IOS_BUNDLE_ID` | شناسه بسته‌ای که در گواهی/پروفایل ثبت شده است |
+| `IOS_PROFILE_NAME` | نام provisioning profile که با پروفایل نصب‌شده مطابقت دارد |
+
+پروفایل iOS باید برای روش توزیع `ad-hoc` مناسب باشد و با Bundle ID و گواهی بالا تطبیق داشته باشد. ساخت Windows و Linux به این secrets امضا نیاز ندارد. با انتخاب `all`، secrets مربوط به Android و iOS نیز باید تنظیم شده باشند؛ در غیر این صورت job همان پلتفرم با پیام مشخص متوقف می‌شود.
+
+Secrets را فقط در تنظیمات امن GitHub وارد کنید؛ مقدار واقعی آن‌ها را در کد، فایل workflow، مستندات، لاگ‌ها یا commit قرار ندهید. فایل keystore و فایل‌های کلید محلی را به مخزن اضافه نکنید. دسترسی نوشتن به secrets و اجرای گردش‌کار را محدود کنید، و secrets را برای اجرای workflow از کدهای غیرقابل اعتماد (مانند pull requestهای fork) در دسترس قرار ندهید. workflow مقادیر secrets را به متغیرهای محیطی هر مرحله لازم محدود می‌کند و پیش از ساخت Android/iOS وجودشان را بررسی می‌کند.
+
 ## معماری
 
 - رابط کاربری از طریق Riverpod به Repositoryها و سپس SQLite دسترسی دارد؛ ویجت‌ها مستقیماً SQL اجرا نمی‌کنند.
