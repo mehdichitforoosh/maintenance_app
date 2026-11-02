@@ -11,8 +11,10 @@ import 'core/localizations/persian_localizations.dart';
 import 'core/routes/app_router.dart';
 import 'core/storage/database/database_helper.dart';
 import 'core/storage/key_value_storage.dart';
+import 'core/subscription/application/subscription_lifecycle_observer.dart';
 import 'core/subscription/application/subscription_service.dart';
 import 'core/subscription/data/local_subscription_state_store.dart';
+import 'core/subscription/providers/subscription_providers.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/facilities/repositories/facility_repository.dart';
@@ -28,6 +30,8 @@ void main() async {
   Intl.defaultLocale = 'fa_IR';
 
   final storage = KeyValueStorage.instance;
+  // Local-only protection: if the device clock moved backwards, invalidate active
+  // subscription windows so the app falls back to read-only mode.
   final subscriptionState = await SubscriptionService(
     store: LocalSubscriptionStateStore(),
     clock: () => DateTime.now().toUtc(),
@@ -49,13 +53,40 @@ void main() async {
   });
 }
 
-class MyApp extends ConsumerWidget {
-  const MyApp({required this.router, super.key});
+class MyApp extends ConsumerStatefulWidget {
+  const MyApp({super.key, required this.router});
 
   final GoRouter router;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  late final SubscriptionLifecycleObserver _subscriptionLifecycleObserver;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscriptionLifecycleObserver = SubscriptionLifecycleObserver(
+      subscriptionService: ref.read(subscriptionServiceProvider),
+      onSubscriptionStateChecked: () {
+        if (!mounted) return;
+        ref.invalidate(subscriptionStateProvider);
+        ref.invalidate(subscriptionAccessProvider);
+      },
+    );
+    WidgetsBinding.instance.addObserver(_subscriptionLifecycleObserver);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_subscriptionLifecycleObserver);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
@@ -72,7 +103,7 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
-      routerConfig: router,
+      routerConfig: widget.router,
     );
   }
 }

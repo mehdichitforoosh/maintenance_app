@@ -47,6 +47,8 @@ class SubscriptionService {
       return reset;
     }
 
-    return saved;
+    final updated = saved.copyWith(lastSeenAtUtc: now);
+    await store.save(updated);
+    return updated;
   }
 }
